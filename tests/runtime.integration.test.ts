@@ -33,6 +33,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let db: typeof import('../src/db/pool.js');
   let runtime: typeof import('../src/infrastructure/runtime.js');
   let runtimeWorker: typeof import('../src/worker/runtime-worker.js');
+  let messageRequests: typeof import('../src/services/message-request-service.js');
+  let appModule: typeof import('../src/app.js');
 
   beforeAll(async () => {
     execFileSync('initdb', ['-D', dataDir, '-A', 'trust', '--no-locale'], { stdio: 'ignore' });
@@ -45,6 +47,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     db = await import('../src/db/pool.js');
     runtime = await import('../src/infrastructure/runtime.js');
     runtimeWorker = await import('../src/worker/runtime-worker.js');
+    messageRequests = await import('../src/services/message-request-service.js');
+    appModule = await import('../src/app.js');
   }, 30_000);
 
   beforeEach(async () => {
@@ -59,6 +63,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         runtime.outbox_commands,
         runtime.scheduled_jobs,
         audit.events,
+        app.messages,
         app.leads,
         app.contacts,
         app.projects,
@@ -381,6 +386,76 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT status FROM runtime.inbox_events WHERE inbox_event_id=$1', [inboxEventId])).rows[0]?.status).toBe('processed');
     expect((await db.pool.query('SELECT state FROM runtime.outbox_commands WHERE outbox_command_id=$1', [outboxCommandId])).rows[0]?.state).toBe('delivered');
     expect((await db.pool.query('SELECT status FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [scheduledJobId])).rows[0]?.status).toBe('completed');
+  });
+
+  it('creates idempotent outbound message requests and outbox commands transactionally', async () => {
+    const service = new messageRequests.MessageRequestService();
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-message-request', 'Message Request Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+
+    const first = await service.requestWhatsAppSend({
+      clientId,
+      requestKey: 'lead-1:welcome',
+      phoneNumberId: 'phone-number-id-test',
+      toE164: '+201000000001',
+      payload: { kind: 'text', text: 'Welcome' },
+      actorId: 'test-worker',
+    });
+    const second = await service.requestWhatsAppSend({
+      clientId,
+      requestKey: 'lead-1:welcome',
+      phoneNumberId: 'phone-number-id-test',
+      toE164: '+201000000001',
+      payload: { kind: 'text', text: 'Welcome' },
+      actorId: 'test-worker',
+    });
+
+    expect(second).toEqual(first);
+    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='message.send_requested'")).rows[0]?.count).toBe('1');
+    const outboxPayload = await db.pool.query<{ payload_json: { messageId?: string }; idempotency_key: string }>(
+      'SELECT payload_json, idempotency_key FROM runtime.outbox_commands WHERE outbox_command_id=$1',
+      [first.outboxCommandId],
+    );
+    expect(outboxPayload.rows[0]?.payload_json.messageId).toBe(first.messageId);
+    expect(outboxPayload.rows[0]?.idempotency_key).toBe(first.idempotencyKey);
+  });
+
+  it('accepts internal WhatsApp send requests through the authenticated API route', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-message-route', 'Message Route Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/internal/messages/whatsapp/send',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientId,
+          requestKey: 'lead-2:welcome',
+          phoneNumberId: 'phone-number-id-test',
+          toE164: '+201000000002',
+          payload: { kind: 'text', text: 'Welcome from route' },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { ok?: boolean; messageId?: string; outboxCommandId?: string };
+      expect(body.ok).toBe(true);
+      expect(body.messageId).toBeTruthy();
+      expect(body.outboxCommandId).toBeTruthy();
+      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
   });
 
   it('records append-only audit entries with actor and correlation metadata', async () => {

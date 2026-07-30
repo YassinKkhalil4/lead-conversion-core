@@ -4,6 +4,7 @@ import { pool } from '../db/pool.js';
 import { compileConfig } from '../domain/compiler.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConfigSyncService } from '../services/config-sync-service.js';
+import { MessageRequestService } from '../services/message-request-service.js';
 import { requireInternalSecret } from './auth.js';
 
 const syncSchema = z.object({ clientRecordId: z.string().min(1).nullable().optional() });
@@ -84,6 +85,38 @@ const consumerFailSchema = z.object({
   idempotencyKey: z.string().min(1).max(500),
   error: z.string().max(4000).optional().default('projection_failed'),
 });
+const messageOptionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+});
+const messagePayloadSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('text'),
+    text: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal('buttons'),
+    text: z.string().min(1),
+    options: z.array(messageOptionSchema).min(1).max(3),
+  }),
+  z.object({
+    kind: z.literal('list'),
+    text: z.string().min(1),
+    buttonText: z.string().min(1),
+    options: z.array(messageOptionSchema).min(1).max(10),
+  }),
+]);
+const whatsappSendSchema = z.object({
+  clientId: z.string().uuid(),
+  contactId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional(),
+  conversationId: z.string().uuid().optional(),
+  requestKey: z.string().min(1),
+  phoneNumberId: z.string().optional().default(''),
+  toE164: z.string().min(5),
+  payload: messagePayloadSchema,
+  actorId: z.string().optional().default('internal-api'),
+});
 
 const ownershipSchema = z.object({
   clientRecordId: z.string().min(1),
@@ -97,6 +130,7 @@ const ownershipSchema = z.object({
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
   const syncService = new ConfigSyncService();
   const configs = new ConfigRepository();
+  const messageRequests = new MessageRequestService();
 
 
   app.post('/internal/config/import', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -496,5 +530,16 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
        FROM edge_outbox GROUP BY status,event_type ORDER BY status,event_type`,
     );
     return { ok: true, rows: result.rows };
+  });
+
+  app.post('/internal/messages/whatsapp/send', async (request: FastifyRequest, reply: FastifyReply) => {
+    requireInternalSecret(request);
+    const parsed = whatsappSendSchema.safeParse(request.body);
+    if (!parsed.success) {
+      reply.code(400);
+      return { ok: false, issues: parsed.error.issues };
+    }
+    const result = await messageRequests.requestWhatsAppSend(parsed.data);
+    return { ok: true, ...result };
   });
 }

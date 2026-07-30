@@ -36,3 +36,6 @@
 - Verification: `npm run lint && npm test` passed with 7 Vitest files and 41 tests after durable outbox dispatcher wiring.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Commit `fcabd0c`: Wired WhatsApp runtime outbox dispatcher and gated runtime worker dispatch on explicit Meta send enablement.
+- Implementation slice: Added migration `008_message_request_idempotency.sql`, internal message request service, and authenticated `/internal/messages/whatsapp/send` route. The service inserts `app.messages`, enqueues `runtime.outbox_commands`, and records audit in one transaction without calling Meta.
+- Verification: `npm run lint && npm test` passed with 7 Vitest files and 43 tests after message request API/service implementation.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.

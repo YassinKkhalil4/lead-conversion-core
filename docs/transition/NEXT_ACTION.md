@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-05 WhatsApp messaging platform
 
-Exact next implementation task: Continue MP-05 by adding an internal message request API/service that validates WhatsApp send requests, enforces deterministic idempotency keys, inserts `app.messages`, and enqueues `runtime.outbox_commands` transactionally without calling Meta inside the database transaction.
+Exact next implementation task: Continue MP-05 by adding WhatsApp template inventory validation and 24-hour conversation-window policy before outbound message requests are accepted.
 
 Files expected to change:
 
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: fcabd0c
+Last verified implementation commit: fcabd0c plus uncommitted MP-05 message request API/service slice verified by the full npm/lint/test/build/audit/smoke gate
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no

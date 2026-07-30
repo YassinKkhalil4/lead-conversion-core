@@ -223,3 +223,15 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 41 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local unit and contract-fixture tested. No live provider call was made.
+
+## 2026-07-30 MP-05 Internal Message Request API
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 7 test files and 43 tests, including PostgreSQL-backed coverage that an internal WhatsApp send request creates one idempotent `app.messages` row, one `runtime.outbox_commands` row, and one audit event across duplicate requests. Fastify route injection verified `/internal/messages/whatsapp/send` with `x-internal-secret` persists and enqueues without calling Meta.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 43 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL and API integration tested. No live provider call was made.
