@@ -69,3 +69,4 @@
 - Implementation slice: Added invalid configuration fixture coverage for no active questions and deterministic config diff tests.
 - Verification: `npm run lint && npm test` passed with 8 Vitest files and 53 tests after invalid configuration fixture tests were added.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Commit `9e9e510`: Added invalid configuration validation fixtures and deterministic diff tests.
