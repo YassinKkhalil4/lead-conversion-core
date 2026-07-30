@@ -30,6 +30,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     EDGE_INTERNAL_SECRET: 'test_internal_secret_123456',
     META_APP_SECRET: 'test_meta_app_secret_123456',
     META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token_123456',
+    META_APPROVED_TEMPLATE_NAMES: 'lead_welcome',
     N8N_COMPAT_ROUTES_ENABLED: 'true',
   };
 
@@ -53,6 +54,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     process.env.EDGE_INTERNAL_SECRET = env.EDGE_INTERNAL_SECRET;
     process.env.META_APP_SECRET = env.META_APP_SECRET;
     process.env.META_WEBHOOK_VERIFY_TOKEN = env.META_WEBHOOK_VERIFY_TOKEN;
+    process.env.META_APPROVED_TEMPLATE_NAMES = env.META_APPROVED_TEMPLATE_NAMES;
     process.env.N8N_COMPAT_ROUTES_ENABLED = env.N8N_COMPAT_ROUTES_ENABLED;
     db = await import('../src/db/pool.js');
     runtime = await import('../src/infrastructure/runtime.js');
@@ -519,6 +521,116 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect(body.outboxCommandId).toBeTruthy();
       expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('accepts lead intake idempotently and enqueues first contact without provider calls', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-intake', 'Intake Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    await db.pool.query(
+      "INSERT INTO app.projects (client_id, legacy_airtable_id, project_name, active) VALUES ($1, 'recPROJECTINTAKE', 'North Coast Homes', true)",
+      [clientId],
+    );
+    const app = await appModule.buildApp();
+    try {
+      const payload = {
+        clientKey: 'client-intake',
+        provider: 'facebook',
+        providerExternalId: 'fb-lead-001',
+        source: 'facebook_lead_ads',
+        contact: {
+          name: 'Intake Lead',
+          phoneRaw: '01099999991',
+          email: 'lead@example.test',
+          consentStatus: 'lead_form',
+        },
+        project: { legacyAirtableId: 'recPROJECTINTAKE' },
+        rawPayload: { form_id: 'form-sanitized', campaign_id: 'campaign-sanitized' },
+        firstContact: {
+          phoneNumberId: 'phone-number-id-test',
+          requestKey: 'fb-lead-001:first-contact',
+          payload: { kind: 'template', templateName: 'lead_welcome', languageCode: 'en_US', components: [] },
+        },
+      };
+      const first = await app.inject({
+        method: 'POST',
+        url: '/internal/leads/intake',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload,
+      });
+      expect(first.statusCode).toBe(200);
+      const firstBody = first.json() as { ok: boolean; leadId: string; contactId: string; duplicate: boolean; firstContact: { outboxCommandId: string; messageId: string } };
+      expect(firstBody.ok).toBe(true);
+      expect(firstBody.duplicate).toBe(false);
+      expect(firstBody.firstContact.outboxCommandId).toBeTruthy();
+
+      const duplicate = await app.inject({
+        method: 'POST',
+        url: '/internal/leads/intake',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload,
+      });
+      expect(duplicate.statusCode).toBe(200);
+      const duplicateBody = duplicate.json() as { leadId: string; contactId: string; duplicate: boolean; firstContact: { outboxCommandId: string; messageId: string } };
+      expect(duplicateBody).toMatchObject({
+        leadId: firstBody.leadId,
+        contactId: firstBody.contactId,
+        duplicate: true,
+      });
+      expect(duplicateBody.firstContact.messageId).toBe(firstBody.firstContact.messageId);
+      expect(duplicateBody.firstContact.outboxCommandId).toBe(firstBody.firstContact.outboxCommandId);
+      expect((await db.pool.query('SELECT count(*) FROM app.contacts')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.lead_intake_events')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.intake_received'")).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('suppresses lead intake first contact for opted-out contacts', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-intake-optout', 'Intake Opt Out Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    await db.pool.query(
+      `INSERT INTO app.contacts (client_id, name, phone_raw, phone_e164, opted_out, opt_out_reason)
+       VALUES ($1, 'Opted Out Lead', '01099999992', '+201099999992', true, 'prior_stop')`,
+      [clientId],
+    );
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/internal/leads/intake',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientId,
+          provider: 'website',
+          providerExternalId: 'web-lead-002',
+          source: 'website_form',
+          contact: { name: 'Opted Out Lead', phoneRaw: '01099999992' },
+          rawPayload: { form: 'website-sanitized' },
+          firstContact: {
+            requestKey: 'web-lead-002:first-contact',
+            payload: { kind: 'template', templateName: 'lead_welcome', languageCode: 'en_US', components: [] },
+          },
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { firstContact: { suppressed: boolean; suppressionReason: string } };
+      expect(body.firstContact).toMatchObject({ suppressed: true, suppressionReason: 'contact_opted_out' });
+      expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
     } finally {
       await app.close();
     }

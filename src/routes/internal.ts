@@ -4,6 +4,7 @@ import { pool } from '../db/pool.js';
 import { compileConfig } from '../domain/compiler.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConfigSyncService } from '../services/config-sync-service.js';
+import { LeadIntakeService, leadIntakeSchema } from '../services/lead-intake-service.js';
 import { MessageRequestService } from '../services/message-request-service.js';
 import { requireInternalSecret } from './auth.js';
 
@@ -138,6 +139,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   const syncService = new ConfigSyncService();
   const configs = new ConfigRepository();
   const messageRequests = new MessageRequestService();
+  const leadIntake = new LeadIntakeService();
 
 
   app.post('/internal/config/import', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -548,6 +550,17 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const result = await messageRequests.requestWhatsAppSend(parsed.data);
+    return { ok: true, ...result };
+  });
+
+  app.post('/internal/leads/intake', async (request: FastifyRequest, reply: FastifyReply) => {
+    requireInternalSecret(request);
+    const parsed = leadIntakeSchema.safeParse(request.body);
+    if (!parsed.success) {
+      reply.code(400);
+      return { ok: false, issues: parsed.error.issues };
+    }
+    const result = await leadIntake.intake(parsed.data);
     return { ok: true, ...result };
   });
 }
