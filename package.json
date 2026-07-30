@@ -17,6 +17,7 @@
     "seed": "tsx scripts/seed.ts",
     "seed:prod": "node dist/scripts/seed.js",
     "import:airtable": "tsx scripts/import-airtable.ts",
+    "reconcile:airtable": "tsx scripts/reconcile-airtable.ts",
     "sync-config": "tsx scripts/sync-config.ts",
     "test": "vitest run",
     "test:watch": "vitest",

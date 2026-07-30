@@ -127,3 +127,11 @@ Command: reran the same apply command against the same database.
 Result: domain entity counts remained 1 client, 1 project, 1 salesperson, 1 contact, 1 lead, and 5 entity-map rows.
 
 Verification level: local PostgreSQL integration tested for initial mappings and idempotent domain upsert.
+
+## 2026-07-30 MP-03 Reconciliation
+
+Command: disposable local PostgreSQL cluster; `npm run migrate`; `npm run import:airtable -- --input=tests/fixtures/airtable-export --apply`; `npm run reconcile:airtable -- --record-results`
+
+Result: reconciliation passed and recorded 7 checks in `migration.reconciliation_results`: rejected records, mapped clients, mapped projects, mapped salespeople, mapped leads, contact phone uniqueness, and lead-contact links.
+
+Verification level: local PostgreSQL integration tested.
