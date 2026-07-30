@@ -15,6 +15,7 @@ import {
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
 import { LeadScoringService } from './lead-scoring-service.js';
+import { LeadRoutingService } from './lead-routing-service.js';
 
 const inboundMessageSchema = z.object({
   webhookType: z.literal('whatsapp.message_received'),
@@ -96,6 +97,7 @@ export class EdgeInboundMessageProcessor {
     private readonly outbox = new RuntimeOutboxRepository(),
     private readonly audit = new AuditRepository(),
     private readonly scorer = new LeadScoringService(),
+    private readonly router = new LeadRoutingService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -533,13 +535,21 @@ export class EdgeInboundMessageProcessor {
          WHERE lead_id=$1`,
         [leadId],
       );
-      await this.scorer.scoreLead(client, {
+      const score = await this.scorer.scoreLead(client, {
         leadId,
         answers: decision.nextState.answers,
         actorType: 'worker',
         actorId: 'edge-inbound-message-processor',
         correlationId: scoringContext.correlationId,
         causationId: scoringContext.causationId,
+      });
+      await this.router.routeLead(client, {
+        leadId,
+        scoreRunId: score.scoreRunId,
+        actorType: 'worker',
+        actorId: 'edge-inbound-message-processor',
+        correlationId: scoringContext.correlationId,
+        causationId: score.scoreRunId,
       });
     }
   }

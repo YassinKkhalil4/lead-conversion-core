@@ -41,6 +41,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
   let metaInbox: typeof import('../src/services/meta-inbox-processor.js');
   let leadScoring: typeof import('../src/services/lead-scoring-service.js');
+  let leadRouting: typeof import('../src/services/lead-routing-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -65,6 +66,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
     metaInbox = await import('../src/services/meta-inbox-processor.js');
     leadScoring = await import('../src/services/lead-scoring-service.js');
+    leadRouting = await import('../src/services/lead-routing-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -228,7 +230,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     currentStage?: string;
     currentQuestionKey?: string;
     answers?: Record<string, string>;
-  }): Promise<{ clientId: string; contactId: string; leadId: string; versionKey: string; configurationVersionId: string }> {
+  }): Promise<{ clientId: string; contactId: string; leadId: string; projectId: string; versionKey: string; configurationVersionId: string }> {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     const service = new versionedConfig.VersionedConfigService();
     const clientRecordId = `recMP08${input.suffix}`;
@@ -310,6 +312,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       clientId,
       contactId,
       leadId,
+      projectId,
       versionKey: published.versionKey,
       configurationVersionId: published.configurationVersionId,
     };
@@ -1435,6 +1438,160 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       'q_site_visit',
     ]);
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.scored' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('routes scored leads by client/project eligibility with stable tie-breaks and idempotent notification enqueue', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'ROUTE',
+      phone: '+201099999986',
+      phoneNumberId: 'phone-number-id-mp09-route',
+    });
+    const alice = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank, unit_specialties, locations, languages)
+       VALUES ($1, 'recROUTEALICE', 'Alice Route', '+201011111111', true, 10, ARRAY['Apartment'], ARRAY['New Cairo'], ARRAY['English'])
+       RETURNING salesperson_id`,
+      [seeded.clientId],
+    );
+    const bob = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank, unit_specialties, locations, languages)
+       VALUES ($1, 'recROUTEBOB', 'Bob Route', '+201022222222', true, 10, ARRAY['Apartment'], ARRAY['New Cairo'], ARRAY['English'])
+       RETURNING salesperson_id`,
+      [seeded.clientId],
+    );
+    const otherClient = await db.pool.query<{ client_id: string }>(
+      `INSERT INTO app.clients (client_key, legacy_airtable_id, company_name)
+       VALUES ('client-mp09-cross', 'recMP09CROSSCLIENT', 'Cross Client')
+       RETURNING client_id`,
+    );
+    const crossClientSalesperson = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank)
+       VALUES ($1, 'recROUTECROSS', 'Aaron Cross Client', '+201033333333', true, 1)
+       RETURNING salesperson_id`,
+      [otherClient.rows[0]?.client_id],
+    );
+    await db.pool.query(
+      `INSERT INTO app.salesperson_projects (salesperson_id, project_id)
+       VALUES ($1,$3), ($2,$3), ($4,$3)`,
+      [
+        alice.rows[0]?.salesperson_id,
+        bob.rows[0]?.salesperson_id,
+        seeded.projectId,
+        crossClientSalesperson.rows[0]?.salesperson_id,
+      ],
+    );
+    const session = await db.pool.query<{ qualification_session_id: string }>(
+      `INSERT INTO app.qualification_sessions
+        (lead_id, status, configuration_version_id, completed_at)
+       VALUES ($1, 'completed', $2, now())
+       RETURNING qualification_session_id`,
+      [seeded.leadId, seeded.configurationVersionId],
+    );
+    await db.pool.query(
+      `INSERT INTO app.qualification_answers
+        (qualification_session_id, question_key, normalized_value, raw_value, parser_source)
+       VALUES
+        ($1, 'q_location', 'New Cairo', 'New Cairo', 'free_text'),
+        ($1, 'q_unit_type', 'Apartment', 'Apartment', 'option_id'),
+        ($1, 'q_budget_min', '3000000', '3M - 5M', 'option_id'),
+        ($1, 'q_budget_max', '5000000', '3M - 5M', 'option_id'),
+        ($1, 'q_payment_plan', 'Installments', 'Installments', 'option_id'),
+        ($1, 'q_down_payment', '500000', '500000', 'free_text'),
+        ($1, 'q_timeline', '3 months', '3 months', 'option_id'),
+        ($1, 'q_purpose', 'Primary Residence', 'Primary Residence', 'option_id'),
+        ($1, 'q_site_visit', 'Yes', 'Yes', 'option_id')`,
+      [session.rows[0]?.qualification_session_id],
+    );
+    await db.pool.query(
+      `UPDATE app.leads
+       SET status='qualified', current_stage='qualified'
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    );
+
+    const scorer = new leadScoring.LeadScoringService();
+    const score = await scorer.scoreLead(db.pool, { leadId: seeded.leadId, correlationId: 'route-test' });
+    const router = new leadRouting.LeadRoutingService();
+    const first = await router.routeLead(db.pool, {
+      leadId: seeded.leadId,
+      scoreRunId: score.scoreRunId,
+      correlationId: 'route-test',
+    });
+    const second = await router.routeLead(db.pool, {
+      leadId: seeded.leadId,
+      scoreRunId: score.scoreRunId,
+      correlationId: 'route-test',
+    });
+
+    expect(first.outcome).toBe('assigned');
+    expect(first.selectedSalespersonId).toBe(alice.rows[0]?.salesperson_id);
+    expect(second.routingRunId).toBe(first.routingRunId);
+    expect(second.inserted).toBe(false);
+    expect((await db.pool.query('SELECT count(*) FROM app.lead_assignments WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='salesperson.lead_assignment_notification'")).rows[0]?.count).toBe('1');
+    const candidates = await db.pool.query<{ ids: string[] }>(
+      `SELECT ARRAY(
+         SELECT candidate->>'salespersonId'
+         FROM app.routing_runs rr,
+         LATERAL jsonb_array_elements(rr.candidates_json) AS candidate
+         WHERE rr.lead_id=$1
+         ORDER BY (candidate->>'rank')::integer
+       ) AS ids`,
+      [seeded.leadId],
+    );
+    expect(candidates.rows[0]?.ids).toEqual([alice.rows[0]?.salesperson_id, bob.rows[0]?.salesperson_id]);
+    expect(candidates.rows[0]?.ids).not.toContain(crossClientSalesperson.rows[0]?.salesperson_id);
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.routed' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('records no-eligible routing decisions and alerts the operator idempotently', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'ROUTENO',
+      phone: '+201099999985',
+      phoneNumberId: 'phone-number-id-mp09-route-no',
+    });
+    await db.pool.query("UPDATE app.clients SET manager_phone_e164='+201099900000' WHERE client_id=$1", [seeded.clientId]);
+    await db.pool.query(
+      `UPDATE app.leads
+       SET status='qualified', current_stage='qualified'
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    );
+    const scorer = new leadScoring.LeadScoringService();
+    const score = await scorer.scoreLead(db.pool, {
+      leadId: seeded.leadId,
+      answers: {
+        q_location: 'New Cairo',
+        q_unit_type: 'Apartment',
+        q_budget_min: '3000000',
+        q_budget_max: '5000000',
+        q_payment_plan: 'Installments',
+        q_down_payment: '500000',
+        q_timeline: '3 months',
+        q_purpose: 'Primary Residence',
+        q_site_visit: 'Yes',
+      },
+      correlationId: 'route-no-test',
+    });
+    const router = new leadRouting.LeadRoutingService();
+    const first = await router.routeLead(db.pool, {
+      leadId: seeded.leadId,
+      scoreRunId: score.scoreRunId,
+      correlationId: 'route-no-test',
+    });
+    const second = await router.routeLead(db.pool, {
+      leadId: seeded.leadId,
+      scoreRunId: score.scoreRunId,
+      correlationId: 'route-no-test',
+    });
+
+    expect(first.outcome).toBe('no_eligible_salesperson');
+    expect(second.routingRunId).toBe(first.routingRunId);
+    expect((await db.pool.query('SELECT count(*) FROM app.lead_assignments WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('0');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.routing_attention_required'")).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.routing_no_eligible' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
   });
 
   it('completes Arabic qualification from the final site-visit answer', async () => {
