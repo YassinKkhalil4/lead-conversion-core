@@ -214,6 +214,56 @@ describe('MessagingOutboxDispatcher', () => {
     }));
   });
 
+  it('maps daily reports to real WhatsApp sends', async () => {
+    const provider: MessageProvider = {
+      send: vi.fn(async () => ({
+        outcome: 'accepted' as const,
+        providerMessageId: 'wamid.report.accepted',
+        providerResponse: {},
+      })),
+    };
+    const dispatcher = new MessagingOutboxDispatcher({ meta: provider });
+
+    await expect(dispatcher.dispatch(command({
+      commandType: 'operator.daily_report',
+      destination: '+201099900001',
+      idempotencyKey: 'report.daily:11111111-1111-4111-8111-111111111111',
+      payload: {
+        dailyReportId: '11111111-1111-4111-8111-111111111111',
+        clientId: '22222222-2222-4222-8222-222222222222',
+        companyName: 'Report Client',
+        reportDate: '2026-07-30',
+        timezone: 'Africa/Cairo',
+        summary: {
+          leadIntakeCount: 2,
+          newLeadCount: 2,
+          qualifiedLeadCount: 1,
+          assignedLeadCount: 1,
+          acknowledgedAssignmentCount: 1,
+          unacknowledgedActiveAssignmentCount: 0,
+          slaEscalationCount: 0,
+          followupSentCount: 3,
+          followupCancelledCount: 1,
+          outboundMessageCount: 5,
+          deliveredMessageCount: 4,
+          failedMessageCount: 1,
+          deadLetterCount: 0,
+        },
+      },
+    }))).resolves.toEqual({
+      outcome: 'delivered',
+      providerMessageId: 'wamid.report.accepted',
+    });
+    expect(provider.send).toHaveBeenCalledWith(expect.objectContaining({
+      destination: expect.objectContaining({ toE164: '+201099900001' }),
+      payload: expect.objectContaining({
+        kind: 'text',
+        text: expect.stringContaining('Daily report for Report Client'),
+      }),
+      idempotencyKey: 'report.daily:11111111-1111-4111-8111-111111111111',
+    }));
+  });
+
   it('rejects malformed notification payloads without calling the provider', async () => {
     const provider: MessageProvider = {
       send: vi.fn(async () => ({

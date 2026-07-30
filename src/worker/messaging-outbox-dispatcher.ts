@@ -84,6 +84,32 @@ const slaEscalationSchema = z.object({
   phoneNumberId: z.string().default(''),
 });
 
+const dailyReportSummarySchema = z.object({
+  leadIntakeCount: z.number().int().nonnegative(),
+  newLeadCount: z.number().int().nonnegative(),
+  qualifiedLeadCount: z.number().int().nonnegative(),
+  assignedLeadCount: z.number().int().nonnegative(),
+  acknowledgedAssignmentCount: z.number().int().nonnegative(),
+  unacknowledgedActiveAssignmentCount: z.number().int().nonnegative(),
+  slaEscalationCount: z.number().int().nonnegative(),
+  followupSentCount: z.number().int().nonnegative(),
+  followupCancelledCount: z.number().int().nonnegative(),
+  outboundMessageCount: z.number().int().nonnegative(),
+  deliveredMessageCount: z.number().int().nonnegative(),
+  failedMessageCount: z.number().int().nonnegative(),
+  deadLetterCount: z.number().int().nonnegative(),
+});
+
+const dailyReportSchema = z.object({
+  dailyReportId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  companyName: z.string().default(''),
+  reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  timezone: z.string().min(1),
+  summary: dailyReportSummarySchema,
+  phoneNumberId: z.string().default(''),
+});
+
 function textLine(label: string, value: string): string {
   return value ? `${label}: ${value}` : '';
 }
@@ -142,6 +168,27 @@ function notificationPayload(command: ClaimedOutboxCommand): { phoneNumberId: st
     ].filter(Boolean);
     return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
   }
+  if (command.commandType === 'operator.daily_report') {
+    const parsed = dailyReportSchema.safeParse(command.payload);
+    if (!parsed.success) return null;
+    const summary = parsed.data.summary;
+    const lines = [
+      `Daily report for ${parsed.data.companyName || parsed.data.clientId}`,
+      `Date: ${parsed.data.reportDate} (${parsed.data.timezone})`,
+      `Lead intake: ${summary.leadIntakeCount}`,
+      `New leads: ${summary.newLeadCount}`,
+      `Qualified: ${summary.qualifiedLeadCount}`,
+      `Assigned: ${summary.assignedLeadCount}`,
+      `Acknowledged assignments: ${summary.acknowledgedAssignmentCount}`,
+      `Unacknowledged active assignments: ${summary.unacknowledgedActiveAssignmentCount}`,
+      `SLA escalations: ${summary.slaEscalationCount}`,
+      `Follow-ups sent/cancelled: ${summary.followupSentCount}/${summary.followupCancelledCount}`,
+      `Outbound delivered/failed: ${summary.deliveredMessageCount}/${summary.failedMessageCount}`,
+      `Dead letters: ${summary.deadLetterCount}`,
+      `Report ID: ${parsed.data.dailyReportId}`,
+    ];
+    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
+  }
   return null;
 }
 
@@ -155,6 +202,7 @@ export class MessagingOutboxDispatcher {
       'operator.routing_attention_required',
       'salesperson.sla_assignment_reminder',
       'operator.sla_escalation',
+      'operator.daily_report',
     ].includes(command.commandType)) {
       return { outcome: 'permanently_failed', error: `unsupported_outbox_command:${command.commandType}` };
     }

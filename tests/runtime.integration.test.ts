@@ -45,6 +45,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let followupScheduler: typeof import('../src/services/followup-scheduler-service.js');
   let followupJob: typeof import('../src/services/followup-job-processor.js');
   let slaService: typeof import('../src/services/sla-service.js');
+  let reportingService: typeof import('../src/services/reporting-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -73,6 +74,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     followupScheduler = await import('../src/services/followup-scheduler-service.js');
     followupJob = await import('../src/services/followup-job-processor.js');
     slaService = await import('../src/services/sla-service.js');
+    reportingService = await import('../src/services/reporting-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -437,6 +439,15 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     } finally {
       await app.close();
     }
+  }
+
+  function todayInCairo(): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Cairo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
   }
 
   it('deduplicates inbound events before business processing creates side effects', async () => {
@@ -1983,6 +1994,161 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       cancelled_reason: 'stop_follow_up_true',
     });
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands WHERE aggregate_key=$1', [seeded.leadId])).rows[0]?.count).toBe('0');
+  });
+
+  it('schedules daily report jobs idempotently with explicit timezone', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'REPORTSCHED',
+      phone: '+201099999973',
+      phoneNumberId: 'phone-number-id-mp10-report-schedule',
+    });
+    await db.pool.query("UPDATE app.clients SET timezone='Africa/Cairo', manager_phone_e164='+201099900004' WHERE client_id=$1", [seeded.clientId]);
+    const service = new reportingService.ReportingService();
+    const reportDate = todayInCairo();
+    const first = await service.scheduleDailyReport(db.pool, {
+      clientId: seeded.clientId,
+      reportDate,
+      correlationId: 'report-schedule-test',
+    });
+    const second = await service.scheduleDailyReport(db.pool, {
+      clientId: seeded.clientId,
+      reportDate,
+      correlationId: 'report-schedule-test',
+    });
+
+    expect(second.dailyReportId).toBe(first.dailyReportId);
+    expect(second.scheduledJobId).toBe(first.scheduledJobId);
+    expect((await db.pool.query('SELECT count(*) FROM app.daily_reports WHERE client_id=$1', [seeded.clientId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT timezone, job_type, aggregate_key FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [first.scheduledJobId])).rows[0]).toEqual({
+      timezone: 'Africa/Cairo',
+      job_type: 'report.daily',
+      aggregate_key: seeded.clientId,
+    });
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='report.daily_scheduled' AND aggregate_id=$1", [seeded.clientId])).rows[0]?.count).toBe('1');
+  });
+
+  it('does not execute cancelled daily report jobs', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'REPORTCANCEL',
+      phone: '+201099999972',
+      phoneNumberId: 'phone-number-id-mp10-report-cancel',
+    });
+    await db.pool.query("UPDATE app.clients SET timezone='Africa/Cairo', manager_phone_e164='+201099900005' WHERE client_id=$1", [seeded.clientId]);
+    const service = new reportingService.ReportingService();
+    const scheduled = await service.scheduleDailyReport(db.pool, {
+      clientId: seeded.clientId,
+      reportDate: todayInCairo(),
+      dueAt: new Date().toISOString(),
+      correlationId: 'report-cancel-test',
+    });
+    await service.cancelDailyReport(db.pool, {
+      dailyReportId: scheduled.dailyReportId,
+      reason: 'operator_superseded',
+      correlationId: 'report-cancel-test',
+    });
+    await db.pool.query('UPDATE runtime.scheduled_jobs SET due_at=now()-interval \'1 second\' WHERE scheduled_job_id=$1', [scheduled.scheduledJobId]);
+
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => service.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(0);
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM app.daily_reports WHERE daily_report_id=$1', [scheduled.dailyReportId])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'operator_superseded',
+    });
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+  });
+
+  it('recovers expired daily report leases and generates accurate idempotent summaries', async () => {
+    const assigned = await seedAssignedLead({
+      suffix: 'REPORTEXEC',
+      phone: '+201099999971',
+      salespersonPhone: '+201088888883',
+    });
+    await db.pool.query("UPDATE app.clients SET timezone='Africa/Cairo', manager_phone_e164='+201099900006' WHERE client_id=$1", [assigned.clientId]);
+    await db.pool.query(
+      `INSERT INTO app.lead_intake_events
+        (lead_id, client_id, provider, provider_external_id, idempotency_key, payload_json)
+       VALUES ($1, $2, 'website', 'report-provider-id', 'report-intake-id', $3::jsonb)`,
+      [assigned.leadId, assigned.clientId, JSON.stringify({ clientId: assigned.clientId })],
+    );
+    await db.pool.query(
+      `INSERT INTO app.qualification_sessions (lead_id, status, completed_at)
+       VALUES ($1, 'completed', now())`,
+      [assigned.leadId],
+    );
+    await db.pool.query(
+      `INSERT INTO app.sla_jobs
+        (lead_id, lead_assignment_id, client_id, salesperson_id, semantic_key, sla_type, status, due_at, timezone)
+       VALUES ($1, $2, $3, $4, $5, 'assignment_ack_escalation', 'sent', now(), 'Africa/Cairo')`,
+      [assigned.leadId, assigned.assignmentId, assigned.clientId, assigned.salespersonId, `sla:report:${assigned.leadId}`],
+    );
+    await db.pool.query(
+      `INSERT INTO app.followups (lead_id, status, due_at, semantic_key, timezone, sequence_key, step_order)
+       VALUES
+        ($1, 'sent', now(), $2, 'Africa/Cairo', 'report', 1),
+        ($1, 'cancelled', now(), $3, 'Africa/Cairo', 'report', 2)`,
+      [assigned.leadId, `followup:report:${assigned.leadId}:sent`, `followup:report:${assigned.leadId}:cancelled`],
+    );
+    await db.pool.query(
+      `INSERT INTO app.messages
+        (lead_id, client_id, direction, channel, to_address, message_text, message_type, state)
+       VALUES ($1, $2, 'outbound', 'whatsapp', '+201099999971', 'Report message', 'text', 'delivered')`,
+      [assigned.leadId, assigned.clientId],
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
+       VALUES ('runtime.outbox_commands', $1, 'report test dead letter', $2::jsonb)`,
+      [assigned.leadId, JSON.stringify({ clientId: assigned.clientId })],
+    );
+
+    const service = new reportingService.ReportingService();
+    const scheduled = await service.scheduleDailyReport(db.pool, {
+      clientId: assigned.clientId,
+      reportDate: todayInCairo(),
+      dueAt: new Date().toISOString(),
+      correlationId: 'report-exec-test',
+    });
+    await db.pool.query(
+      `UPDATE runtime.scheduled_jobs
+       SET status='processing',
+           locked_by='abandoned-worker',
+           lock_expires_at=now()-interval '1 second',
+           due_at=now()-interval '1 second'
+       WHERE scheduled_job_id=$1`,
+      [scheduled.scheduledJobId],
+    );
+
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => service.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+    expect(await worker.tick()).toBe(0);
+
+    const report = await db.pool.query<{ status: string; summary_json: Record<string, unknown> }>(
+      'SELECT status, summary_json FROM app.daily_reports WHERE daily_report_id=$1',
+      [scheduled.dailyReportId],
+    );
+    expect(report.rows[0]?.status).toBe('sent');
+    expect(report.rows[0]?.summary_json).toMatchObject({
+      leadIntakeCount: 1,
+      newLeadCount: 1,
+      qualifiedLeadCount: 1,
+      assignedLeadCount: 1,
+      acknowledgedAssignmentCount: 0,
+      unacknowledgedActiveAssignmentCount: 1,
+      slaEscalationCount: 1,
+      followupSentCount: 1,
+      followupCancelledCount: 1,
+      outboundMessageCount: 1,
+      deliveredMessageCount: 1,
+      failedMessageCount: 0,
+      deadLetterCount: 1,
+    });
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.daily_report' AND aggregate_key=$1", [assigned.clientId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='report.daily_sent' AND aggregate_id=$1", [assigned.clientId])).rows[0]?.count).toBe('1');
   });
 
   it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {

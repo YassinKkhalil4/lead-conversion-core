@@ -5,6 +5,7 @@ import type { ClaimedJob } from './infrastructure/runtime.js';
 import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adapter.js';
 import { MetaInboxProcessor } from './services/meta-inbox-processor.js';
 import { FollowupJobProcessor } from './services/followup-job-processor.js';
+import { ReportingService } from './services/reporting-service.js';
 import { SlaService } from './services/sla-service.js';
 import { MessagingOutboxDispatcher } from './worker/messaging-outbox-dispatcher.js';
 import { OutboxWorker } from './worker/outbox-worker.js';
@@ -17,9 +18,11 @@ const messagingDispatcher = env.DIRECT_META_SEND_ENABLED
 const metaInboxProcessor = env.META_STATUS_PROCESSOR_ENABLED ? new MetaInboxProcessor() : undefined;
 const followupJobProcessor = new FollowupJobProcessor();
 const slaService = new SlaService();
+const reportingService = new ReportingService();
 const processRuntimeJob = (job: ClaimedJob) => {
   if (job.jobType === 'sla.notify') return slaService.process(job);
   if (job.jobType === 'followup.send') return followupJobProcessor.process(job);
+  if (job.jobType === 'report.daily') return reportingService.process(job);
   return Promise.resolve({ outcome: 'retryable' as const, error: `unsupported_scheduled_job:${job.jobType}` });
 };
 const runtimeHandlers = messagingDispatcher
