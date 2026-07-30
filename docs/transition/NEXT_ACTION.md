@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-10 Follow-ups, SLA, reporting
 
-Exact next implementation task: Continue MP-10 by adding SLA reminder and escalation scheduling. Persist semantic SLA jobs for unacknowledged assignments and stale qualified leads, cancel them on acknowledgement/close/takeover/opt-out, execute due SLA jobs into durable operator/salesperson outbox commands without provider calls inside transactions, and add PostgreSQL integration tests for duplicate prevention, cancellation, expired leases, and escalation command idempotency.
+Exact next implementation task: Continue MP-10 by adding durable daily reporting. Persist semantic report jobs with explicit client timezone, generate SQL-backed daily summaries for lead intake, qualification, assignment acknowledgement, SLA breaches, follow-ups, message delivery, and dead letters, enqueue report outbox commands without provider calls inside transactions, and add PostgreSQL integration tests for duplicate schedules, cancelled/superseded reports, expired leases, report row-count accuracy, and outbox idempotency.
 
 Files expected to change:
 
@@ -13,12 +13,12 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `migrations/00*_*.sql`
-- `src/domain/**`
-- `src/services/**`
-- `src/routes/**`
-- `scripts/**`
-- `tests/**/*`
+- `migrations/019_reporting_jobs.sql`
+- `src/services/reporting-service.ts`
+- `src/worker-runner.ts`
+- `src/worker/messaging-outbox-dispatcher.ts`
+- `tests/runtime.integration.test.ts`
+- `tests/messaging-outbox-dispatcher.test.ts`
 
 Required verification:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: daa9945
+Last verified implementation commit: 0b8dd82
 
 Git worktree clean when recorded: yes

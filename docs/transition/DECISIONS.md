@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-020: SLA Enforcement Uses Semantic Runtime Jobs
+
+Decision: SLA reminders and escalations persist `app.sla_jobs` rows linked to semantic `runtime.scheduled_jobs` records, and due SLA jobs enqueue durable outbox commands only after revalidating current lead/assignment state.
+
+Reason: SLA work must be deduplicated, cancellable, auditable, and recoverable by PostgreSQL leases. Revalidation prevents stale reminders after acknowledgement, opt-out, close, takeover, or reassignment, while outbox commands preserve the rule that external effects are requested transactionally and dispatched later by workers.
+
+Date: 2026-07-30
+
 ## DEC-019: Follow-Ups Use Semantic Runtime Jobs
 
 Decision: Follow-up scheduling persists both `app.followups` and `runtime.scheduled_jobs` using the same semantic key, including lead, sequence, stage, and step order.

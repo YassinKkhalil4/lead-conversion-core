@@ -584,6 +584,30 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or report-recipient provider call was made.
 
+## 2026-07-30 MP-10 SLA Scheduling And Execution
+
+Command: `npm run lint`
+
+Result: failed on first run. `SlaService` passed optional `correlationId`, `causationId`, and `actorId` values as explicit `undefined` under exact optional property types. Resolution: optional fields are now included only when present.
+
+Command: `npm run lint`
+
+Result: passed after the optional-field fix.
+
+Command: `npx vitest run tests/messaging-outbox-dispatcher.test.ts tests/runtime.integration.test.ts`
+
+Result: failed on first focused run. Due SLA jobs were claimed but the `app.sla_jobs` rows stayed scheduled because the worker retried an SQL error: the SLA processing query used `USING (client_id)` after the left side already exposed `client_id` from multiple tables. Resolution: changed the SLA processing query to explicit joins.
+
+Command: `npx vitest run tests/messaging-outbox-dispatcher.test.ts tests/runtime.integration.test.ts`
+
+Result: passed after the explicit-join fix. Focused tests ran 55 tests, including SLA idempotent assignment scheduling, acknowledgement cancellation, due reminder/escalation execution, expired stale-qualified lease recovery, stale SLA cancellation at execution time, and dispatcher mapping for SLA notification command types.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 88 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API and dispatcher contract integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or report-recipient provider call was made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`
