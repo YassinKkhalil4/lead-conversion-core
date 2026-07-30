@@ -30,3 +30,4 @@
 - Verification: `npm run lint && npm test` passed with 6 Vitest files and 37 tests after the MP-05 Meta adapter contract fixtures were added.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Deferred external verification: live Meta send/status verification remains pending rotated credentials, approved templates, and staging webhook access.
+- Commit `b0fbd16`: Added provider-neutral messaging contract, disabled Meta WhatsApp adapter, sanitized provider fixtures, and adapter classification tests.
