@@ -87,3 +87,8 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 58 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live website/Facebook lead intake remains pending owner source configuration.
 - Commit `c2dadf2`: Added the internal lead intake command.
+- Implementation slice: Added `/webhooks/leads/website` and `/webhooks/leads/facebook` source-specific ingress adapters protected by `EDGE_SHARED_SECRET`, durable raw receipt into `runtime.inbox_events`, invalid-payload ignore handling, sanitized website/Facebook contract mapping, and processing through `LeadIntakeService` without live source-provider API calls.
+- Verification: `npm run lint` and `npx vitest run tests/runtime.integration.test.ts` passed; runtime integration ran 26 PostgreSQL/API tests including processed website/Facebook inbox receipts and ignored invalid website receipt.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 61 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live website/Facebook webhook verification remains pending owner source configuration and callback setup.
+- Commit `0923e79`: Added durable website/Facebook lead source ingress adapters.

@@ -84,7 +84,7 @@ Dependencies: real website/Facebook configuration for live verification.
 
 Verification gates: idempotent intake, opted-out suppression, projection failure isolation.
 
-Remaining: source-specific website/Facebook intake adapters, Airtable projection-only hook, projection failure isolation tests, and live intake verification pending owner source configuration.
+Remaining: Airtable projection-only hook, projection failure isolation tests, and live intake verification pending owner source configuration.
 
 ## MP-08 Conversation And Qualification
 

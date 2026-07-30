@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-07 Lead intake and CRM
 
-Exact next implementation task: Continue MP-07 by adding source-specific website/Facebook intake adapters backed by durable inbox receipt and sanitized contract fixtures, then feed accepted leads into the internal `LeadIntakeService` without making live source-provider calls.
+Exact next implementation task: Continue MP-07 by adding the Airtable read-only visibility projection hook for newly accepted leads, keeping projection side effects in the durable outbox and proving projection failures do not roll back authoritative PostgreSQL intake state.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: c2dadf2
+Last verified implementation commit: 0923e79
 
 Git worktree clean when recorded: yes
