@@ -56,3 +56,8 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Deferred external verification: MP-05 live staging remains blocked on owner Meta credentials, approved templates, callback URL, webhook subscription, and test recipient.
 - Commit `f516fc6`: Added n8n WhatsApp compatibility send and status routes behind an explicit compatibility flag.
+- Implementation slice: Began MP-06 with migration `010_versioned_configuration.sql`, immutable published config guard, `configuration.active_versions`, versioned config validation/diff/publish service, and `npm run config` CLI.
+- Implementation slice: Versioned config publish also maintains `edge_config_snapshots` in the same transaction as a rollback/compatibility path.
+- Verification: `npm run lint && npm test` passed with 7 Vitest files and 50 tests after MP-06 foundation implementation.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Verification: `npm run config -- validate --input=config/seed-real-estate.json` passed with dummy local env values and reported 9 questions and 7 messages.

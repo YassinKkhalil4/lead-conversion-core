@@ -64,7 +64,7 @@ Remaining: live staging verification pending owner action for rotated credential
 
 ## MP-06 Versioned Configuration
 
-Status: not_started
+Status: implementing
 
 Deliverables: import/validate/diff/publish/rollback/active CLI and immutable published config.
 
@@ -72,7 +72,7 @@ Dependencies: complete config source for final parity.
 
 Verification gates: invalid config rejection, parity compile, rollback, conversation pinning.
 
-Remaining: all.
+Remaining: invalid config fixture tests, rollback/active CLI command coverage, conversation pinning to `configuration.versions`, Airtable configuration import parity, and final config-source reconciliation.
 
 ## MP-07 Lead Intake And CRM
 

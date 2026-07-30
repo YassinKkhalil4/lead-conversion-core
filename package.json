@@ -19,6 +19,8 @@
     "import:airtable": "tsx scripts/import-airtable.ts",
     "reconcile:airtable": "tsx scripts/reconcile-airtable.ts",
     "sync-config": "tsx scripts/sync-config.ts",
+    "config": "tsx scripts/config.ts",
+    "config:prod": "node dist/scripts/config.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc -p tsconfig.json --noEmit",

@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-06 Versioned configuration
 
-Exact next implementation task: Begin MP-06 by adding immutable published configuration tables/migrations and a validation/diff/publish CLI that can import the current seed configuration without mutating executable code.
+Exact next implementation task: Continue MP-06 by adding invalid configuration fixtures, rollback/active CLI commands, and repository reads from `configuration.active_versions` while preserving legacy snapshot fallback during transition.
 
 Files expected to change:
 
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: f516fc6
+Last verified implementation commit: f516fc6 plus uncommitted MP-06 versioned configuration foundation verified by the full npm/lint/test/build/audit/smoke gate and config CLI validation
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no

@@ -38,6 +38,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let runtimeWorker: typeof import('../src/worker/runtime-worker.js');
   let messageRequests: typeof import('../src/services/message-request-service.js');
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
+  let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let appModule: typeof import('../src/app.js');
 
   beforeAll(async () => {
@@ -56,6 +57,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     runtimeWorker = await import('../src/worker/runtime-worker.js');
     messageRequests = await import('../src/services/message-request-service.js');
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
+    versionedConfig = await import('../src/configuration/versioned-config-service.js');
     appModule = await import('../src/app.js');
   }, 30_000);
 
@@ -71,6 +73,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         runtime.outbox_commands,
         runtime.scheduled_jobs,
         audit.events,
+        configuration.active_versions,
+        configuration.versions,
         app.message_delivery_events,
         app.messages,
         app.leads,
@@ -773,5 +777,44 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     await expect(db.pool.query("UPDATE audit.events SET actor_id='tamper' WHERE audit_event_id=$1", [auditId])).rejects.toThrow(
       /audit_events_are_append_only/,
     );
+  });
+
+  it('publishes immutable versioned configuration and maintains the legacy active snapshot', async () => {
+    const service = new versionedConfig.VersionedConfigService();
+    const sourcePath = join(process.cwd(), 'config/seed-real-estate.json');
+    const compiled = await service.loadAndCompile(sourcePath, null);
+    expect(service.validate(compiled)).toMatchObject({
+      ok: true,
+      version: compiled.version,
+      questions: 9,
+      messages: 7,
+    });
+    expect(await service.diff(sourcePath, null)).toMatchObject({
+      fromVersion: '',
+      toVersion: compiled.version,
+      questionCountDelta: 9,
+      messageCountDelta: 7,
+    });
+
+    const published = await service.publish({
+      sourcePath,
+      clientRecordId: null,
+      publishedBy: 'test-operator',
+    });
+    const republished = await service.publish({
+      sourcePath,
+      clientRecordId: null,
+      publishedBy: 'test-operator',
+    });
+
+    expect(republished.configurationVersionId).toBe(published.configurationVersionId);
+    expect((await db.pool.query('SELECT count(*) FROM configuration.versions')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT configuration_version_id FROM configuration.active_versions WHERE scope_key='default'")).rows[0]?.configuration_version_id).toBe(
+      published.configurationVersionId,
+    );
+    expect((await db.pool.query('SELECT active FROM edge_config_snapshots WHERE config_version=$1', [published.versionKey])).rows[0]?.active).toBe(true);
+    await expect(
+      db.pool.query("UPDATE configuration.versions SET config_json='{}'::jsonb WHERE configuration_version_id=$1", [published.configurationVersionId]),
+    ).rejects.toThrow(/published_configuration_versions_are_immutable/);
   });
 });

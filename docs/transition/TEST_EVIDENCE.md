@@ -271,3 +271,19 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 49 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested. No live provider call was made; routes remain behind `N8N_COMPAT_ROUTES_ENABLED`.
+
+## 2026-07-30 MP-06 Versioned Configuration Foundation
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 7 test files and 50 tests, including PostgreSQL integration coverage that the seed configuration validates, diffs from no active config, publishes one immutable `configuration.versions` row, updates `configuration.active_versions`, maintains the legacy active `edge_config_snapshots` compatibility row, idempotently republishes the same version, and rejects mutation of a published configuration row.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 50 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Command: `DATABASE_URL=postgresql://127.0.0.1:1/unused EDGE_SHARED_SECRET=test_shared_secret_123456 EDGE_INTERNAL_SECRET=test_internal_secret_123456 npm run config -- validate --input=config/seed-real-estate.json`
+
+Result: passed. CLI validation returned `ok=true`, version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, checksum `2163da54e79c23e0d79fc3ef58451be23a02d2e311fdff4df5d685ae26408466`, 9 questions, and 7 messages.
+
+Verification level: local PostgreSQL integration tested.
