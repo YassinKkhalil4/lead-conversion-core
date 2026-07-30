@@ -1,0 +1,16 @@
+[
+  {
+    "id": "recCLIENT001",
+    "fields": {
+      "Client ID": "client_demo",
+      "Company Name": "Demo Realty",
+      "Active": true,
+      "Manager Name": "Manager One",
+      "Manager Phone": "01000000000",
+      "WhatsApp Provider": "meta",
+      "Calendar ID": "demo-calendar",
+      "Appointment Hours": ["11:00", "14:00", "16:00"],
+      "Appointment Blackout Days": ["Friday"]
+    }
+  }
+]

@@ -21,3 +21,21 @@ Initial import order:
 13. FollowUps
 14. Appointments
 15. Events
+
+## Current Implementation
+
+Implemented locally:
+
+- Additive schemas: `app`, `configuration`, `audit`, `migration`
+- Runtime queue tables: webhook receipts, inbox events, outbox commands, scheduled jobs, dead letters, rollout tables
+- Migration tables: import runs, raw Airtable records, entity map, rejected records, reconciliation results
+- Importer command: `npm run import:airtable -- --input=<dir>` for dry-run
+- Apply command: `npm run import:airtable -- --input=<dir> --apply`
+- Supported file formats: per-table JSON and CSV
+- Initial apply mappings: Clients, Projects, Salespeople, Contacts derived from Leads, Leads
+
+Pending:
+
+- Complete owner export
+- Full mappings for questions/options/conversation messages/qualifications/messages/assignments/follow-ups/appointments/scores/events
+- Count and linked-record reconciliation against real export

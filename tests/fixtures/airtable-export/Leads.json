@@ -1,0 +1,13 @@
+[
+  {
+    "id": "recLEAD001",
+    "fields": {
+      "Lead ID": "lead_demo",
+      "Name": "Ahmed Example",
+      "Phone Raw": "01000000002",
+      "Client": ["recCLIENT001"],
+      "Project Linked": ["recPROJECT001"],
+      "Status": "New"
+    }
+  }
+]

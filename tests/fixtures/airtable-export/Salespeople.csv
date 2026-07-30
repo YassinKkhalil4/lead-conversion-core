@@ -1,0 +1,2 @@
+id,Client,Name,Phone,Email,Active,Unit Specialties,Locations,Languages,Priority Rank
+recSALE001,recCLIENT001,Sara Sales,01000000001,sara@example.invalid,true,Apartment,New Cairo,"Arabic,English",1

@@ -95,3 +95,35 @@ Command: `LEAD_CORE_ENV_FILE=<empty temp file> EDGE_POSTGRES_PASSWORD=<dummy> do
 Result: static Compose validation passed.
 
 Verification level: static config tested; Docker image run and Docker-based dump metadata inspection blocked by local daemon availability.
+
+## 2026-07-30 MP-03 Core Schema
+
+Command: disposable local PostgreSQL cluster; `npm run migrate`
+
+Result: migrations `001` through `006_app_core_schema.sql` applied successfully. New schemas contained 37 tables across `app`, `runtime`, `configuration`, `audit`, and `migration`.
+
+Verification level: local PostgreSQL integration tested.
+
+## 2026-07-30 MP-03 Airtable Importer Dry Run
+
+Command: `npm run import:airtable -- --input=tests/fixtures/airtable-export`
+
+Result: dry-run loaded 4 synthetic records across JSON and CSV files, reported 4 valid records, 0 rejected records, and correctly listed missing tables from the incomplete fixture.
+
+Command: `npm test`
+
+Result: importer dry-run fixture test passed alongside existing engine/migration tests.
+
+Verification level: unit tested and contract-fixture tested locally.
+
+## 2026-07-30 MP-03 Airtable Importer Apply
+
+Command: disposable local PostgreSQL cluster; `npm run migrate`; `npm run import:airtable -- --input=tests/fixtures/airtable-export --apply`
+
+Result: created 1 import run, 4 raw records, 1 client, 1 project, 1 salesperson, 1 contact, 1 lead, and 5 entity-map rows.
+
+Command: reran the same apply command against the same database.
+
+Result: domain entity counts remained 1 client, 1 project, 1 salesperson, 1 contact, 1 lead, and 5 entity-map rows.
+
+Verification level: local PostgreSQL integration tested for initial mappings and idempotent domain upsert.
