@@ -65,3 +65,4 @@
 - Implementation slice: Added configuration active metadata/rollback activation, `npm run config -- active`, `npm run config -- rollback --version=...`, and runtime `ConfigRepository` reads from `configuration.active_versions` with legacy snapshot fallback.
 - Verification: `npm run lint && npm test` passed with 7 Vitest files and 51 tests after active/rollback configuration implementation.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Commit `f3423da`: Added configuration active/rollback flow and runtime reads from versioned configuration.
