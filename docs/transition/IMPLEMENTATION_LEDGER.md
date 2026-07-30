@@ -35,3 +35,4 @@
 - Implementation slice: Wired `WORKER_KIND=runtime` to use the messaging dispatcher only when `DIRECT_META_SEND_ENABLED=true`; when disabled, the runtime worker does not claim message side-effect rows.
 - Verification: `npm run lint && npm test` passed with 7 Vitest files and 41 tests after durable outbox dispatcher wiring.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Commit `fcabd0c`: Wired WhatsApp runtime outbox dispatcher and gated runtime worker dispatch on explicit Meta send enablement.
