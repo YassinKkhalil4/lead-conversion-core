@@ -4,6 +4,7 @@ import { logger } from './config/logger.js';
 import { healthRoutes } from './routes/health.js';
 import { activeRoutes } from './routes/active.js';
 import { internalRoutes } from './routes/internal.js';
+import { leadIngressRoutes } from './routes/lead-ingress.js';
 import { metaWebhookRoutes } from './routes/meta-webhooks.js';
 import { n8nCompatRoutes } from './routes/n8n-compat.js';
 import { shadowRoutes } from './routes/shadow.js';
@@ -39,6 +40,7 @@ export async function buildApp() {
   await app.register(activeRoutes);
   await app.register(shadowRoutes);
   await app.register(internalRoutes);
+  await app.register(leadIngressRoutes);
   await app.register(metaWebhookRoutes);
   await app.register(n8nCompatRoutes);
 

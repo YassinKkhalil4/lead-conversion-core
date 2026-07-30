@@ -636,6 +636,110 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     }
   });
 
+  it('receives website lead webhooks through durable inbox before intake processing', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-website-ingress', 'Website Ingress Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    await db.pool.query(
+      "INSERT INTO app.projects (client_id, project_name, active) VALUES ($1, 'Website Towers', true)",
+      [clientId],
+    );
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/leads/website',
+        headers: { 'x-edge-secret': env.EDGE_SHARED_SECRET },
+        payload: {
+          eventId: 'website-lead-001',
+          clientKey: 'client-website-ingress',
+          name: 'Website Lead',
+          phone: '01099999993',
+          email: 'website@example.test',
+          projectName: 'Website Towers',
+          campaign: 'landing_page',
+          firstContact: {
+            requestKey: 'website-lead-001:first-contact',
+            payload: { kind: 'template', templateName: 'lead_welcome', languageCode: 'en_US', components: [] },
+          },
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { ok: boolean; inboxEventId: string; intake: { leadId: string; firstContact: { outboxCommandId: string } } };
+      expect(body.ok).toBe(true);
+      expect(body.inboxEventId).toBeTruthy();
+      expect(body.intake.firstContact.outboxCommandId).toBeTruthy();
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-001'")).rows[0]?.status).toBe('processed');
+      expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('receives sanitized Facebook lead payloads without live Graph API calls', async () => {
+    await db.pool.query("INSERT INTO app.clients (client_key, company_name) VALUES ('client-facebook-ingress', 'Facebook Ingress Client')");
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/leads/facebook',
+        headers: { 'x-edge-secret': env.EDGE_SHARED_SECRET },
+        payload: {
+          clientKey: 'client-facebook-ingress',
+          leadgen_id: 'fb-lead-graphless-001',
+          form_id: 'form-sanitized',
+          page_id: 'page-sanitized',
+          campaign_id: 'campaign-sanitized',
+          field_data: [
+            { name: 'full_name', values: ['Facebook Lead'] },
+            { name: 'phone_number', values: ['01099999994'] },
+            { name: 'email', values: ['facebook@example.test'] },
+            { name: 'project_name', values: ['Unknown Project Interest'] },
+          ],
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { ok: boolean; intake: { firstContact: null; duplicate: boolean } };
+      expect(body.ok).toBe(true);
+      expect(body.intake.firstContact).toBeNull();
+      expect(body.intake.duplicate).toBe(false);
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='facebook' AND external_event_id='fb-lead-graphless-001'")).rows[0]?.status).toBe('processed');
+      expect((await db.pool.query("SELECT provider, provider_external_id FROM app.leads WHERE provider='facebook'")).rows[0]).toEqual({
+        provider: 'facebook',
+        provider_external_id: 'fb-lead-graphless-001',
+      });
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('durably records and ignores invalid website lead webhook payloads', async () => {
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/leads/website',
+        headers: { 'x-edge-secret': env.EDGE_SHARED_SECRET },
+        payload: {
+          eventId: 'website-lead-invalid-001',
+          clientKey: 'missing-client',
+          name: 'Invalid Website Lead',
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect((await db.pool.query("SELECT status, ignored_reason FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-invalid-001'")).rows[0]).toMatchObject({
+        status: 'ignored',
+      });
+      expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('0');
+    } finally {
+      await app.close();
+    }
+  });
+
   it('verifies Meta webhook challenges and rejects invalid status signatures without durable receipt', async () => {
     const app = await appModule.buildApp();
     try {
