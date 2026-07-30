@@ -564,9 +564,17 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         payload,
       });
       expect(first.statusCode).toBe(200);
-      const firstBody = first.json() as { ok: boolean; leadId: string; contactId: string; duplicate: boolean; firstContact: { outboxCommandId: string; messageId: string } };
+      const firstBody = first.json() as {
+        ok: boolean;
+        leadId: string;
+        contactId: string;
+        duplicate: boolean;
+        projectionOutboxCommandId: string;
+        firstContact: { outboxCommandId: string; messageId: string };
+      };
       expect(firstBody.ok).toBe(true);
       expect(firstBody.duplicate).toBe(false);
+      expect(firstBody.projectionOutboxCommandId).toBeTruthy();
       expect(firstBody.firstContact.outboxCommandId).toBeTruthy();
 
       const duplicate = await app.inject({
@@ -576,11 +584,12 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         payload,
       });
       expect(duplicate.statusCode).toBe(200);
-      const duplicateBody = duplicate.json() as { leadId: string; contactId: string; duplicate: boolean; firstContact: { outboxCommandId: string; messageId: string } };
+      const duplicateBody = duplicate.json() as { leadId: string; contactId: string; duplicate: boolean; projectionOutboxCommandId: string; firstContact: { outboxCommandId: string; messageId: string } };
       expect(duplicateBody).toMatchObject({
         leadId: firstBody.leadId,
         contactId: firstBody.contactId,
         duplicate: true,
+        projectionOutboxCommandId: firstBody.projectionOutboxCommandId,
       });
       expect(duplicateBody.firstContact.messageId).toBe(firstBody.firstContact.messageId);
       expect(duplicateBody.firstContact.outboxCommandId).toBe(firstBody.firstContact.outboxCommandId);
@@ -588,7 +597,10 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM app.lead_intake_events')).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
-      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('2');
+      await new runtime.RuntimeOutboxRepository().markPermanentlyFailed(firstBody.projectionOutboxCommandId, 'airtable_projection_credentials_missing');
+      expect((await db.pool.query('SELECT count(*) FROM app.leads WHERE lead_id=$1', [firstBody.leadId])).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT state FROM runtime.outbox_commands WHERE command_type='airtable.project_lead_visibility'")).rows[0]?.state).toBe('permanently_failed');
       expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.intake_received'")).rows[0]?.count).toBe('1');
     } finally {
       await app.close();
@@ -630,7 +642,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect(body.firstContact).toMatchObject({ suppressed: true, suppressionReason: 'contact_opted_out' });
       expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('0');
-      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT command_type FROM runtime.outbox_commands")).rows[0]?.command_type).toBe('airtable.project_lead_visibility');
     } finally {
       await app.close();
     }
@@ -673,7 +686,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect(body.intake.firstContact.outboxCommandId).toBeTruthy();
       expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-001'")).rows[0]?.status).toBe('processed');
       expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
-      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('2');
     } finally {
       await app.close();
     }
@@ -711,7 +724,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         provider: 'facebook',
         provider_external_id: 'fb-lead-graphless-001',
       });
-      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
     } finally {
       await app.close();
     }
