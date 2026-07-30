@@ -357,6 +357,82 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(await worker.tick()).toBe(input.expectedDuplicates ? 0 : 1);
   }
 
+  async function seedAssignedLead(input: {
+    suffix: string;
+    phone: string;
+    salespersonPhone: string;
+  }): Promise<{
+    clientId: string;
+    leadId: string;
+    salespersonId: string;
+    assignmentId: string;
+  }> {
+    const seeded = await seedMp08Conversation({
+      suffix: input.suffix,
+      phone: input.phone,
+      phoneNumberId: `phone-number-id-${input.suffix.toLocaleLowerCase()}`,
+    });
+    const salesperson = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank)
+       VALUES ($1, $2, $3, $4, true, 10)
+       RETURNING salesperson_id`,
+      [seeded.clientId, `rec${input.suffix}SP`, `${input.suffix} Sales`, input.salespersonPhone],
+    );
+    const salespersonId = salesperson.rows[0]?.salesperson_id;
+    if (!salespersonId) throw new Error('salesperson_not_created');
+    const assignment = await db.pool.query<{ lead_assignment_id: string }>(
+      `INSERT INTO app.lead_assignments
+        (lead_id, salesperson_id, routing_version, idempotency_key)
+       VALUES ($1, $2, 'real_estate_v1', $3)
+       RETURNING lead_assignment_id`,
+      [seeded.leadId, salespersonId, `assignment:${input.suffix}`],
+    );
+    const assignmentId = assignment.rows[0]?.lead_assignment_id;
+    if (!assignmentId) throw new Error('assignment_not_created');
+    return {
+      clientId: seeded.clientId,
+      leadId: seeded.leadId,
+      salespersonId,
+      assignmentId,
+    };
+  }
+
+  async function receiveSalespersonCommand(input: {
+    clientId: string;
+    leadId?: string;
+    assignmentId?: string;
+    fromE164: string;
+    messageText: string;
+    commandIntent?: string;
+    sourceEventId: string;
+    expectedDuplicate?: boolean;
+  }): Promise<void> {
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/salesperson/commands',
+        headers: {
+          'x-internal-secret': env.EDGE_INTERNAL_SECRET,
+        },
+        payload: {
+          clientId: input.clientId,
+          leadId: input.leadId,
+          assignmentId: input.assignmentId,
+          fromE164: input.fromE164,
+          messageText: input.messageText,
+          commandIntent: input.commandIntent || '',
+          sourceEventId: input.sourceEventId,
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ ok: true, received: 1, duplicate: input.expectedDuplicate ?? false });
+    } finally {
+      await app.close();
+    }
+  }
+
   it('deduplicates inbound events before business processing creates side effects', async () => {
     const inbox = new runtime.InboxRepository();
     const outbox = new runtime.RuntimeOutboxRepository();
@@ -1592,6 +1668,119 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM app.lead_assignments WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('0');
     expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.routing_attention_required'")).rows[0]?.count).toBe('1');
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.routing_no_eligible' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {
+    const assigned = await seedAssignedLead({
+      suffix: 'CMDACK',
+      phone: '+201099999984',
+      salespersonPhone: '+201044444444',
+    });
+
+    await receiveSalespersonCommand({
+      clientId: assigned.clientId,
+      leadId: assigned.leadId,
+      assignmentId: assigned.assignmentId,
+      fromE164: '+201044444444',
+      messageText: 'ACK',
+      sourceEventId: 'cmd-ack-1',
+    });
+    await receiveSalespersonCommand({
+      clientId: assigned.clientId,
+      leadId: assigned.leadId,
+      assignmentId: assigned.assignmentId,
+      fromE164: '+201044444444',
+      messageText: 'ACK',
+      sourceEventId: 'cmd-ack-1',
+      expectedDuplicate: true,
+    });
+
+    const processor = new metaInbox.MetaInboxProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processInbox: (event) => processor.process(event) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+
+    expect((await db.pool.query('SELECT acknowledged_at IS NOT NULL AS acknowledged FROM app.lead_assignments WHERE lead_assignment_id=$1', [assigned.assignmentId])).rows[0]?.acknowledged).toBe(true);
+    expect((await db.pool.query("SELECT count(*) FROM app.salesperson_commands WHERE status='processed' AND command_intent='acknowledge'")).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='salesperson.command_processed' AND aggregate_id=$1", [assigned.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('rejects salesperson commands when the sender is not the active assignee', async () => {
+    const assigned = await seedAssignedLead({
+      suffix: 'CMDBAD',
+      phone: '+201099999983',
+      salespersonPhone: '+201055555555',
+    });
+    await db.pool.query(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank)
+       VALUES ($1, 'recCMDBADOTHER', 'Wrong Sender', '+201066666666', true, 1)`,
+      [assigned.clientId],
+    );
+
+    await receiveSalespersonCommand({
+      clientId: assigned.clientId,
+      leadId: assigned.leadId,
+      assignmentId: assigned.assignmentId,
+      fromE164: '+201066666666',
+      messageText: 'ACK',
+      sourceEventId: 'cmd-bad-1',
+    });
+
+    const processor = new metaInbox.MetaInboxProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processInbox: (event) => processor.process(event) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+
+    expect((await db.pool.query('SELECT acknowledged_at FROM app.lead_assignments WHERE lead_assignment_id=$1', [assigned.assignmentId])).rows[0]?.acknowledged_at).toBeNull();
+    expect((await db.pool.query('SELECT status, outcome_reason FROM app.salesperson_commands')).rows[0]).toEqual({
+      status: 'rejected',
+      outcome_reason: 'sender_not_active_assignee',
+    });
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='salesperson.command_rejected' AND aggregate_id=$1", [assigned.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('processes authorized close-lost salesperson commands without external side effects', async () => {
+    const assigned = await seedAssignedLead({
+      suffix: 'CMDLOST',
+      phone: '+201099999982',
+      salespersonPhone: '+201077777777',
+    });
+
+    await receiveSalespersonCommand({
+      clientId: assigned.clientId,
+      leadId: assigned.leadId,
+      assignmentId: assigned.assignmentId,
+      fromE164: '+201077777777',
+      messageText: 'close lost',
+      sourceEventId: 'cmd-lost-1',
+    });
+
+    const processor = new metaInbox.MetaInboxProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processInbox: (event) => processor.process(event) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+
+    expect((await db.pool.query('SELECT status, current_stage, closed_status, stop_follow_up, stop_reason FROM app.leads WHERE lead_id=$1', [assigned.leadId])).rows[0]).toEqual({
+      status: 'lost',
+      current_stage: 'closed_lost',
+      closed_status: 'lost',
+      stop_follow_up: true,
+      stop_reason: 'salesperson_command',
+    });
+    expect((await db.pool.query('SELECT status, current_stage, closed_status, stop_follow_up FROM edge_conversations WHERE lead_id=$1', [assigned.leadId])).rows[0]).toEqual({
+      status: 'lost',
+      current_stage: 'closed_lost',
+      closed_status: 'lost',
+      stop_follow_up: true,
+    });
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
   });
 
   it('completes Arabic qualification from the final site-visit answer', async () => {

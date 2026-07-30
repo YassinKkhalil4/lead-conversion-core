@@ -62,6 +62,20 @@ const inboundSchema = z.object({
   rawPayload: z.record(z.unknown()).optional().default({}),
 });
 
+const salespersonCommandSchema = z.object({
+  clientId: z.string().uuid().optional(),
+  clientRecordId: z.string().min(1).optional(),
+  leadId: z.string().uuid().optional(),
+  assignmentId: z.string().uuid().optional(),
+  fromE164: z.string().min(5).optional(),
+  salespersonPhoneE164: z.string().min(5).optional(),
+  messageText: z.string().min(1),
+  commandIntent: z.string().optional().default(''),
+  sourceEventId: z.string().min(1).optional(),
+  receivedAt: z.string().datetime().optional(),
+  rawPayload: z.record(z.unknown()).optional().default({}),
+});
+
 async function resolveClientId(input: { clientId?: string; clientRecordId?: string }): Promise<string> {
   if (input.clientId) return input.clientId;
   if (!input.clientRecordId) throw Object.assign(new Error('client_identity_required'), { statusCode: 400 });
@@ -107,6 +121,20 @@ function inboundEventKey(input: z.output<typeof inboundSchema>): string {
     rawPayload: input.rawPayload,
   })).slice(0, 32);
   return `n8n:whatsapp_message:${stableId}`;
+}
+
+function salespersonCommandEventKey(input: z.output<typeof salespersonCommandSchema>): string {
+  const stableId = input.sourceEventId || sha256Hex(stableJson({
+    clientId: input.clientId || '',
+    clientRecordId: input.clientRecordId || '',
+    leadId: input.leadId || '',
+    assignmentId: input.assignmentId || '',
+    from: input.fromE164 || input.salespersonPhoneE164 || '',
+    text: input.messageText,
+    intent: input.commandIntent,
+    receivedAt: input.receivedAt || '',
+  })).slice(0, 32);
+  return `n8n:salesperson_command:${stableId}`;
 }
 
 export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
@@ -217,6 +245,49 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
       payload,
       signatureValid: true,
       aggregateKey: from,
+    });
+    return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId, clientId };
+  });
+
+  app.post('/compat/n8n/salesperson/commands', async (request: FastifyRequest, reply: FastifyReply) => {
+    requireInternalSecret(request);
+    if (!compatEnabled(reply)) return { ok: false, error: 'n8n_compat_routes_disabled' };
+    const parsed = salespersonCommandSchema.safeParse(request.body);
+    if (!parsed.success) {
+      reply.code(400);
+      return { ok: false, issues: parsed.error.issues };
+    }
+    const body = parsed.data;
+    const clientId = await resolveClientId(clientIdentity(body));
+    const from = body.fromE164 || body.salespersonPhoneE164 || '';
+    if (!from) {
+      reply.code(400);
+      return { ok: false, error: 'salesperson_phone_required' };
+    }
+    const eventKey = salespersonCommandEventKey(body);
+    const payload = {
+      webhookType: 'salesperson.command_received',
+      clientId,
+      clientRecordId: body.clientRecordId,
+      leadId: body.leadId,
+      assignmentId: body.assignmentId,
+      fromE164: from,
+      messageText: body.messageText,
+      commandIntent: body.commandIntent,
+      sourceEventId: body.sourceEventId || eventKey,
+      receivedAt: body.receivedAt,
+      rawPayload: { ...body.rawPayload, source: 'n8n' },
+    };
+    const rawBody = Buffer.from(JSON.stringify(body));
+    const receipt = await inbox.receive({
+      provider: 'n8n',
+      eventType: 'salesperson.command_received',
+      externalEventId: eventKey,
+      rawBody,
+      headers: { 'x-internal-secret': 'present' },
+      payload,
+      signatureValid: true,
+      aggregateKey: body.leadId || body.assignmentId || from,
     });
     return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId, clientId };
   });
