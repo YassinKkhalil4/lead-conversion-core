@@ -1,0 +1,40 @@
+# Dependencies and builds
+node_modules/
+dist/
+coverage/
+.vitest/
+.turbo/
+
+# Local runtime configuration
+.env
+.env.*
+!.env.example
+
+# Production evidence and runtime archives
+*.dump
+*.sql.gz
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*inspect*.json
+*compose-resolved*.yml
+*compose-resolved*.yaml
+all-n8n-credentials-encrypted.json
+credentials*.json
+*credential*.json
+persistent/
+docker/
+databases/
+
+# Logs and local OS/editor files
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/
+
+# Temporary migration inputs; provide through ignored local files.
+imports/
+exports/
+tmp/

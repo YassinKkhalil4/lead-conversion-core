@@ -1,0 +1,16 @@
+{
+  "source": "sanitized current edge seed and engine behavior",
+  "verifiedAt": "2026-07-30",
+  "containsSecrets": false,
+  "containsProductionPii": false,
+  "questionCount": 9,
+  "messageKeys": [
+    "qualified_closing",
+    "language_selection",
+    "clarify_invalid",
+    "already_handed_off",
+    "fallback",
+    "paused_ack",
+    "media_text_required"
+  ]
+}

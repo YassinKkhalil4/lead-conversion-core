@@ -1,0 +1,59 @@
+[
+  {
+    "name": "language-selection",
+    "input": {
+      "preferredLanguage": "",
+      "currentStage": "",
+      "currentQuestionKey": "",
+      "messageText": "hello"
+    },
+    "expected": {
+      "replyKey": "language_selection",
+      "stageAfter": "language_selection",
+      "messageKind": "buttons"
+    }
+  },
+  {
+    "name": "permission-yes-advances-to-location",
+    "input": {
+      "preferredLanguage": "English",
+      "currentStage": "awaiting_permission",
+      "currentQuestionKey": "q_permission",
+      "messageOptionId": "perm_yes"
+    },
+    "expected": {
+      "replyKey": "q_location",
+      "stageAfter": "asking_location"
+    }
+  },
+  {
+    "name": "cash-skips-down-payment",
+    "input": {
+      "preferredLanguage": "English",
+      "currentStage": "asking_payment_plan",
+      "currentQuestionKey": "q_payment_plan",
+      "messageOptionId": "pay_cash"
+    },
+    "expected": {
+      "stageAfter": "asking_timeline",
+      "answerKey": "q_payment_plan",
+      "answerValue": "Cash"
+    }
+  },
+  {
+    "name": "second-invalid-selectable-uses-raw-fallback",
+    "input": {
+      "preferredLanguage": "English",
+      "currentStage": "asking_unit_type",
+      "currentQuestionKey": "q_unit_type",
+      "retryCount": 1,
+      "messageText": "custom loft"
+    },
+    "expected": {
+      "stageAfter": "asking_budget",
+      "parseSource": "raw_fallback",
+      "answerKey": "q_unit_type",
+      "answerValue": "custom loft"
+    }
+  }
+]

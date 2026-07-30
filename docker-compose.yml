@@ -1,0 +1,86 @@
+services:
+  lead-core-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EDGE_POSTGRES_DB:-lead_os_edge}
+      POSTGRES_USER: ${EDGE_POSTGRES_USER:-lead_os_edge_app}
+      POSTGRES_PASSWORD: ${EDGE_POSTGRES_PASSWORD:?set EDGE_POSTGRES_PASSWORD}
+    volumes:
+      - edge_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EDGE_POSTGRES_USER:-lead_os_edge_app} -d ${EDGE_POSTGRES_DB:-lead_os_edge}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [edge]
+
+  lead-core-migrate:
+    build: .
+    restart: "no"
+    env_file: ${LEAD_CORE_ENV_FILE:-.env}
+    environment:
+      DATABASE_URL: postgresql://${EDGE_POSTGRES_USER:-lead_os_edge_app}:${EDGE_POSTGRES_PASSWORD}@lead-core-postgres:5432/${EDGE_POSTGRES_DB:-lead_os_edge}
+    depends_on:
+      lead-core-postgres:
+        condition: service_healthy
+    command: ["npm", "run", "migrate:prod"]
+    networks: [edge]
+
+  lead-core-api:
+    build: .
+    restart: unless-stopped
+    env_file: ${LEAD_CORE_ENV_FILE:-.env}
+    environment:
+      DATABASE_URL: postgresql://${EDGE_POSTGRES_USER:-lead_os_edge_app}:${EDGE_POSTGRES_PASSWORD}@lead-core-postgres:5432/${EDGE_POSTGRES_DB:-lead_os_edge}
+    depends_on:
+      lead-core-postgres:
+        condition: service_healthy
+      lead-core-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${EDGE_HOST_PORT:-8082}:${EDGE_PORT:-8080}"
+    command: ["sh", "-lc", "npm run seed:prod && npm start"]
+    networks: [edge, n8n]
+
+  lead-core-worker:
+    build: .
+    restart: unless-stopped
+    env_file: ${LEAD_CORE_ENV_FILE:-.env}
+    environment:
+      DATABASE_URL: postgresql://${EDGE_POSTGRES_USER:-lead_os_edge_app}:${EDGE_POSTGRES_PASSWORD}@lead-core-postgres:5432/${EDGE_POSTGRES_DB:-lead_os_edge}
+      WORKER_KIND: outbox
+    depends_on:
+      lead-core-postgres:
+        condition: service_healthy
+      lead-core-migrate:
+        condition: service_completed_successfully
+    command: ["npm", "run", "worker"]
+    networks: [edge, n8n]
+
+  lead-core-backup:
+    build: .
+    restart: "no"
+    env_file: ${LEAD_CORE_ENV_FILE:-.env}
+    environment:
+      DATABASE_URL: postgresql://${EDGE_POSTGRES_USER:-lead_os_edge_app}:${EDGE_POSTGRES_PASSWORD}@lead-core-postgres:5432/${EDGE_POSTGRES_DB:-lead_os_edge}
+      BACKUP_DIR: /backups
+    volumes:
+      - lead_core_backups:/backups
+    depends_on:
+      lead-core-postgres:
+        condition: service_healthy
+    command: ["sh", "scripts/backup/backup-postgres.sh"]
+    profiles: ["ops"]
+    networks: [edge]
+
+networks:
+  edge:
+    name: conversation-edge
+  n8n:
+    external: true
+    name: ${N8N_DOCKER_NETWORK:-n8n_default}
+
+volumes:
+  edge_postgres_data:
+  lead_core_backups:

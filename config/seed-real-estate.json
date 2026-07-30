@@ -1,0 +1,532 @@
+{
+  "industry": "real_estate",
+  "clientRecordId": null,
+  "questions": [
+    {
+      "id": "recXrXyina0FWHG9N",
+      "fields": {
+        "Question Key": "q_permission",
+        "English": "Hello {{lead_name}} 👋 This is {{company_name}}'s assistant, about your interest in {{project_name}}. May I ask you a few quick questions so we can help you in the best way?",
+        "Arabic": "أهلاً {{lead_name}} 👋 معاك مساعد {{company_name}} بخصوص اهتمامك بمشروع {{project_name}}. ممكن أسألك كام سؤال سريع عشان نقدر نساعدك بأفضل شكل؟",
+        "Question Type": "Buttons",
+        "Order": 1,
+        "Active": true,
+        "Stage Key": "awaiting_permission",
+        "Saves To": "q_permission",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "recPh06iIKJqHwp8k",
+      "fields": {
+        "Question Key": "q_location",
+        "English": "Where would you like the project to be? (e.g., New Cairo, Sheikh Zayed, New Capital, North Coast)",
+        "Arabic": "تحب المشروع يكون فين؟ (مثلاً: القاهرة الجديدة، الشيخ زايد، العاصمة الإدارية، الساحل)",
+        "Question Type": "Free Text",
+        "Order": 2,
+        "Active": true,
+        "Stage Key": "asking_location",
+        "Saves To": "q_location",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "recEEM9zeWLaO6cZ8",
+      "fields": {
+        "Question Key": "q_unit_type",
+        "English": "What type of unit are you looking for?",
+        "Arabic": "نوع الوحدة اللي بتدور عليها إيه؟",
+        "Question Type": "List",
+        "Order": 3,
+        "Active": true,
+        "Stage Key": "asking_unit_type",
+        "Saves To": "q_unit_type",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "rec0FD6JZtT4hWtvu",
+      "fields": {
+        "Question Key": "q_budget",
+        "English": "What is your approximate budget?",
+        "Arabic": "ميزانيتك التقريبية كام؟",
+        "Question Type": "List",
+        "Order": 4,
+        "Active": true,
+        "Stage Key": "asking_budget",
+        "Saves To": "q_budget",
+        "Parser Hint": "egp_range",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "recYOLjDjkNc31mRs",
+      "fields": {
+        "Question Key": "q_payment_plan",
+        "English": "Do you prefer paying cash or in installments?",
+        "Arabic": "تفضل الدفع كاش ولا تقسيط؟",
+        "Question Type": "Buttons",
+        "Order": 5,
+        "Active": true,
+        "Stage Key": "asking_payment_plan",
+        "Saves To": "q_payment_plan",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "recHK9TKHemKJs30M",
+      "fields": {
+        "Question Key": "q_down_payment",
+        "English": "Roughly how much can you pay as a down payment?",
+        "Arabic": "تقدر تدفع مقدم قد إيه تقريباً؟",
+        "Question Type": "Free Text",
+        "Order": 6,
+        "Active": true,
+        "Stage Key": "asking_down_payment",
+        "Saves To": "q_down_payment",
+        "Parser Hint": "egp_amount",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "recRflpNBmUFy6ju6",
+      "fields": {
+        "Question Key": "q_timeline",
+        "English": "When are you planning to buy?",
+        "Arabic": "ناوي تشتري إمتى؟",
+        "Question Type": "List",
+        "Order": 7,
+        "Active": true,
+        "Stage Key": "asking_timeline",
+        "Saves To": "q_timeline",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "recHjWaKFOHjsQHXo",
+      "fields": {
+        "Question Key": "q_purpose",
+        "English": "Is this unit for living or for investment?",
+        "Arabic": "الوحدة دي للسكن ولا استثمار؟",
+        "Question Type": "Buttons",
+        "Order": 8,
+        "Active": true,
+        "Stage Key": "asking_purpose",
+        "Saves To": "q_purpose",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    },
+    {
+      "id": "rec8Sz5uygtCEpama",
+      "fields": {
+        "Question Key": "q_site_visit",
+        "English": "Would you like us to arrange a site visit so you can see the units yourself?",
+        "Arabic": "تحب نرتبلك زيارة للمشروع تشوف الوحدات بنفسك؟",
+        "Question Type": "Buttons",
+        "Order": 9,
+        "Active": true,
+        "Stage Key": "asking_site_visit",
+        "Saves To": "q_site_visit",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    }
+  ],
+  "options": [
+    {
+      "id": "rec3gsE1kLE2qJwhK",
+      "fields": {
+        "Option Key": "budget_lt3",
+        "Question": [
+          "rec0FD6JZtT4hWtvu"
+        ],
+        "English": "Under 3M EGP",
+        "Arabic": "أقل من 3 مليون",
+        "Value": "0-3000000",
+        "Order": 1,
+        "Active": true
+      }
+    },
+    {
+      "id": "recAH2Muem9KOZGsA",
+      "fields": {
+        "Option Key": "budget_3_5",
+        "Question": [
+          "rec0FD6JZtT4hWtvu"
+        ],
+        "English": "3M – 5M EGP",
+        "Arabic": "من 3 لـ 5 مليون",
+        "Value": "3000000-5000000",
+        "Order": 2,
+        "Active": true
+      }
+    },
+    {
+      "id": "recOMZYqskj3mUktI",
+      "fields": {
+        "Option Key": "budget_5_10",
+        "Question": [
+          "rec0FD6JZtT4hWtvu"
+        ],
+        "English": "5M – 10M EGP",
+        "Arabic": "من 5 لـ 10 مليون",
+        "Value": "5000000-10000000",
+        "Order": 3,
+        "Active": true
+      }
+    },
+    {
+      "id": "recbA3tx34v9iO5I3",
+      "fields": {
+        "Option Key": "budget_gt10",
+        "Question": [
+          "rec0FD6JZtT4hWtvu"
+        ],
+        "English": "Over 10M EGP",
+        "Arabic": "أكتر من 10 مليون",
+        "Value": "10000000-50000000",
+        "Order": 4,
+        "Active": true
+      }
+    },
+    {
+      "id": "rechxDP8FsDrOsUtJ",
+      "fields": {
+        "Option Key": "perm_yes",
+        "Question": [
+          "recXrXyina0FWHG9N"
+        ],
+        "English": "Yes, go ahead",
+        "Arabic": "تمام، اتفضل",
+        "Value": "yes",
+        "Order": 1,
+        "Active": true
+      }
+    },
+    {
+      "id": "receYjx5JKNaIa9j3",
+      "fields": {
+        "Option Key": "perm_no",
+        "Question": [
+          "recXrXyina0FWHG9N"
+        ],
+        "English": "Not now",
+        "Arabic": "مش دلوقتي",
+        "Value": "no",
+        "Order": 2,
+        "Active": true
+      }
+    },
+    {
+      "id": "recxoJ02gLjJ1wILl",
+      "fields": {
+        "Option Key": "unit_apartment",
+        "Question": [
+          "recEEM9zeWLaO6cZ8"
+        ],
+        "English": "Apartment",
+        "Arabic": "شقة",
+        "Value": "Apartment",
+        "Order": 1,
+        "Active": true
+      }
+    },
+    {
+      "id": "recxYiusdDGqpCPVm",
+      "fields": {
+        "Option Key": "unit_villa",
+        "Question": [
+          "recEEM9zeWLaO6cZ8"
+        ],
+        "English": "Villa",
+        "Arabic": "فيلا",
+        "Value": "Villa",
+        "Order": 2,
+        "Active": true
+      }
+    },
+    {
+      "id": "rec9LZ7kbBnoqWKfj",
+      "fields": {
+        "Option Key": "unit_townhouse",
+        "Question": [
+          "recEEM9zeWLaO6cZ8"
+        ],
+        "English": "Townhouse",
+        "Arabic": "تاون هاوس",
+        "Value": "Townhouse",
+        "Order": 3,
+        "Active": true
+      }
+    },
+    {
+      "id": "recLKE3IRmFC5x6te",
+      "fields": {
+        "Option Key": "unit_commercial",
+        "Question": [
+          "recEEM9zeWLaO6cZ8"
+        ],
+        "English": "Commercial / Office",
+        "Arabic": "تجاري / إداري",
+        "Value": "Commercial",
+        "Order": 4,
+        "Active": true
+      }
+    },
+    {
+      "id": "recvEEwt9iatIVDJI",
+      "fields": {
+        "Option Key": "pay_cash",
+        "Question": [
+          "recYOLjDjkNc31mRs"
+        ],
+        "English": "Cash",
+        "Arabic": "كاش",
+        "Value": "Cash",
+        "Order": 1,
+        "Active": true
+      }
+    },
+    {
+      "id": "rec33wiLmUn8qIFqq",
+      "fields": {
+        "Option Key": "pay_installments",
+        "Question": [
+          "recYOLjDjkNc31mRs"
+        ],
+        "English": "Installments",
+        "Arabic": "تقسيط",
+        "Value": "Installments",
+        "Order": 2,
+        "Active": true
+      }
+    },
+    {
+      "id": "recWmVqBjZiRUm626",
+      "fields": {
+        "Option Key": "pay_flexible",
+        "Question": [
+          "recYOLjDjkNc31mRs"
+        ],
+        "English": "Either works",
+        "Arabic": "الاتنين ينفع",
+        "Value": "Flexible",
+        "Order": 3,
+        "Active": true
+      }
+    },
+    {
+      "id": "recPrtYQ5TngrOnyb",
+      "fields": {
+        "Option Key": "tl_now",
+        "Question": [
+          "recRflpNBmUFy6ju6"
+        ],
+        "English": "As soon as possible",
+        "Arabic": "في أقرب وقت",
+        "Value": "Immediate",
+        "Order": 1,
+        "Active": true
+      }
+    },
+    {
+      "id": "recfAuyOuvi4otUnl",
+      "fields": {
+        "Option Key": "tl_3m",
+        "Question": [
+          "recRflpNBmUFy6ju6"
+        ],
+        "English": "Within 3 months",
+        "Arabic": "خلال 3 شهور",
+        "Value": "3 months",
+        "Order": 2,
+        "Active": true
+      }
+    },
+    {
+      "id": "rec6iIVPHTuwFJUVI",
+      "fields": {
+        "Option Key": "tl_6m",
+        "Question": [
+          "recRflpNBmUFy6ju6"
+        ],
+        "English": "Within 6 months",
+        "Arabic": "خلال 6 شهور",
+        "Value": "6 months",
+        "Order": 3,
+        "Active": true
+      }
+    },
+    {
+      "id": "recZoV1UoAka2400j",
+      "fields": {
+        "Option Key": "tl_explore",
+        "Question": [
+          "recRflpNBmUFy6ju6"
+        ],
+        "English": "Just exploring",
+        "Arabic": "لسه بشوف",
+        "Value": "Exploring",
+        "Order": 4,
+        "Active": true
+      }
+    },
+    {
+      "id": "recjAdr4lwRNByDjz",
+      "fields": {
+        "Option Key": "pur_residence",
+        "Question": [
+          "recHjWaKFOHjsQHXo"
+        ],
+        "English": "To live in",
+        "Arabic": "سكن",
+        "Value": "Primary Residence",
+        "Order": 1,
+        "Active": true
+      }
+    },
+    {
+      "id": "recd2FvLs9LWKjrUj",
+      "fields": {
+        "Option Key": "pur_investment",
+        "Question": [
+          "recHjWaKFOHjsQHXo"
+        ],
+        "English": "Investment",
+        "Arabic": "استثمار",
+        "Value": "Investment",
+        "Order": 2,
+        "Active": true
+      }
+    },
+    {
+      "id": "recVSGC4fUM36ofwU",
+      "fields": {
+        "Option Key": "pur_both",
+        "Question": [
+          "recHjWaKFOHjsQHXo"
+        ],
+        "English": "Both",
+        "Arabic": "الاتنين",
+        "Value": "Both",
+        "Order": 3,
+        "Active": true
+      }
+    },
+    {
+      "id": "recHlrtOgxBvxIQiR",
+      "fields": {
+        "Option Key": "sv_yes",
+        "Question": [
+          "rec8Sz5uygtCEpama"
+        ],
+        "English": "Yes, please",
+        "Arabic": "أيوه، يا ريت",
+        "Value": "Yes",
+        "Order": 1,
+        "Active": true
+      }
+    },
+    {
+      "id": "recxENbK4RE6VXAUF",
+      "fields": {
+        "Option Key": "sv_no",
+        "Question": [
+          "rec8Sz5uygtCEpama"
+        ],
+        "English": "Not now",
+        "Arabic": "مش دلوقتي",
+        "Value": "No",
+        "Order": 2,
+        "Active": true
+      }
+    }
+  ],
+  "messages": [
+    {
+      "id": "recA0gpVzmWoBNW94",
+      "fields": {
+        "Message Key": "qualified_closing",
+        "English": "Perfect, thank you {{lead_name}} 🙏 Our property consultant will contact you shortly with all the details that suit you.",
+        "Arabic": "تمام يا {{lead_name}}، شكراً ليك 🙏 المستشار العقاري المختص هيتواصل معاك في أقرب وقت بكل التفاصيل المناسبة ليك.",
+        "Client": [],
+        "Active": true
+      }
+    },
+    {
+      "id": "recA6qByWIBiQol8F",
+      "fields": {
+        "Message Key": "language_selection",
+        "English": "👋 Welcome!\nPlease choose your preferred language.\n👋 أهلاً بيك!\nاختار اللغة اللي تفضلها.",
+        "Arabic": "👋 Welcome!\nPlease choose your preferred language.\n👋 أهلاً بيك!\nاختار اللغة اللي تفضلها.",
+        "Client": [],
+        "Active": true
+      }
+    },
+    {
+      "id": "recKELlQowW5MUXz2",
+      "fields": {
+        "Message Key": "clarify_invalid",
+        "English": "Sorry, I didn't quite catch that 🙏 Please choose one of the options.",
+        "Arabic": "معلش، مش فاهم قصدك 🙏 ممكن تختار من الاختيارات دي؟",
+        "Client": [],
+        "Active": true
+      }
+    },
+    {
+      "id": "recWKnmAE7lYzF2jE",
+      "fields": {
+        "Message Key": "already_handed_off",
+        "English": "Thank you! Your consultant has your details and will be in touch shortly 🙏",
+        "Arabic": "شكراً ليك! المستشار المختص استلم بياناتك وهيتواصل معاك قريب 🙏",
+        "Client": [],
+        "Active": true
+      }
+    },
+    {
+      "id": "recmLN2nGmzikJHgK",
+      "fields": {
+        "Message Key": "fallback",
+        "English": "Sorry, something went wrong on our side. Please try again in a little while 🙏",
+        "Arabic": "معلش، حصلت مشكلة عندنا. جرب تاني بعد شوية لو سمحت 🙏",
+        "Client": [],
+        "Active": true
+      }
+    },
+    {
+      "id": "recveD2J4P2xarq3K",
+      "fields": {
+        "Message Key": "paused_ack",
+        "English": "No problem at all — I'll send you the details and you can reply any time 🙏",
+        "Arabic": "ولا يهمك، هبعتلك التفاصيل وتقدر ترد علينا في أي وقت 🙏",
+        "Client": [],
+        "Active": true
+      }
+    },
+    {
+      "id": "reczegroDCXw4MKsR",
+      "fields": {
+        "Message Key": "media_text_required",
+        "English": "Please send a text message so I can help you 🙏",
+        "Arabic": "ابعتلي رسالة نصية لو سمحت 🙏",
+        "Client": [],
+        "Active": true
+      }
+    }
+  ]
+}
