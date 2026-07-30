@@ -418,6 +418,14 @@ export class RuntimeOutboxRepository {
         FROM updated
         WHERE updated.command_type='whatsapp.send_message'
           AND m.message_id = NULLIF(updated.payload_json->>'messageId', '')::uuid
+      ), appointment_update AS (
+        UPDATE app.appointments a
+        SET calendar_event_id=$2,
+            status='confirmed',
+            updated_at=now()
+        FROM updated
+        WHERE updated.command_type='calendar.create_event'
+          AND a.appointment_id = NULLIF(updated.payload_json->>'appointmentId', '')::uuid
       )
       UPDATE runtime.outbox_command_attempts a
       SET outcome='delivered', provider_message_id=$2, finished_at=now()

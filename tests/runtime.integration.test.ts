@@ -2272,6 +2272,47 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='calendar.create_event' AND aggregate_key=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
     expect((await db.pool.query('SELECT current_stage FROM app.leads WHERE lead_id=$1', [seeded.leadId])).rows[0]?.current_stage).toBe('appointment_booked');
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='appointment.booked' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+    const outbox = new runtime.RuntimeOutboxRepository();
+    expect((await outbox.claim('calendar-worker-delivered')).map((row) => row.outboxCommandId)).toEqual([booked.outboxCommandId]);
+    await outbox.markDelivered(booked.outboxCommandId, 'google-event-confirmed');
+    expect((await db.pool.query('SELECT status, calendar_event_id FROM app.appointments WHERE appointment_id=$1', [booked.appointmentId])).rows[0]).toEqual({
+      status: 'confirmed',
+      calendar_event_id: 'google-event-confirmed',
+    });
+  });
+
+  it('preserves delivery-unknown calendar creates without blind duplicate event generation', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'APPUNKNOWN',
+      phone: '+201099999967',
+      phoneNumberId: 'phone-number-id-mp11-unknown',
+    });
+    await db.pool.query("UPDATE app.clients SET calendar_id='calendar-test-primary' WHERE client_id=$1", [seeded.clientId]);
+    const service = new appointmentService.AppointmentService();
+    const offer = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt: [new Date(Date.now() + 86_400_000).toISOString()],
+      durationMinutes: 45,
+      correlationId: 'appointment-unknown-test',
+    });
+    const booking = await service.bookSlot({
+      appointmentOfferId: offer.appointmentOfferId,
+      appointmentSlotId: offer.slotIds[0] || '',
+      sourceEventId: 'appointment-unknown-book',
+      bookedBy: seeded.leadId,
+      correlationId: 'appointment-unknown-test',
+    });
+    expect(booking.outcome).toBe('booked');
+    const outbox = new runtime.RuntimeOutboxRepository();
+    expect((await outbox.claim('calendar-worker-a')).map((row) => row.outboxCommandId)).toEqual([booking.outboxCommandId]);
+    await outbox.markDeliveryUnknown(booking.outboxCommandId, 'provider accepted but response was lost');
+
+    expect((await db.pool.query('SELECT state FROM runtime.outbox_commands WHERE outbox_command_id=$1', [booking.outboxCommandId])).rows[0]?.state).toBe('delivery_unknown');
+    expect(await outbox.claim('calendar-worker-b')).toHaveLength(0);
+    expect((await db.pool.query('SELECT status, calendar_event_id FROM app.appointments WHERE appointment_id=$1', [booking.appointmentId])).rows[0]).toEqual({
+      status: 'booked',
+      calendar_event_id: '',
+    });
   });
 
   it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {
