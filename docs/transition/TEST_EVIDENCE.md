@@ -704,6 +704,22 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local PostgreSQL/runtime, CLI build, and calendar dispatcher contract tests with sanitized fixtures. No live Google Calendar call was made.
 
+## 2026-07-30 MP-12 Direct Ingress Route Gates
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/ingress-gating.test.ts`
+
+Result: passed. Focused app-injection tests ran 2 tests proving direct Meta and direct lead ingress return 503 unless explicitly enabled, direct Meta challenge succeeds when enabled, and n8n compatibility remains separately reachable when `N8N_COMPAT_ROUTES_ENABLED=true`.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 11 files and 106 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local app-injection, PostgreSQL/API regression, and full npm gate. No DNS, Caddy, Meta, Facebook, Google Calendar, n8n, Typebot, or production route changes were made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

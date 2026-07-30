@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Begin MP-12 by auditing current ingress, compatibility routes, rollout controls, and decommission runbooks, then implement locally testable direct-ingress/canary-readiness controls without changing DNS, production Caddy routes, provider accounts, or deleting legacy infrastructure. Preserve n8n/Typebot fallback paths and add tests proving direct routes can be enabled only by explicit configuration while legacy compatibility remains available.
+Exact next implementation task: Continue MP-12 by adding PostgreSQL-backed canary readiness reporting for direct ingress. Implement a local readiness service/CLI or endpoint that reports direct-route flags, n8n compatibility status, pending/oldest inbox and outbox age, delivery-unknown counts, dead-letter counts, and recent worker heartbeat age without mutating production or changing Caddy/DNS. Add tests using disposable PostgreSQL data.
 
 Files expected to change:
 
@@ -18,9 +18,8 @@ Files expected to change:
 - `docs/owner-actions/06-staging-dns-and-access.md`
 - `docs/owner-actions/07-production-cutover.md`
 - `src/config/env.ts`
-- `src/routes/meta-webhooks.ts`
-- `src/routes/n8n-compat.ts`
-- `src/routes/lead-ingress.ts`
+- `src/services/cutover-readiness-service.ts`
+- `scripts/cutover-readiness.ts`
 - `src/app.ts`
 - `tests/runtime.integration.test.ts`
 - `tests/*ingress*.test.ts`
@@ -48,6 +47,6 @@ Known blockers:
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 
-Last verified implementation commit: fec6c33
+Last verified implementation commit: 8738391
 
 Git worktree clean when recorded: yes

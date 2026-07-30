@@ -209,3 +209,9 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 104 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live Google Calendar availability/create/delete/duplicate-booking verification remains pending owner-provided credentials and calendar IDs.
 - Commit `fec6c33`: Added calendar create reconciliation command.
+- Implementation slice: Began MP-12 direct ingress controls by adding explicit `DIRECT_META_WEBHOOK_ENABLED` and `DIRECT_LEAD_INGRESS_ENABLED` flags. Direct Meta challenge/receipt and direct website/Facebook lead ingress now return 503 unless explicitly enabled, while n8n compatibility remains independently gated.
+- Decision: Direct provider ingress requires explicit environment enablement separate from the presence of secrets and separate from n8n compatibility fallback.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/ingress-gating.test.ts` passed; focused app-injection tests ran 2 tests proving disabled direct routes and separately enabled n8n compatibility.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 11 files and 106 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Commit `8738391`: Gated direct ingress routes for cutover.

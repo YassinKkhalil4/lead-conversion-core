@@ -144,7 +144,7 @@ Remaining: live Google Calendar availability/create/delete/duplicate-booking ver
 
 ## MP-12 Direct Ingress, Rollout, Decommission
 
-Status: not_started
+Status: implementing
 
 Deliverables: direct callback compatibility, Caddy route plan, rollout overrides, decommission criteria/runbooks.
 
@@ -152,4 +152,6 @@ Dependencies: DNS/Caddy/production owner action.
 
 Verification gates: staging ingress, canary metrics, explicit owner approval for removals.
 
-Remaining: all.
+Completed locally: direct Meta webhook route is disabled by default unless `DIRECT_META_WEBHOOK_ENABLED=true`; direct website/Facebook lead ingress is disabled by default unless `DIRECT_LEAD_INGRESS_ENABLED=true`; n8n compatibility routes remain independently gated by `N8N_COMPAT_ROUTES_ENABLED`; local app-injection tests prove disabled direct routes return 503 without provider calls while n8n compatibility remains available when explicitly enabled.
+
+Remaining: PostgreSQL-backed rollout/canary readiness checks, direct callback compatibility report, Caddy route plan, staging ingress verification, production cutover owner approval, decommission exit criteria evidence, and all destructive fallback removals.

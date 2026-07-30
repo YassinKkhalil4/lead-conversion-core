@@ -199,3 +199,11 @@ Decision: Operator reconciliation of a delivery-unknown calendar create that is 
 Reason: The customer booking remains real local business state even when the external calendar side effect failed. Releasing or changing appointment semantics would require a broader rescheduling/cancellation policy and could create a second authority for the same slot.
 
 Date: 2026-07-30
+
+## DEC-017: Direct Ingress Requires Explicit Enablement
+
+Decision: Direct Meta webhook receipt and direct website/Facebook lead ingress are disabled by default behind `DIRECT_META_WEBHOOK_ENABLED` and `DIRECT_LEAD_INGRESS_ENABLED`, while n8n compatibility remains independently controlled by `N8N_COMPAT_ROUTES_ENABLED`.
+
+Reason: MP-12 must preserve fallback infrastructure during cutover and avoid accidental direct-provider activation from merely deploying the edge app with secrets present. Direct ingress should become reachable only through an explicit environment and routing change.
+
+Date: 2026-07-30
