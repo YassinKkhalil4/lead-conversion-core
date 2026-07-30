@@ -5,6 +5,7 @@ import { compileConfig, type CompileInput } from '../domain/compiler.js';
 import type { CompiledConfig } from '../domain/types.js';
 import { sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
+import { loadAirtableConfigExport, type AirtableConfigExportSummary } from './airtable-config-source.js';
 
 type Db = typeof pool | PoolClient;
 
@@ -39,6 +40,11 @@ export interface PublishConfigResult {
   versionKey: string;
   checksum: string;
   activeScopeKey: string;
+}
+
+export interface LoadedAirtableConfig {
+  config: CompiledConfig;
+  summary: AirtableConfigExportSummary;
 }
 
 export interface ActiveConfigResult {
@@ -83,6 +89,25 @@ export class VersionedConfigService {
       ...raw,
       clientRecordId: clientRecordId ?? raw.clientRecordId ?? null,
     });
+  }
+
+  async loadAndCompileAirtableExport(inputDir: string, clientRecordId?: string | null): Promise<LoadedAirtableConfig> {
+    const loaded = await loadAirtableConfigExport(inputDir, clientRecordId ?? null);
+    if (loaded.summary.missingTables.length > 0 || loaded.summary.rejectedRecords > 0) {
+      throw new Error(`airtable_config_export_invalid:${JSON.stringify({
+        missingTables: loaded.summary.missingTables,
+        rejectedRecords: loaded.summary.rejectedRecords,
+        rejected: loaded.summary.rejected.map((record) => ({
+          tableName: record.tableName,
+          recordId: record.recordId,
+          reason: record.reason,
+        })),
+      })}`);
+    }
+    return {
+      config: compileConfig(loaded.input),
+      summary: loaded.summary,
+    };
   }
 
   validate(config: CompiledConfig): ConfigValidationResult {
@@ -182,6 +207,32 @@ export class VersionedConfigService {
 
   async publish(input: PublishConfigInput): Promise<PublishConfigResult> {
     const config = await this.loadAndCompile(input.sourcePath, input.clientRecordId);
+    return this.publishCompiled(config, {
+      sourcePath: input.sourcePath,
+      publishedBy: input.publishedBy,
+      sourceKind: input.sourceKind || 'seed_json',
+    });
+  }
+
+  async publishAirtableExport(input: {
+    inputDir: string;
+    clientRecordId?: string | null;
+    publishedBy: string;
+  }): Promise<PublishConfigResult & { sourceSummary: AirtableConfigExportSummary }> {
+    const loaded = await this.loadAndCompileAirtableExport(input.inputDir, input.clientRecordId);
+    const published = await this.publishCompiled(loaded.config, {
+      sourcePath: input.inputDir,
+      publishedBy: input.publishedBy,
+      sourceKind: 'airtable_export',
+    });
+    return { ...published, sourceSummary: loaded.summary };
+  }
+
+  private async publishCompiled(config: CompiledConfig, input: {
+    sourcePath: string;
+    publishedBy: string;
+    sourceKind: string;
+  }): Promise<PublishConfigResult> {
     const validation = this.validate(config);
     const scope = scopeKey(config.clientRecordId);
     const previous = await this.getActive(scope);
@@ -204,7 +255,7 @@ export class VersionedConfigService {
           config.version,
           JSON.stringify(config),
           validation.checksum,
-          input.sourceKind || 'seed_json',
+          input.sourceKind,
           input.sourcePath,
           JSON.stringify(validation),
           JSON.stringify(diff),
