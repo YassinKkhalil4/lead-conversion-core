@@ -66,13 +66,13 @@ Remaining: live staging verification pending owner action for rotated credential
 
 Status: implementing
 
-Deliverables: import/validate/diff/publish/rollback/active CLI and immutable published config.
+Deliverables: import/validate/diff/publish/rollback/active CLI, immutable published config, and conversation pins to immutable configuration version IDs with legacy `config_version` compatibility.
 
 Dependencies: complete config source for final parity.
 
 Verification gates: invalid config rejection, parity compile, rollback, conversation pinning.
 
-Remaining: conversation pinning to `configuration.versions`, Airtable configuration import parity, and final config-source reconciliation.
+Remaining: Airtable configuration import parity and final config-source reconciliation.
 
 ## MP-07 Lead Intake And CRM
 

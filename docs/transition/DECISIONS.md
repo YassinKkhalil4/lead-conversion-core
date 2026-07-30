@@ -79,3 +79,11 @@ Decision: Add the Meta WhatsApp adapter behind an explicit enabled configuration
 Reason: Live Meta credentials and template approvals are pending owner action. The code can be contract-tested with sanitized fixtures, but production must not send or pretend to send messages until credentials, templates, and staging webhooks are verified.
 
 Date: 2026-07-30
+
+## DEC-011: Conversation Configuration Pins
+
+Decision: Store `configuration_version_id` on legacy `edge_conversations` in addition to the existing `config_version` text key, and only re-pin an existing conversation through the explicit bootstrap `migrateConfig` path.
+
+Reason: Conversations must remain pinned to the configuration they started with during cutover, while operators still need a deliberate compatibility path to move a legacy conversation onto a newer immutable published configuration.
+
+Date: 2026-07-30

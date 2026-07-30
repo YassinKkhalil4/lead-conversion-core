@@ -311,3 +311,23 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 53 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local unit and fixture tested.
+
+## 2026-07-30 MP-06 Conversation Configuration Pins
+
+Command: `npm run lint`
+
+Result: passed. TypeScript strict compile completed with no errors after adding configuration metadata snapshots and conversation UUID pins.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 8 test files and 54 tests, including PostgreSQL integration coverage that new legacy `edge_conversations` rows store both `config_version` and `configuration_version_id`, ordinary reruns keep the original pin after active configuration changes, and authenticated bootstrap with `migrateConfig=true` moves both pins together.
+
+Command: `npm run build`
+
+Result: passed.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 54 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested.

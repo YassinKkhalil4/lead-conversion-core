@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-06 Versioned configuration
 
-Exact next implementation task: Continue MP-06 by adding conversation pinning to `configuration.versions` identifiers while preserving legacy `config_version` compatibility during transition.
+Exact next implementation task: Continue MP-06 by implementing Airtable configuration import parity for Questions, Question Options, and Conversation Messages against the provisional field map, while preserving the existing seed JSON publication path.
 
 Files expected to change:
 
@@ -13,7 +13,8 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `migrations/00*_*.sql`
+- `docs/transition/AIRTABLE_FIELD_MAP.md`
+- `config/**`
 - `src/configuration/**`
 - `src/services/**`
 - `scripts/**`
@@ -40,6 +41,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: 9e9e510
+Last verified implementation commit: 38390e8
 
 Git worktree clean when recorded: yes

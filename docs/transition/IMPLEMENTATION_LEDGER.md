@@ -70,3 +70,8 @@
 - Verification: `npm run lint && npm test` passed with 8 Vitest files and 53 tests after invalid configuration fixture tests were added.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Commit `9e9e510`: Added invalid configuration validation fixtures and deterministic diff tests.
+- Implementation slice: Added migration `011_conversation_configuration_pin.sql`, runtime config metadata reads, conversation repository UUID pinning, shadow-evaluator creation pins, and authenticated bootstrap re-pin support through the existing `migrateConfig` flag.
+- Decision: Existing conversations remain pinned to their original `config_version` and `configuration_version_id`; only explicit bootstrap migration can move both pins.
+- Verification: `npm run lint`, `npm test`, and `npm run build` passed after the conversation-pin implementation; Vitest ran 8 files and 54 tests.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Commit `38390e8`: Pinned conversations to immutable configuration version IDs while preserving legacy `config_version` compatibility.
