@@ -40,6 +40,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let messageRequests: typeof import('../src/services/message-request-service.js');
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
   let metaInbox: typeof import('../src/services/meta-inbox-processor.js');
+  let leadScoring: typeof import('../src/services/lead-scoring-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -63,6 +64,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     messageRequests = await import('../src/services/message-request-service.js');
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
     metaInbox = await import('../src/services/meta-inbox-processor.js');
+    leadScoring = await import('../src/services/lead-scoring-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -1312,6 +1314,28 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       current_stage: 'qualified',
     });
     expect((await db.pool.query(
+      'SELECT lead_score, temperature FROM app.leads WHERE lead_id=$1',
+      [seeded.leadId],
+    )).rows[0]).toEqual({
+      lead_score: 99,
+      temperature: 'hot',
+    });
+    expect((await db.pool.query(
+      `SELECT scoring_version, score, temperature, factors_json->'missingAnswers' AS missing
+       FROM app.score_runs
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    )).rows[0]).toEqual({
+      scoring_version: 'real_estate_v1',
+      score: 99,
+      temperature: 'hot',
+      missing: [],
+    });
+    expect((await db.pool.query(
+      "SELECT count(*) FROM audit.events WHERE event_type='lead.scored' AND aggregate_id=$1",
+      [seeded.leadId],
+    )).rows[0]?.count).toBe('1');
+    expect((await db.pool.query(
       `SELECT s.status, s.configuration_version_id, a.normalized_value
        FROM app.qualification_sessions s
        JOIN app.qualification_answers a USING (qualification_session_id)
@@ -1343,6 +1367,74 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('2');
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='conversation.inbound_processed'")).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM app.score_runs WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.scored' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('scores incomplete qualification data without inventing missing answers and reruns idempotently', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'SCOREMISS',
+      phone: '+201099999987',
+      phoneNumberId: 'phone-number-id-mp09-score-missing',
+    });
+    const session = await db.pool.query<{ qualification_session_id: string }>(
+      `INSERT INTO app.qualification_sessions
+        (lead_id, status, configuration_version_id, completed_at)
+       VALUES ($1, 'completed', $2, now())
+       RETURNING qualification_session_id`,
+      [seeded.leadId, seeded.configurationVersionId],
+    );
+    await db.pool.query(
+      `INSERT INTO app.qualification_answers
+        (qualification_session_id, question_key, normalized_value, raw_value, parser_source)
+       VALUES ($1, 'q_location', 'New Cairo', 'New Cairo', 'free_text')`,
+      [session.rows[0]?.qualification_session_id],
+    );
+    await db.pool.query(
+      `UPDATE app.leads
+       SET status='qualified', current_stage='qualified'
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    );
+
+    const service = new leadScoring.LeadScoringService();
+    const first = await service.scoreLead(db.pool, {
+      leadId: seeded.leadId,
+      actorType: 'worker',
+      actorId: 'test-worker',
+      correlationId: 'test-score-missing',
+    });
+    const second = await service.scoreLead(db.pool, {
+      leadId: seeded.leadId,
+      actorType: 'worker',
+      actorId: 'test-worker',
+      correlationId: 'test-score-missing',
+    });
+
+    expect(second.scoreRunId).toBe(first.scoreRunId);
+    expect(second.inserted).toBe(false);
+    expect((await db.pool.query('SELECT lead_score, temperature FROM app.leads WHERE lead_id=$1', [seeded.leadId])).rows[0]).toEqual({
+      lead_score: 20,
+      temperature: 'cold',
+    });
+    expect((await db.pool.query('SELECT count(*) FROM app.score_runs WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+    const scoreRun = await db.pool.query<{ missing: string[] }>(
+      `SELECT factors_json->'missingAnswers' AS missing
+       FROM app.score_runs
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    );
+    expect(scoreRun.rows[0]?.missing).toEqual([
+      'q_unit_type',
+      'q_budget_min',
+      'q_budget_max',
+      'q_payment_plan',
+      'q_down_payment',
+      'q_timeline',
+      'q_purpose',
+      'q_site_visit',
+    ]);
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.scored' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
   });
 
   it('completes Arabic qualification from the final site-visit answer', async () => {

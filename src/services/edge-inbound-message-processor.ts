@@ -14,6 +14,7 @@ import {
 } from '../infrastructure/runtime.js';
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
+import { LeadScoringService } from './lead-scoring-service.js';
 
 const inboundMessageSchema = z.object({
   webhookType: z.literal('whatsapp.message_received'),
@@ -94,6 +95,7 @@ export class EdgeInboundMessageProcessor {
     private readonly conversations = new ConversationRepository(),
     private readonly outbox = new RuntimeOutboxRepository(),
     private readonly audit = new AuditRepository(),
+    private readonly scorer = new LeadScoringService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -210,7 +212,10 @@ export class EdgeInboundMessageProcessor {
         });
       }
 
-      await this.persistQualificationEvents(client, state.leadId, decision, appConversationId);
+      await this.persistQualificationEvents(client, state.leadId, decision, appConversationId, {
+        correlationId: event.dedupeKey,
+        causationId: event.inboxEventId,
+      });
       if (decision.outboxEvents.some((outboxEvent) => outboxEvent.eventType === 'lead_opted_out')) {
         await this.persistOptOut(client, decision.nextState, input.from);
       }
@@ -458,6 +463,7 @@ export class EdgeInboundMessageProcessor {
     leadId: string,
     decision: ReplyDecision,
     appConversationId: string,
+    scoringContext: { correlationId: string; causationId: string },
   ): Promise<void> {
     if (!isUuid(leadId)) return;
     const answerEvents = decision.outboxEvents.filter((event) => event.eventType === 'qualification_answer_saved');
@@ -527,6 +533,14 @@ export class EdgeInboundMessageProcessor {
          WHERE lead_id=$1`,
         [leadId],
       );
+      await this.scorer.scoreLead(client, {
+        leadId,
+        answers: decision.nextState.answers,
+        actorType: 'worker',
+        actorId: 'edge-inbound-message-processor',
+        correlationId: scoringContext.correlationId,
+        causationId: scoringContext.causationId,
+      });
     }
   }
 
