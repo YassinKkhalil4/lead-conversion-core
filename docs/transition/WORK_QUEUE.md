@@ -110,9 +110,9 @@ Dependencies: salesperson/project export for final data parity.
 
 Verification gates: parity fixtures, cross-client rejection, deterministic tie-breaks.
 
-Completed locally: deterministic `real_estate_v1` score calculation from normalized qualification answers and lead state; score-run idempotency using scoring version plus input hash; atomic update of `app.leads.lead_score` and `app.leads.temperature`; `lead.scored` audit events; PostgreSQL integration coverage for completed qualification scoring, duplicate reruns, and missing-answer reporting.
+Completed locally: deterministic `real_estate_v1` score calculation from normalized qualification answers and lead state; score-run idempotency using scoring version plus input hash; atomic update of `app.leads.lead_score` and `app.leads.temperature`; `lead.scored` audit events; deterministic `real_estate_v1` routing runs with same-client/project salesperson eligibility; cross-client salesperson rejection even when project links are malformed; stable candidate tie-breaks; active-assignment reuse on rerun; durable `salesperson.lead_assignment_notification` and `operator.routing_attention_required` outbox commands; PostgreSQL integration coverage for completed qualification scoring, duplicate reruns, missing-answer reporting, routing tie-breaks, no-eligible routing, and cross-client rejection.
 
-Remaining: deterministic routing policy and persisted route runs; salesperson command handling; authorized alert enqueue/dispatch rules; parity against real salesperson/project export when available.
+Remaining: salesperson command handling and authorization; alert dispatch adapter/worker behavior for non-WhatsApp command types; parity against real salesperson/project export when available.
 
 ## MP-10 Follow-ups, SLA, Reporting
 

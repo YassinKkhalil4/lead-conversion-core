@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-016: Existing Active Assignments Are Routing Authority
+
+Decision: `real_estate_v1` routing reuses an existing active `app.lead_assignments` row for a lead and does not recompute a different assignee until a future explicit reassignment or supersession command exists.
+
+Reason: Assignment itself changes candidate load, so blindly rerouting after assignment can produce a different winner. During this phase, stable replay/idempotency is more important than automatic reassignment.
+
+Date: 2026-07-30
+
 ## DEC-015: Scoring Is Snapshot-Idempotent
 
 Decision: `real_estate_v1` scoring uses normalized qualification answers plus lead state as its input snapshot and persists score runs with a unique `(lead_id, scoring_version, input_hash)` identity for computed score runs; legacy imported score rows are excluded from that uniqueness predicate with the explicit `legacy-import` hash.

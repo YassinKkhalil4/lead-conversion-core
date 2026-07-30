@@ -527,3 +527,27 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 71 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or salesperson-provider call was made.
+
+## 2026-07-30 MP-09 Routing Foundation
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts tests/lead-scoring.test.ts`
+
+Result: failed on first routing run. Duplicate reroute attempted to insert a second `app.lead_assignments` row with status `assigned`, violating `lead_assignments_lead_id_status_key`. Resolution: `LeadRoutingService` now locks and reuses existing active assignments.
+
+Command: `npx vitest run tests/runtime.integration.test.ts tests/lead-scoring.test.ts`
+
+Result: failed on second focused run. Recomputing after the assignment changed candidate load and selected a different salesperson. Resolution: active-assignment reuse now happens before candidate ranking, preserving assignment authority and replay idempotency.
+
+Command: `npx vitest run tests/runtime.integration.test.ts tests/lead-scoring.test.ts`
+
+Result: passed. Focused tests ran 38 tests, including deterministic same-client/project routing, malformed cross-client project-link rejection, stable tie-break by candidate ordering, duplicate rerun preserving one assignment and one notification command, and no-eligible routing with one operator alert command.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 73 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or salesperson-provider call was made.
