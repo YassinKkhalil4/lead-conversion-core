@@ -16,6 +16,7 @@ import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
 import { LeadScoringService } from './lead-scoring-service.js';
 import { LeadRoutingService } from './lead-routing-service.js';
+import { FollowupSchedulerService } from './followup-scheduler-service.js';
 
 const inboundMessageSchema = z.object({
   webhookType: z.literal('whatsapp.message_received'),
@@ -98,6 +99,7 @@ export class EdgeInboundMessageProcessor {
     private readonly audit = new AuditRepository(),
     private readonly scorer = new LeadScoringService(),
     private readonly router = new LeadRoutingService(),
+    private readonly followups = new FollowupSchedulerService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -535,6 +537,13 @@ export class EdgeInboundMessageProcessor {
          WHERE lead_id=$1`,
         [leadId],
       );
+      await this.followups.cancelForLead(client, {
+        leadId,
+        reason: 'qualification_completed',
+        actorId: 'edge-inbound-message-processor',
+        correlationId: scoringContext.correlationId,
+        causationId: scoringContext.causationId,
+      });
       const score = await this.scorer.scoreLead(client, {
         leadId,
         answers: decision.nextState.answers,
@@ -582,6 +591,12 @@ export class EdgeInboundMessageProcessor {
          AND c.phone_e164=$2`,
       [state.leadId, phoneNormalized],
     );
+    await this.followups.cancelForLead(client, {
+      leadId: state.leadId,
+      reason: 'lead_opted_out',
+      actorId: 'edge-inbound-message-processor',
+      causationId: 'lead_opted_out',
+    });
   }
 
   private async persistControlSnapshot(

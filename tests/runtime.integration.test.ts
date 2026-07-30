@@ -42,6 +42,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let metaInbox: typeof import('../src/services/meta-inbox-processor.js');
   let leadScoring: typeof import('../src/services/lead-scoring-service.js');
   let leadRouting: typeof import('../src/services/lead-routing-service.js');
+  let followupScheduler: typeof import('../src/services/followup-scheduler-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -67,6 +68,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     metaInbox = await import('../src/services/meta-inbox-processor.js');
     leadScoring = await import('../src/services/lead-scoring-service.js');
     leadRouting = await import('../src/services/lead-routing-service.js');
+    followupScheduler = await import('../src/services/followup-scheduler-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -1558,6 +1560,16 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         crossClientSalesperson.rows[0]?.salesperson_id,
       ],
     );
+    const followups = new followupScheduler.FollowupSchedulerService();
+    const scheduledFollowup = await followups.scheduleFollowup(db.pool, {
+      leadId: seeded.leadId,
+      stageKey: 'asking_location',
+      sequenceKey: 'default',
+      stepOrder: 1,
+      delaySeconds: 3600,
+      correlationId: 'route-test',
+    });
+    expect(scheduledFollowup.scheduled).toBe(true);
     const session = await db.pool.query<{ qualification_session_id: string }>(
       `INSERT INTO app.qualification_sessions
         (lead_id, status, configuration_version_id, completed_at)
@@ -1607,6 +1619,14 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(second.inserted).toBe(false);
     expect((await db.pool.query('SELECT count(*) FROM app.lead_assignments WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
     expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='salesperson.lead_assignment_notification'")).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM app.followups WHERE followup_id=$1', [scheduledFollowup.followupId])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'lead_assigned',
+    });
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [scheduledFollowup.scheduledJobId])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'lead_assigned',
+    });
     const candidates = await db.pool.query<{ ids: string[] }>(
       `SELECT ARRAY(
          SELECT candidate->>'salespersonId'
@@ -1668,6 +1688,43 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM app.lead_assignments WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('0');
     expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.routing_attention_required'")).rows[0]?.count).toBe('1');
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.routing_no_eligible' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('schedules durable follow-up jobs idempotently with explicit timezone', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'FOLLOW',
+      phone: '+201099999981',
+      phoneNumberId: 'phone-number-id-mp10-follow',
+    });
+    await db.pool.query("UPDATE app.clients SET timezone='Africa/Cairo' WHERE client_id=$1", [seeded.clientId]);
+    const service = new followupScheduler.FollowupSchedulerService();
+    const first = await service.scheduleFollowup(db.pool, {
+      leadId: seeded.leadId,
+      stageKey: 'asking_location',
+      sequenceKey: 'default',
+      stepOrder: 1,
+      delaySeconds: 900,
+      correlationId: 'followup-test',
+    });
+    const second = await service.scheduleFollowup(db.pool, {
+      leadId: seeded.leadId,
+      stageKey: 'asking_location',
+      sequenceKey: 'default',
+      stepOrder: 1,
+      delaySeconds: 900,
+      correlationId: 'followup-test',
+    });
+
+    expect(second.followupId).toBe(first.followupId);
+    expect(second.scheduledJobId).toBe(first.scheduledJobId);
+    expect((await db.pool.query('SELECT count(*) FROM app.followups WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.scheduled_jobs WHERE job_key=$1', [first.jobKey])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT timezone, job_type, aggregate_key FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [first.scheduledJobId])).rows[0]).toEqual({
+      timezone: 'Africa/Cairo',
+      job_type: 'followup.send',
+      aggregate_key: seeded.leadId,
+    });
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='followup.scheduled' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
   });
 
   it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {
@@ -1750,6 +1807,21 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       phone: '+201099999982',
       salespersonPhone: '+201077777777',
     });
+    const scheduledJobId = await new runtime.JobRepository().schedule(db.pool, {
+      jobKey: `followup:${assigned.leadId}:manual:asking_location:step:1`,
+      jobType: 'followup.send',
+      dueAt: new Date(Date.now() + 3600_000).toISOString(),
+      timezone: 'Africa/Cairo',
+      aggregateKey: assigned.leadId,
+      payload: { leadId: assigned.leadId },
+    });
+    const followup = await db.pool.query<{ followup_id: string }>(
+      `INSERT INTO app.followups
+        (lead_id, status, due_at, semantic_key, scheduled_job_id, timezone, sequence_key, step_order)
+       VALUES ($1, 'scheduled', now()+interval '1 hour', $2, $3, 'Africa/Cairo', 'manual', 1)
+       RETURNING followup_id`,
+      [assigned.leadId, `followup:${assigned.leadId}:manual:asking_location:step:1`, scheduledJobId],
+    );
 
     await receiveSalespersonCommand({
       clientId: assigned.clientId,
@@ -1779,6 +1851,14 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       current_stage: 'closed_lost',
       closed_status: 'lost',
       stop_follow_up: true,
+    });
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM app.followups WHERE followup_id=$1', [followup.rows[0]?.followup_id])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'salesperson_close_lost',
+    });
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [scheduledJobId])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'salesperson_close_lost',
     });
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
   });

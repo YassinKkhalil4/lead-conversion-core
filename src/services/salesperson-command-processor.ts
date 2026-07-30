@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { pool } from '../db/pool.js';
 import { AuditRepository, sha256Hex, stableJson, type ClaimedInboxEvent } from '../infrastructure/runtime.js';
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
+import { FollowupSchedulerService } from './followup-scheduler-service.js';
 
 const commandPayloadSchema = z.object({
   webhookType: z.literal('salesperson.command_received'),
@@ -36,7 +37,10 @@ function parseIntent(input: { commandIntent: string; messageText: string }): Com
 }
 
 export class SalespersonCommandProcessor {
-  constructor(private readonly audit = new AuditRepository()) {}
+  constructor(
+    private readonly audit = new AuditRepository(),
+    private readonly followups = new FollowupSchedulerService(),
+  ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
     if (!['n8n', 'meta'].includes(event.provider) || event.eventType !== 'salesperson.command_received') {
@@ -102,6 +106,15 @@ export class SalespersonCommandProcessor {
 
       if (status === 'processed' && assignment && intent) {
         await this.applyCommand(client, { assignment, intent });
+        if (['close_lost', 'stop_follow_up', 'takeover'].includes(intent)) {
+          await this.followups.cancelForLead(client, {
+            leadId: assignment.lead_id,
+            reason: `salesperson_${intent}`,
+            actorId: 'salesperson-command-processor',
+            correlationId: event.dedupeKey,
+            causationId: event.inboxEventId,
+          });
+        }
         reason = intent;
       }
 
