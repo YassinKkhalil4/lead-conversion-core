@@ -95,3 +95,11 @@ Decision: Compile Airtable configuration exports only from the verified Question
 Reason: The real Airtable export is unavailable. Local parity can be proven against sanitized Airtable-shaped exports, but production configuration authority must not be published from rows with missing IDs, duplicate IDs, invalid active flags, missing links, or missing display text.
 
 Date: 2026-07-30
+
+## DEC-013: Edge Inbound Conversation Ownership Gate
+
+Decision: Durable Meta inbound message processing only mutates conversations whose `conversation_engine` and `state_authority` are both `edge`; legacy-owned conversations are durably acknowledged and ignored so Typebot remains authoritative during cutover.
+
+Reason: The migration must preserve rollback/fallback paths until explicit cutover evidence exists. Processing legacy-owned turns in Edge would create duplicate authorities for conversation state and outbound replies.
+
+Date: 2026-07-30

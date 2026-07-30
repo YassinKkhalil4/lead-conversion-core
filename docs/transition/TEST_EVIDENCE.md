@@ -395,3 +395,39 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 61 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested. No live Airtable call was made.
+
+## 2026-07-30 MP-08 Durable Meta Inbound Conversation Bridge
+
+Command: `npm run lint`
+
+Result: passed. TypeScript strict compile completed with no errors after adding the durable inbound message processor and combined Meta inbox processor.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed. Runtime integration ran 28 PostgreSQL/API tests, including signed Meta inbound message webhook receipt into `runtime.inbox_events`, worker processing through `MetaInboxProcessor`, edge-owned `edge_conversations` state advancement from `asking_location` to `asking_unit_type`, `app.qualification_answers` persistence, transactional `app.messages` plus `runtime.outbox_commands` reply enqueue, `conversation.inbound_processed` audit recording, and legacy-owned conversation ignore behavior preserving Typebot fallback authority.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages from the lockfile, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 8 files and 63 tests, including the new MP-08 inbound conversation coverage and existing MP-01 through MP-07 regression coverage.
+
+Command: `npm run build`
+
+Result: passed.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized Meta fixtures. No live Meta, Typebot, n8n, or Airtable call was made.

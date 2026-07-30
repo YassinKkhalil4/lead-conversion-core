@@ -97,3 +97,9 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 61 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live Airtable projection remains pending owner Airtable export/access and projection target confirmation.
 - Commit `b865b26`: Added Airtable lead projection outbox hook.
+- Implementation slice: Began MP-08 by adding migration `012_edge_active_turn_queued_status.sql`, durable Meta inbound message extraction, `EdgeInboundMessageProcessor`, and `MetaInboxProcessor`. Signed Meta message webhooks now durably store raw inbound messages before processing, runtime workers mutate only edge-owned conversations, persist qualification answers, enqueue outbound WhatsApp commands in the same transaction as conversation state updates, and record `conversation.inbound_processed` audit events.
+- Decision: Edge inbound message processing ignores legacy-owned conversations and records the durable inbox item as ignored so Typebot remains authoritative during cutover.
+- Verification: `npm run lint` and `npx vitest run tests/runtime.integration.test.ts` passed; runtime integration ran 28 PostgreSQL/API tests including signed inbound Meta receipt, durable worker processing, qualification answer persistence, transactional outbound outbox enqueue, audit recording, and legacy-owned Typebot fallback ignore behavior.
+- Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, and `npm run test:smoke` passed; Vitest ran 8 files and 63 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live Meta inbound conversation turn verification remains pending rotated Meta credentials, callback URL, webhook subscription, and staged test recipient.
+- Commit `c104fd2`: Added durable Meta inbound conversation processor.

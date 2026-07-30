@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-08 Conversation and qualification
 
-Exact next implementation task: Begin MP-08 by adding the edge-owned inbound message processing bridge from durable Meta inbox events to conversation state, qualification answers, and outbound reply outbox commands, preserving Typebot fallback for unsupported/legacy conversations.
+Exact next implementation task: Continue MP-08 by adding explicit opt-out and human-takeover handling for durable inbound WhatsApp messages, including persisted conversation/lead control state, audit records, suppressed outbound side effects, and PostgreSQL integration tests for opt-out words, takeover state, and resumed edge-owned turns.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: b865b26
+Last verified implementation commit: c104fd2
 
 Git worktree clean when recorded: yes
