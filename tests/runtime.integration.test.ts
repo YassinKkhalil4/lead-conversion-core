@@ -39,6 +39,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let runtimeWorker: typeof import('../src/worker/runtime-worker.js');
   let messageRequests: typeof import('../src/services/message-request-service.js');
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
+  let metaInbox: typeof import('../src/services/meta-inbox-processor.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -61,6 +62,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     runtimeWorker = await import('../src/worker/runtime-worker.js');
     messageRequests = await import('../src/services/message-request-service.js');
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
+    metaInbox = await import('../src/services/meta-inbox-processor.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -154,6 +156,49 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
                     recipient_id: '201000000001',
                     conversation: { id: 'conversation-sanitized' },
                     pricing: { billable: true, pricing_model: 'CBP', category: 'service' },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  function metaInboundPayload(input: {
+    providerMessageId: string;
+    from: string;
+    phoneNumberId: string;
+    text: string;
+  }): Record<string, unknown> {
+    return {
+      object: 'whatsapp_business_account',
+      entry: [
+        {
+          id: 'waba-sanitized',
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: '201000000000',
+                  phone_number_id: input.phoneNumberId,
+                },
+                contacts: [
+                  {
+                    wa_id: input.from.replace(/^\+/, ''),
+                    profile: { name: 'MP08 Lead' },
+                  },
+                ],
+                messages: [
+                  {
+                    id: input.providerMessageId,
+                    from: input.from.replace(/^\+/, ''),
+                    timestamp: '1785370000',
+                    type: 'text',
+                    text: { body: input.text },
                   },
                 ],
               },
@@ -831,6 +876,184 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='message.delivery_status_received'")).rows[0]?.count).toBe('1');
       expect(await worker.tick()).toBe(0);
       expect((await db.pool.query('SELECT count(*) FROM app.message_delivery_events')).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('processes durable Meta inbound messages through Edge conversation state and queues replies atomically', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    const service = new versionedConfig.VersionedConfigService();
+    const published = await service.publish({
+      sourcePath: join(process.cwd(), 'config/seed-real-estate.json'),
+      clientRecordId: 'recMP08CLIENT',
+      publishedBy: 'test-operator',
+    });
+    const client = await db.pool.query<{ client_id: string }>(
+      `INSERT INTO app.clients (client_key, legacy_airtable_id, company_name)
+       VALUES ('client-mp08-inbound', 'recMP08CLIENT', 'MP08 Client')
+       RETURNING client_id`,
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    const contact = await db.pool.query<{ contact_id: string }>(
+      `INSERT INTO app.contacts (client_id, legacy_airtable_id, name, phone_raw, phone_e164, consent_status)
+       VALUES ($1, 'recMP08CONTACT', 'MP08 Lead', '201099999995', '+201099999995', 'opted_in')
+       RETURNING contact_id`,
+      [clientId],
+    );
+    const contactId = contact.rows[0]?.contact_id;
+    if (!contactId) throw new Error('contact_not_created');
+    const project = await db.pool.query<{ project_id: string }>(
+      `INSERT INTO app.projects (client_id, legacy_airtable_id, project_name)
+       VALUES ($1, 'recMP08PROJECT', 'MP08 Project')
+       RETURNING project_id`,
+      [clientId],
+    );
+    const projectId = project.rows[0]?.project_id;
+    if (!projectId) throw new Error('project_not_created');
+    const lead = await db.pool.query<{ lead_id: string }>(
+      `INSERT INTO app.leads
+        (client_id, contact_id, project_id, legacy_airtable_id, provider, provider_external_id, source, source_payload_hash, current_stage)
+       VALUES ($1, $2, $3, 'recMP08LEAD', 'airtable', 'recMP08LEAD', 'airtable_import', 'fixture-hash', 'asking_location')
+       RETURNING lead_id`,
+      [clientId, contactId, projectId],
+    );
+    const leadId = lead.rows[0]?.lead_id;
+    if (!leadId) throw new Error('lead_not_created');
+    await db.pool.query(
+      `INSERT INTO edge_client_channels
+        (phone_number_id, client_record_id, client_id, company_name, active, config_version, direct_send_enabled, graph_phone_number_id)
+       VALUES ('phone-number-id-mp08', 'recMP08CLIENT', $1, 'MP08 Client', true, $2, true, 'phone-number-id-mp08')`,
+      [clientId, published.versionKey],
+    );
+    await db.pool.query(
+      `INSERT INTO edge_conversations
+        (client_record_id, client_id, phone_normalized, lead_record_id, lead_id, lead_name,
+         company_name, project_name, project_record_id, preferred_language, current_stage,
+         current_question_key, answers_json, status, conversation_engine, state_authority,
+         config_version, configuration_version_id)
+       VALUES (
+         'recMP08CLIENT', $1, '+201099999995', 'recMP08LEAD', $2, 'MP08 Lead',
+         'MP08 Client', 'MP08 Project', 'recMP08PROJECT', 'English', 'asking_location',
+         'q_location', '{}'::jsonb, 'in_qualification', 'edge', 'edge', $3, $4
+       )`,
+      [clientId, leadId, published.versionKey, published.configurationVersionId],
+    );
+
+    const app = await appModule.buildApp();
+    try {
+      const payload = metaInboundPayload({
+        providerMessageId: 'wamid.mp08.inbound.1',
+        from: '+201099999995',
+        phoneNumberId: 'phone-number-id-mp08',
+        text: 'New Cairo',
+      });
+      const signed = signedMetaWebhook(payload);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ ok: true, received: 1, duplicates: 0 });
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE event_type='whatsapp.message_received'")).rows[0]?.count).toBe('1');
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(1);
+      expect(await worker.tick()).toBe(0);
+
+      const conversation = await db.pool.query<{ current_stage: string; current_question_key: string; q_location: string }>(
+        `SELECT current_stage, current_question_key, answers_json->>'q_location' AS q_location
+         FROM edge_conversations
+         WHERE client_record_id='recMP08CLIENT' AND phone_normalized='+201099999995'`,
+      );
+      expect(conversation.rows[0]).toEqual({
+        current_stage: 'asking_unit_type',
+        current_question_key: 'q_unit_type',
+        q_location: 'New Cairo',
+      });
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE event_type='whatsapp.message_received'")).rows[0]?.status).toBe('processed');
+      expect((await db.pool.query("SELECT normalized_value FROM app.qualification_answers WHERE question_key='q_location'")).rows[0]?.normalized_value).toBe('New Cairo');
+      expect((await db.pool.query('SELECT count(*) FROM app.messages WHERE direction=$1 AND state=$2', ['outbound', 'queued'])).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message' AND state='pending'")).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.inbound.1'")).rows[0]?.status).toBe('queued');
+      expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='conversation.inbound_processed'")).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('ignores legacy-owned inbound conversations so Typebot fallback remains authoritative during cutover', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    const service = new versionedConfig.VersionedConfigService();
+    const published = await service.publish({
+      sourcePath: join(process.cwd(), 'config/seed-real-estate.json'),
+      clientRecordId: 'recMP08LEGACY',
+      publishedBy: 'test-operator',
+    });
+    await db.pool.query(
+      `INSERT INTO edge_client_channels
+        (phone_number_id, client_record_id, client_id, company_name, active, config_version, direct_send_enabled, graph_phone_number_id)
+       VALUES ('phone-number-id-mp08-legacy', 'recMP08LEGACY', 'legacy-client-id', 'MP08 Legacy Client', true, $1, true, 'phone-number-id-mp08-legacy')`,
+      [published.versionKey],
+    );
+    await db.pool.query(
+      `INSERT INTO edge_conversations
+        (client_record_id, client_id, phone_normalized, lead_record_id, lead_id, lead_name,
+         company_name, project_name, project_record_id, preferred_language, current_stage,
+         current_question_key, answers_json, status, conversation_engine, state_authority,
+         config_version, configuration_version_id)
+       VALUES (
+         'recMP08LEGACY', 'legacy-client-id', '+201099999996', 'recMP08LEGACYLEAD', 'legacy-lead-id', 'Legacy Lead',
+         'MP08 Legacy Client', 'Legacy Project', 'recMP08LEGACYPROJECT', 'English', 'asking_location',
+         'q_location', '{}'::jsonb, 'in_qualification', 'legacy', 'legacy', $1, $2
+       )`,
+      [published.versionKey, published.configurationVersionId],
+    );
+
+    const app = await appModule.buildApp();
+    try {
+      const payload = metaInboundPayload({
+        providerMessageId: 'wamid.mp08.legacy.inbound.1',
+        from: '+201099999996',
+        phoneNumberId: 'phone-number-id-mp08-legacy',
+        text: 'New Cairo',
+      });
+      const signed = signedMetaWebhook(payload);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ ok: true, received: 1, duplicates: 0 });
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(1);
+      expect((await db.pool.query("SELECT status, ignored_reason FROM runtime.inbox_events WHERE event_type='whatsapp.message_received'")).rows[0]).toMatchObject({
+        status: 'ignored',
+        ignored_reason: 'conversation_owned_by_legacy',
+      });
+      expect((await db.pool.query('SELECT count(*) FROM edge_active_turns')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
     } finally {
       await app.close();
     }

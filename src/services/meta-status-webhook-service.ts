@@ -28,6 +28,28 @@ const storedStatusSchema = z.object({
   rawStatus: z.record(z.unknown()),
 });
 
+const messageSchema = z.object({
+  id: z.string().min(1),
+  from: z.string().min(1),
+  timestamp: z.string().optional(),
+  type: z.string().min(1),
+  text: z.object({ body: z.string().optional().default('') }).optional(),
+  button: z.object({
+    payload: z.string().optional().default(''),
+    text: z.string().optional().default(''),
+  }).optional(),
+  interactive: z.object({
+    button_reply: z.object({
+      id: z.string().optional().default(''),
+      title: z.string().optional().default(''),
+    }).optional(),
+    list_reply: z.object({
+      id: z.string().optional().default(''),
+      title: z.string().optional().default(''),
+    }).optional(),
+  }).optional(),
+}).passthrough();
+
 export interface ParsedMetaStatus {
   eventKey: string;
   providerMessageId: string;
@@ -92,6 +114,69 @@ export function extractMetaStatuses(payload: unknown): ParsedMetaStatus[] {
   return statuses;
 }
 
+export interface ParsedMetaMessage {
+  eventKey: string;
+  phoneNumberId: string;
+  metaMessageId: string;
+  from: string;
+  messageType: string;
+  messageText: string;
+  messageOptionId: string;
+  receivedAt: string | null;
+  profileName: string;
+  rawMessage: Record<string, unknown>;
+}
+
+function messageTextAndOption(message: z.infer<typeof messageSchema>): { messageText: string; messageOptionId: string } {
+  if (message.type === 'text') return { messageText: message.text?.body || '', messageOptionId: '' };
+  if (message.type === 'button') return { messageText: message.button?.text || '', messageOptionId: message.button?.payload || '' };
+  const button = message.interactive?.button_reply;
+  if (button) return { messageText: button.title, messageOptionId: button.id };
+  const list = message.interactive?.list_reply;
+  if (list) return { messageText: list.title, messageOptionId: list.id };
+  return { messageText: '', messageOptionId: '' };
+}
+
+export function extractMetaMessages(payload: unknown): ParsedMetaMessage[] {
+  const root = payload as {
+    entry?: Array<{
+      changes?: Array<{
+        value?: {
+          metadata?: { phone_number_id?: string };
+          contacts?: Array<{ wa_id?: string; profile?: { name?: string } }>;
+          messages?: unknown[];
+        };
+      }>;
+    }>;
+  };
+  const messages: ParsedMetaMessage[] = [];
+  for (const entry of root.entry || []) {
+    for (const change of entry.changes || []) {
+      const phoneNumberId = change.value?.metadata?.phone_number_id || '';
+      const contacts = change.value?.contacts || [];
+      for (const message of change.value?.messages || []) {
+        const parsed = messageSchema.safeParse(message);
+        if (!parsed.success) continue;
+        const text = messageTextAndOption(parsed.data);
+        const contact = contacts.find((candidate) => candidate.wa_id === parsed.data.from) || contacts[0];
+        messages.push({
+          eventKey: `meta:whatsapp_message:${parsed.data.id}`,
+          phoneNumberId,
+          metaMessageId: parsed.data.id,
+          from: parsed.data.from.startsWith('+') ? parsed.data.from : `+${parsed.data.from}`,
+          messageType: parsed.data.type,
+          messageText: text.messageText,
+          messageOptionId: text.messageOptionId,
+          receivedAt: timestampToIso(parsed.data.timestamp),
+          profileName: contact?.profile?.name || '',
+          rawMessage: parsed.data,
+        });
+      }
+    }
+  }
+  return messages;
+}
+
 function mapMessageState(providerStatus: string): 'sent' | 'delivered' | 'read' | 'failed' | 'delivery_unknown' {
   if (providerStatus === 'sent') return 'sent';
   if (providerStatus === 'delivered') return 'delivered';
@@ -121,7 +206,8 @@ export class MetaStatusWebhookService {
       throw Object.assign(new Error('invalid_meta_json'), { statusCode: 400 });
     }
     const statuses = extractMetaStatuses(payload);
-    if (statuses.length === 0) {
+    const messages = extractMetaMessages(payload);
+    if (statuses.length === 0 && messages.length === 0) {
       const receipt = await this.inbox.receive({
         provider: 'meta',
         eventType: 'whatsapp.webhook_ignored',
@@ -134,6 +220,30 @@ export class MetaStatusWebhookService {
     }
 
     let duplicates = 0;
+    for (const message of messages) {
+      const receipt = await this.inbox.receive({
+        provider: 'meta',
+        eventType: 'whatsapp.message_received',
+        externalEventId: message.eventKey,
+        rawBody: input.rawBody,
+        headers: input.headers,
+        payload: {
+          webhookType: 'whatsapp.message_received',
+          phoneNumberId: message.phoneNumberId,
+          metaMessageId: message.metaMessageId,
+          from: message.from,
+          messageType: message.messageType,
+          messageText: message.messageText,
+          messageOptionId: message.messageOptionId,
+          receivedAt: message.receivedAt,
+          profileName: message.profileName,
+          rawMessage: message.rawMessage,
+        },
+        signatureValid: true,
+        aggregateKey: message.from,
+      });
+      if (receipt.duplicate) duplicates += 1;
+    }
     for (const status of statuses) {
       const receipt = await this.inbox.receive({
         provider: 'meta',
@@ -155,7 +265,7 @@ export class MetaStatusWebhookService {
       });
       if (receipt.duplicate) duplicates += 1;
     }
-    return { received: statuses.length, duplicates };
+    return { received: statuses.length + messages.length, duplicates };
   }
 }
 
