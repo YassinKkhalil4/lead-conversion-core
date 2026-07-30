@@ -347,3 +347,19 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 56 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local unit, CLI, and fixture-generated Airtable export parity tested. Final compatibility with the real Airtable export remains pending owner action.
+
+## 2026-07-30 MP-07 Internal Lead Intake Command
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed. Runtime integration ran 23 PostgreSQL/API tests, including authenticated `/internal/leads/intake` coverage for idempotent contact/lead/intake-event upserts, project matching by legacy ID, one first-contact `app.messages` row, one `runtime.outbox_commands` row, one audit event, duplicate replay returning the same durable IDs, and opted-out contact suppression with no outbound message/outbox row.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 58 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested. No live website, Facebook, Airtable, or Meta provider call was made.

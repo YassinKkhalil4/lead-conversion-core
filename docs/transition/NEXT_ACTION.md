@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-07 Lead intake and CRM
 
-Exact next implementation task: Implement the authenticated internal lead intake command that validates a source lead payload, upserts `app.contacts` and `app.leads` idempotently in PostgreSQL, records audit metadata, and enqueues the first-contact WhatsApp outbox command without calling an external provider inside the transaction.
+Exact next implementation task: Continue MP-07 by adding source-specific website/Facebook intake adapters backed by durable inbox receipt and sanitized contract fixtures, then feed accepted leads into the internal `LeadIntakeService` without making live source-provider calls.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: bb8314a
+Last verified implementation commit: c2dadf2
 
 Git worktree clean when recorded: yes

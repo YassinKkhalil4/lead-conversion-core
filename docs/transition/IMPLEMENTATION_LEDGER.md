@@ -81,3 +81,9 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 56 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: final MP-06 config-source reconciliation against the real Airtable export remains pending owner action.
 - Commit `bb8314a`: Added Airtable configuration export parity.
+- Implementation slice: Began MP-07 with authenticated `/internal/leads/intake`, `LeadIntakeService`, idempotent contact/lead/intake-event upserts, deterministic fallback lead idempotency keys, project matching by ID/legacy ID/name, audit recording, opted-out first-contact suppression, and first-contact message/outbox enqueue in the same PostgreSQL transaction.
+- Decision: First contact from lead intake requires an approved WhatsApp template and never calls Meta directly; the command only inserts `app.messages` and `runtime.outbox_commands`.
+- Verification: `npm run lint` and `npx vitest run tests/runtime.integration.test.ts` passed; runtime integration ran 23 PostgreSQL/API tests including lead intake idempotency and opt-out suppression.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 58 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live website/Facebook lead intake remains pending owner source configuration.
+- Commit `c2dadf2`: Added the internal lead intake command.
