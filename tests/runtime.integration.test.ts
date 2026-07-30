@@ -43,6 +43,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let leadScoring: typeof import('../src/services/lead-scoring-service.js');
   let leadRouting: typeof import('../src/services/lead-routing-service.js');
   let followupScheduler: typeof import('../src/services/followup-scheduler-service.js');
+  let followupJob: typeof import('../src/services/followup-job-processor.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -69,6 +70,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     leadScoring = await import('../src/services/lead-scoring-service.js');
     leadRouting = await import('../src/services/lead-routing-service.js');
     followupScheduler = await import('../src/services/followup-scheduler-service.js');
+    followupJob = await import('../src/services/followup-job-processor.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -1725,6 +1727,107 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       aggregate_key: seeded.leadId,
     });
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='followup.scheduled' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('executes due follow-up jobs once through the runtime worker', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'FOLLOWEXEC',
+      phone: '+201099999980',
+      phoneNumberId: 'phone-number-id-mp10-follow-exec',
+    });
+    const scheduler = new followupScheduler.FollowupSchedulerService();
+    const scheduled = await scheduler.scheduleFollowup(db.pool, {
+      leadId: seeded.leadId,
+      stageKey: 'asking_location',
+      delaySeconds: 0,
+      correlationId: 'followup-exec-test',
+    });
+    await db.pool.query('UPDATE runtime.scheduled_jobs SET due_at=now()-interval \'1 second\' WHERE scheduled_job_id=$1', [scheduled.scheduledJobId]);
+
+    const processor = new followupJob.FollowupJobProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => processor.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+    expect(await worker.tick()).toBe(0);
+
+    expect((await db.pool.query('SELECT status, sent_message_id IS NOT NULL AS has_message FROM app.followups WHERE followup_id=$1', [scheduled.followupId])).rows[0]).toEqual({
+      status: 'sent',
+      has_message: true,
+    });
+    expect((await db.pool.query('SELECT status FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [scheduled.scheduledJobId])).rows[0]?.status).toBe('completed');
+    expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='outbound' AND lead_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'")).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='followup.sent' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('does not execute cancelled follow-up jobs', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'FOLLOWCANCEL',
+      phone: '+201099999979',
+      phoneNumberId: 'phone-number-id-mp10-follow-cancel',
+    });
+    const scheduler = new followupScheduler.FollowupSchedulerService();
+    const scheduled = await scheduler.scheduleFollowup(db.pool, {
+      leadId: seeded.leadId,
+      stageKey: 'asking_location',
+      delaySeconds: 0,
+      correlationId: 'followup-cancel-test',
+    });
+    await scheduler.cancelForLead(db.pool, {
+      leadId: seeded.leadId,
+      reason: 'test_cancel',
+      correlationId: 'followup-cancel-test',
+    });
+    await db.pool.query('UPDATE runtime.scheduled_jobs SET due_at=now()-interval \'1 second\' WHERE scheduled_job_id=$1', [scheduled.scheduledJobId]);
+
+    const processor = new followupJob.FollowupJobProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => processor.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(0);
+
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM app.followups WHERE followup_id=$1', [scheduled.followupId])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'test_cancel',
+    });
+    expect((await db.pool.query('SELECT count(*) FROM app.messages WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('0');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+  });
+
+  it('recovers expired follow-up job leases before execution', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'FOLLOWLEASE',
+      phone: '+201099999978',
+      phoneNumberId: 'phone-number-id-mp10-follow-lease',
+    });
+    const scheduler = new followupScheduler.FollowupSchedulerService();
+    const scheduled = await scheduler.scheduleFollowup(db.pool, {
+      leadId: seeded.leadId,
+      stageKey: 'asking_location',
+      delaySeconds: 0,
+      correlationId: 'followup-lease-test',
+    });
+    await db.pool.query(
+      `UPDATE runtime.scheduled_jobs
+       SET status='processing',
+           locked_by='abandoned-worker',
+           lock_expires_at=now()-interval '1 second',
+           due_at=now()-interval '1 second'
+       WHERE scheduled_job_id=$1`,
+      [scheduled.scheduledJobId],
+    );
+
+    const processor = new followupJob.FollowupJobProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => processor.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+    expect((await db.pool.query('SELECT status FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [scheduled.scheduledJobId])).rows[0]?.status).toBe('completed');
+    expect((await db.pool.query('SELECT count(*) FROM app.messages WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
   });
 
   it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {
