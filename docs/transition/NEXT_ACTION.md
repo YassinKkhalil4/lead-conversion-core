@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-09 Scoring, routing, commands, and alerts
 
-Exact next implementation task: Continue MP-09 by adding authenticated salesperson command ingestion. Accept sanitized WhatsApp/n8n command payloads from assigned salespeople, validate the sender is the active assignee for the lead/client, persist command receipts and outcomes in PostgreSQL, support acknowledgement/takeover/close-lost/stop-follow-up command intents without external side effects, update assignment or lead/control state atomically, record audit events, and add PostgreSQL/API integration tests for unauthorized sender rejection, duplicate command idempotency, cross-client rejection, and each supported command.
+Exact next implementation task: Continue MP-09 by adding outbound dispatch handling for durable salesperson/operator notification command types. Implement a real adapter path that maps `salesperson.lead_assignment_notification` and `operator.routing_attention_required` to configured WhatsApp template/text sends without hardcoded success, keeps the provider disabled unless configured, preserves retry/permanent-failure classification, and adds unit/PostgreSQL worker tests proving unsupported or unconfigured sends fail safely without losing outbox history.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: e8b6cf5
+Last verified implementation commit: d0f7e36
 
 Git worktree clean when recorded: yes

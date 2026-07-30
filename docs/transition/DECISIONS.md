@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-017: Salesperson Commands Are Durable Inbox Events
+
+Decision: Salesperson command compatibility ingress stores sanitized WhatsApp/n8n command payloads in `runtime.inbox_events` before processing, and command effects are applied only by the worker after validating the sender is the active assignee for the lead/client.
+
+Reason: Salesperson commands mutate assignment and lead control state. They need the same receipt, dedupe, replay, authorization, and audit guarantees as external lead and conversation events.
+
+Date: 2026-07-30
+
 ## DEC-016: Existing Active Assignments Are Routing Authority
 
 Decision: `real_estate_v1` routing reuses an existing active `app.lead_assignments` row for a lead and does not recompute a different assignee until a future explicit reassignment or supersession command exists.
