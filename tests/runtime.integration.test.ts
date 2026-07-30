@@ -50,6 +50,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let reportingService: typeof import('../src/services/reporting-service.js');
   let appointmentService: typeof import('../src/services/appointment-service.js');
   let calendarReconciliation: typeof import('../src/worker/calendar-reconciliation.js');
+  let cutoverReadiness: typeof import('../src/services/cutover-readiness-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -83,6 +84,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     reportingService = await import('../src/services/reporting-service.js');
     appointmentService = await import('../src/services/appointment-service.js');
     calendarReconciliation = await import('../src/worker/calendar-reconciliation.js');
+    cutoverReadiness = await import('../src/services/cutover-readiness-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -732,6 +734,85 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT status FROM runtime.inbox_events WHERE inbox_event_id=$1', [inboxEventId])).rows[0]?.status).toBe('processed');
     expect((await db.pool.query('SELECT state FROM runtime.outbox_commands WHERE outbox_command_id=$1', [outboxCommandId])).rows[0]?.state).toBe('delivered');
     expect((await db.pool.query('SELECT status FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [scheduledJobId])).rows[0]?.status).toBe('completed');
+  });
+
+  it('reports cutover readiness from direct-ingress flags and empty runtime queues', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES ('cutover-readiness-test', 'runtime', 1, now(), now(), '{}'::jsonb)`,
+    );
+    const report = await new cutoverReadiness.CutoverReadinessService().report();
+    expect(report.ok).toBe(true);
+    expect(report.config).toMatchObject({
+      directMetaWebhookEnabled: true,
+      directLeadIngressEnabled: true,
+      n8nCompatRoutesEnabled: true,
+    });
+    expect(report.queues).toMatchObject({
+      inboxPendingCount: 0,
+      outboxPendingCount: 0,
+      deliveryUnknownCount: 0,
+      deadLetterCount: 0,
+    });
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_meta_webhook_flag: 'pass',
+      direct_lead_ingress_flag: 'pass',
+      n8n_compatibility_flag: 'pass',
+      inbox_backlog: 'pass',
+      outbox_backlog: 'pass',
+      delivery_unknown: 'pass',
+      dead_letters: 'pass',
+      runtime_worker_heartbeat: 'pass',
+    });
+  });
+
+  it('fails cutover readiness when queues contain stale pending work, delivery unknowns, or dead letters', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('meta', 'message.received', 'cutover-stale-inbox', '+201000000001', '{}'::jsonb, 'pending', now() - interval '10 minutes')`,
+    );
+    const pendingOutboxId = await enqueueOutbox();
+    await db.pool.query(
+      `UPDATE runtime.outbox_commands
+       SET created_at=now() - interval '10 minutes'
+       WHERE outbox_command_id=$1`,
+      [pendingOutboxId],
+    );
+    const unknownOutboxId = await new runtime.RuntimeOutboxRepository().enqueue(db.pool, {
+      commandType: 'calendar.create_event',
+      destination: 'calendar-test-primary',
+      idempotencyKey: 'calendar.create_event:cutover-readiness-unknown',
+      aggregateKey: 'lead-cutover-readiness',
+      payload: { appointmentId: '00000000-0000-4000-8000-000000000001' },
+    });
+    await db.pool.query(
+      `UPDATE runtime.outbox_commands
+       SET state='delivery_unknown'
+       WHERE outbox_command_id=$1`,
+      [unknownOutboxId],
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
+       VALUES ('runtime.outbox_commands', $1, 'cutover readiness fixture', '{}'::jsonb)`,
+      [unknownOutboxId],
+    );
+
+    const report = await new cutoverReadiness.CutoverReadinessService().report({ maxQueueAgeSeconds: 300 });
+    expect(report.ok).toBe(false);
+    expect(report.queues).toMatchObject({
+      inboxPendingCount: 1,
+      outboxPendingCount: 1,
+      deliveryUnknownCount: 1,
+      deadLetterCount: 1,
+    });
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      inbox_backlog: 'fail',
+      outbox_backlog: 'fail',
+      delivery_unknown: 'fail',
+      dead_letters: 'fail',
+    });
   });
 
   it('creates idempotent outbound message requests and outbox commands transactionally', async () => {
