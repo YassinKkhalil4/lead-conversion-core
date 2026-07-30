@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-30
 
-Current mini-project: MP-10 Follow-ups, SLA, reporting
+Current mini-project: MP-11 Appointments and Google Calendar
 
-Exact next implementation task: Continue MP-10 by adding durable daily reporting. Persist semantic report jobs with explicit client timezone, generate SQL-backed daily summaries for lead intake, qualification, assignment acknowledgement, SLA breaches, follow-ups, message delivery, and dead letters, enqueue report outbox commands without provider calls inside transactions, and add PostgreSQL integration tests for duplicate schedules, cancelled/superseded reports, expired leases, report row-count accuracy, and outbox idempotency.
+Exact next implementation task: Begin MP-11 by adding the internal appointment scheduling foundation. Persist appointment offers and slots with deterministic semantic identities, enforce slot locks and duplicate reply idempotency in PostgreSQL, add a disabled Google Calendar adapter shape that never fakes success, enqueue calendar-create outbox commands only after durable appointment state changes, and add PostgreSQL integration tests for concurrent slot booking, duplicate replies, cancellation/supersession, provider failure classification, and no external HTTP inside transactions.
 
 Files expected to change:
 
@@ -13,12 +13,14 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `migrations/019_reporting_jobs.sql`
-- `src/services/reporting-service.ts`
+- `migrations/020_appointment_scheduling.sql`
+- `src/services/appointment-service.ts`
+- `src/integrations/calendar/**`
 - `src/worker-runner.ts`
 - `src/worker/messaging-outbox-dispatcher.ts`
+- `src/worker/calendar-outbox-dispatcher.ts`
 - `tests/runtime.integration.test.ts`
-- `tests/messaging-outbox-dispatcher.test.ts`
+- `tests/calendar-*.test.ts`
 
 Required verification:
 
@@ -41,7 +43,8 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
+- Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 
-Last verified implementation commit: 0b8dd82
+Last verified implementation commit: 18a33a6
 
 Git worktree clean when recorded: yes

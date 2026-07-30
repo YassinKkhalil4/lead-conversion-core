@@ -608,6 +608,30 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local PostgreSQL/API and dispatcher contract integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or report-recipient provider call was made.
 
+## 2026-07-30 MP-10 Daily Reporting Jobs
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/messaging-outbox-dispatcher.test.ts tests/runtime.integration.test.ts`
+
+Result: failed on first focused run. The daily report job was claimed but the report row stayed scheduled because the unacknowledged-assignment count query referenced `$2` while leaving `$1` and `$3` unused, so PostgreSQL could not determine the type of `$1`. Resolution: the query now computes active unacknowledged assignments as of the report date, using the report date and timezone parameters explicitly.
+
+Command: `npm run lint`
+
+Result: passed after the report query fix.
+
+Command: `npx vitest run tests/messaging-outbox-dispatcher.test.ts tests/runtime.integration.test.ts`
+
+Result: passed after the report query fix. Focused tests ran 59 tests, including daily report idempotent scheduling, cancelled report non-execution, expired report lease recovery, SQL row-count accuracy, report outbox idempotency, and dispatcher mapping for `operator.daily_report`.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 92 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API and dispatcher contract integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, Google Calendar, or report-recipient provider call was made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

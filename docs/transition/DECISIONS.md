@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-021: Daily Reports Are Generated From Authoritative SQL At Execution Time
+
+Decision: Daily reports persist semantic `app.daily_reports` rows linked to `runtime.scheduled_jobs`, and workers generate report summaries from authoritative PostgreSQL tables when the job executes before inserting one idempotent `operator.daily_report` outbox command.
+
+Reason: Report data must be durable, replayable, and auditable without maintaining a second reporting authority. Generating from SQL inside the worker transaction keeps the report tied to the persisted report date/timezone and prevents in-memory timers or stale snapshots from becoming durable scheduling state.
+
+Date: 2026-07-30
+
 ## DEC-020: SLA Enforcement Uses Semantic Runtime Jobs
 
 Decision: SLA reminders and escalations persist `app.sla_jobs` rows linked to semantic `runtime.scheduled_jobs` records, and due SLA jobs enqueue durable outbox commands only after revalidating current lead/assignment state.
