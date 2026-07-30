@@ -18,6 +18,7 @@ Status: pending owner configuration and provider verification.
 2. Create a test event.
 3. Delete the test event.
 4. Confirm duplicate booking request creates only one event.
-5. Rotate/revoke credentials and confirm old credentials fail.
+5. Force or simulate a lost provider response and confirm `npm run calendar:reconcile -- list` shows the ambiguous create; then verify operator-confirm and operator-fail paths against a staging-only event.
+6. Rotate/revoke credentials and confirm old credentials fail.
 
 Do not store refresh tokens in docs or ordinary database tables.

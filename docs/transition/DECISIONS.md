@@ -191,3 +191,11 @@ Decision: Marking a `calendar.create_event` outbox command delivered persists th
 Reason: Provider acceptance may have occurred even if the worker crashed before recording the provider ID. Automatic replay could create duplicate calendar events, so ambiguous creates require operator-visible reconciliation while preserving the original payload and attempt history.
 
 Date: 2026-07-30
+
+## DEC-016: Calendar Failure Reconciliation Does Not Release Bookings
+
+Decision: Operator reconciliation of a delivery-unknown calendar create that is verified as not created marks the durable outbox command permanently failed and records audit/dead-letter evidence, but leaves the linked appointment in `booked` state without a provider event ID.
+
+Reason: The customer booking remains real local business state even when the external calendar side effect failed. Releasing or changing appointment semantics would require a broader rescheduling/cancellation policy and could create a second authority for the same slot.
+
+Date: 2026-07-30

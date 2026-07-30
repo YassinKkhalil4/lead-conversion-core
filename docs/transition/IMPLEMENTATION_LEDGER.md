@@ -201,3 +201,11 @@
 - Verification: `npx vitest run tests/calendar-outbox-dispatcher.test.ts tests/runtime.integration.test.ts` passed; focused dispatcher/runtime tests ran 60 tests.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 102 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Commit `284b110`: Persisted calendar delivery outcomes.
+- Implementation slice: Completed locally implementable MP-11 calendar reconciliation with `CalendarReconciliationService` and `npm run calendar:reconcile`. Operators can list ambiguous `delivery_unknown` calendar creates, confirm a verified provider event ID into `runtime.outbox_commands` and `app.appointments`, or mark the create permanently failed with dead-letter and audit evidence. Reconciliation is idempotent and does not call Google.
+- Decision: A verified failed calendar create does not release the customer booking; it marks only the outbox side effect permanently failed while leaving the appointment booked for operator follow-up.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "appointment|delivery-unknown|calendar create"` passed; focused PostgreSQL tests ran 6 tests covering delivery-unknown preservation, confirmed reconciliation, failed reconciliation, idempotent replay, audit recording, and dead-letter capture.
+- Verification: `npx vitest run tests/calendar-outbox-dispatcher.test.ts tests/runtime.integration.test.ts` passed; focused dispatcher/runtime tests ran 62 tests.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 104 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live Google Calendar availability/create/delete/duplicate-booking verification remains pending owner-provided credentials and calendar IDs.
+- Commit `fec6c33`: Added calendar create reconciliation command.
