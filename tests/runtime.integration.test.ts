@@ -1562,6 +1562,68 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     }
   });
 
+  it('receives n8n-compatible inbound WhatsApp messages through durable inbox', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'N8NINBOUND',
+      phone: '+201099999987',
+      phoneNumberId: 'phone-number-id-mp08-n8n-inbound',
+    });
+
+    const app = await appModule.buildApp();
+    try {
+      const payload = {
+        clientRecordId: 'recMP08N8NINBOUND',
+        sourceEventId: 'n8n-inbound-mp08-001',
+        phoneNumberId: 'phone-number-id-mp08-n8n-inbound',
+        phoneNormalized: '+201099999987',
+        messageType: 'text',
+        messageText: 'New Cairo',
+        receivedAt: '2026-07-30T03:00:00.000Z',
+        profileName: 'n8n Lead',
+        rawPayload: { workflow: 'sanitized-n8n-inbound' },
+      };
+      const first = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/messages/whatsapp/inbound',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload,
+      });
+      const duplicate = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/messages/whatsapp/inbound',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload,
+      });
+      expect(first.statusCode).toBe(200);
+      expect(first.json()).toMatchObject({ ok: true, received: 1, duplicate: false, clientId: seeded.clientId });
+      expect(duplicate.statusCode).toBe(200);
+      expect(duplicate.json()).toMatchObject({ ok: true, received: 1, duplicate: true, clientId: seeded.clientId });
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE provider='n8n' AND event_type='whatsapp.message_received'")).rows[0]?.count).toBe('1');
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(1);
+      expect((await db.pool.query(
+        `SELECT current_stage, current_question_key, answers_json->>'q_location' AS q_location
+         FROM edge_conversations
+         WHERE lead_id=$1`,
+        [seeded.leadId],
+      )).rows[0]).toEqual({
+        current_stage: 'asking_unit_type',
+        current_question_key: 'q_unit_type',
+        q_location: 'New Cairo',
+      });
+      expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='inbound' AND provider_message_id='n8n-inbound-mp08-001'")).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='outbound' AND state='queued'")).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'")).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
   it('enforces WhatsApp session-window and approved-template policy before enqueueing sends', async () => {
     const client = await db.pool.query<{ client_id: string }>(
       "INSERT INTO app.clients (client_key, company_name) VALUES ('client-message-policy', 'Message Policy Client') RETURNING client_id",
