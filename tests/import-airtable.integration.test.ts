@@ -60,6 +60,11 @@ describePg('airtable importer with real PostgreSQL', () => {
     expect(psqlScalar('SELECT count(*) FROM app.clients')).toBe('1');
     expect(psqlScalar('SELECT count(*) FROM app.contacts')).toBe('1');
     expect(psqlScalar('SELECT count(*) FROM app.leads')).toBe('1');
+    expect(psqlScalar('SELECT count(*) FROM app.qualification_sessions')).toBe('1');
+    expect(psqlScalar('SELECT count(*) FROM app.score_runs')).toBe('1');
+    expect(psqlScalar('SELECT count(*) FROM app.messages')).toBe('1');
+    expect(psqlScalar('SELECT count(*) FROM app.followups')).toBe('1');
+    expect(psqlScalar('SELECT count(*) FROM app.appointments')).toBe('1');
   }, 30_000);
 
   it('records missing relationship rejects without creating target entities', () => {

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "recSCORE001",
+    "fields": {
+      "Lead": ["recLEAD001"],
+      "Score Total": "85",
+      "Temperature": "Very Hot"
+    }
+  }
+]

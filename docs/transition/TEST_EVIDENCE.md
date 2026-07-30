@@ -136,6 +136,18 @@ Result: reconciliation passed and recorded 7 checks in `migration.reconciliation
 
 Verification level: local PostgreSQL integration tested.
 
+## 2026-07-30 MP-03 Expanded Historical Adapters
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest included PostgreSQL-backed importer integration tests for idempotent import of clients/projects/salespeople/contacts/leads/qualifications/scores/messages/followups/appointments, missing relationships, and rollback on mid-transaction failure.
+
+Command: disposable local PostgreSQL cluster; `npm run migrate`; `npm run import:airtable -- --input=tests/fixtures/airtable-export --apply`; `npm run reconcile:airtable -- --record-results`
+
+Result: reconciliation passed and recorded 12 checks: rejected records, mapped clients, mapped projects, mapped salespeople, mapped leads, mapped qualifications, mapped scores, mapped messages, mapped followups, mapped appointments, contact phone uniqueness, and lead-contact links.
+
+Verification level: local PostgreSQL integration tested.
+
 ## 2026-07-30 Codex Conversion And Audit Gate
 
 Command: `git status --short`

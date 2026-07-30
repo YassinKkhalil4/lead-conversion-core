@@ -4,18 +4,19 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-03 PostgreSQL core and Airtable migration foundation
 
-Exact next implementation task: Continue MP-03 by adding remaining provisional per-table adapters and reconciliation checks for configuration records, messages, qualifications, scores, follow-ups, and appointments using only verified/inferred field mappings.
+Exact next implementation task: Finish MP-03 documentation/commit for expanded historical adapters, then begin MP-04 durable inbox/outbox/jobs/audit runtime.
 
 Files expected to change:
 
-- `scripts/import-airtable.ts`
-- `scripts/reconcile-airtable.ts`
-- `docs/transition/AIRTABLE_FIELD_MAP.md`
-- `docs/transition/DATA_MIGRATION.md`
-- `docs/transition/DATA_RECONCILIATION.md`
+- `docs/transition/STATUS.md`
+- `docs/transition/WORK_QUEUE.md`
+- `docs/transition/NEXT_ACTION.md`
+- `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `tests/fixtures/airtable-export*`
-- `tests/import-airtable*.test.ts`
+- `migrations/00*_*.sql`
+- `src/infrastructure/**`
+- `src/repositories/**`
+- `tests/**/*`
 
 Required verification:
 
@@ -38,6 +39,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated provider credentials are unavailable for live integrations.
 
-Last verified commit: d0e751a plus uncommitted Codex conversion/audit slice verified by local gates
+Last verified commit: 52721ad plus uncommitted MP-03 expanded adapters verified by local gates
 
 Git worktree clean when recorded: yes

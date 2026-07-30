@@ -36,7 +36,7 @@ Dependencies: complete Airtable export for production reconciliation.
 
 Verification gates: synthetic malformed/duplicate/missing-relationship fixtures, idempotent rerun, partial failure rollback, disposable PostgreSQL apply/reconcile, documented field map.
 
-Remaining: full per-table adapters for configuration/messages/qualifications/messages/follow-ups/appointments/scores/events, projection readiness, broader reconciliation checks, full reconciliation blocked on export.
+Remaining: configuration publication adapters for Questions/Question Options/Conversation Messages in MP-06, Events import, projection readiness, broader real-export reconciliation checks, full reconciliation blocked on export.
 
 ## MP-04 Durable Inbox, Outbox, Jobs, Audit
 

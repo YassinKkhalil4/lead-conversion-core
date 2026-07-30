@@ -5,6 +5,11 @@
     { "name": "Clients", "file": "Clients.json", "expectedRecords": 1 },
     { "name": "Projects", "file": "Projects.json", "expectedRecords": 1 },
     { "name": "Salespeople", "file": "Salespeople.csv", "expectedRecords": 1 },
-    { "name": "Leads", "file": "Leads.json", "expectedRecords": 1 }
+    { "name": "Leads", "file": "Leads.json", "expectedRecords": 1 },
+    { "name": "Qualifications", "file": "Qualifications.json", "expectedRecords": 1 },
+    { "name": "Scores", "file": "Scores.json", "expectedRecords": 1 },
+    { "name": "Messages", "file": "Messages.json", "expectedRecords": 1 },
+    { "name": "FollowUps", "file": "FollowUps.json", "expectedRecords": 1 },
+    { "name": "Appointments", "file": "Appointments.json", "expectedRecords": 1 }
   ]
 }

@@ -15,3 +15,5 @@
 - Verification failure: parallel `npm ci` with lint/test/build caused transient missing modules/types while `node_modules` was replaced. Resolution: reran serially; serial gate passed.
 - Verification failure: importer rollback test initially reused `recPROJECT001`, causing a false positive raw-record count. Resolution: changed failing fixture to unique `recPROJECTSQLBAD`; test passed.
 - Implementation slice: Hardened importer manifest/rejection behavior, added provisional Airtable field map, improved restore verification, and added PostgreSQL-backed importer tests for idempotency, missing relationships, and rollback.
+- Commit `52721ad`: Converted repository instructions to Codex `AGENTS.md`, removed Claude-specific files, added persistent work queue/next-action/ledger, hardened MP-03 importer audit behavior, and verified with npm/source/PostgreSQL gates.
+- Implementation slice: Added historical import adapters for Qualifications, Scores, Messages, FollowUps, and Appointments. Expanded synthetic export fixtures and reconciliation to 12 checks.

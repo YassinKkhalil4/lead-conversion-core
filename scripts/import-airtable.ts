@@ -108,6 +108,38 @@ function linkedRecord(fields: AirtableFields, key: string): string {
   return String(value ?? '').trim();
 }
 
+function firstPresentField(fields: AirtableFields, keys: string[]): string {
+  for (const key of keys) {
+    const value = stringField(fields, key);
+    if (value) return value;
+  }
+  return '';
+}
+
+function boolField(fields: AirtableFields, key: string): boolean {
+  const value = fields[key];
+  if (typeof value === 'boolean') return value;
+  return ['true', 'yes', '1'].includes(String(value ?? '').toLocaleLowerCase());
+}
+
+function numberOrNull(fields: AirtableFields, key: string): number | null {
+  const value = stringField(fields, key);
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function dateOrNull(fields: AirtableFields, key: string): string | null {
+  const value = stringField(fields, key);
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function addMinutes(iso: string, minutes: number): string {
+  return new Date(new Date(iso).getTime() + minutes * 60_000).toISOString();
+}
+
 function splitList(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
   return String(value ?? '')
@@ -354,6 +386,27 @@ async function mappedId(client: PoolClient, sourceTable: string, sourceRecordId:
   return result.rows[0]?.target_id || null;
 }
 
+async function rejectRecord(client: PoolClient, input: {
+  importRunId: string;
+  tableName: string;
+  record: AirtableRecord;
+  reason: string;
+}): Promise<void> {
+  await client.query(
+    `INSERT INTO migration.rejected_records
+      (import_run_id, table_name, record_id, content_hash, reason, fields_json)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+    [
+      input.importRunId,
+      input.tableName,
+      input.record.id,
+      input.record.contentHash,
+      input.reason,
+      JSON.stringify(input.record.fields),
+    ],
+  );
+}
+
 async function applyImport(inputDir: string, loads: TableLoad[], summary: ImportSummary): Promise<string> {
   const [{ pool, closePool }] = await Promise.all([import('../src/db/pool.js')]);
   const client = await pool.connect();
@@ -442,12 +495,7 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
       const clientRecordId = linkedRecord(record.fields, 'Client') || linkedRecord(record.fields, 'Clients');
       const clientId = clientRecordId ? await mappedId(client, 'Clients', clientRecordId, 'app.clients') : null;
       if (clientRecordId && !clientId) {
-        await client.query(
-          `INSERT INTO migration.rejected_records
-            (import_run_id, table_name, record_id, content_hash, reason, fields_json)
-           VALUES ($1, 'Projects', $2, $3, 'missing_mapped_client', $4::jsonb)`,
-          [importRunId, record.id, record.contentHash, JSON.stringify(record.fields)],
-        );
+        await rejectRecord(client, { importRunId, tableName: 'Projects', record, reason: 'missing_mapped_client' });
         continue;
       }
       const result = await client.query<{ project_id: string }>(
@@ -491,12 +539,7 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
       const clientRecordId = linkedRecord(record.fields, 'Client') || linkedRecord(record.fields, 'Clients');
       const clientId = clientRecordId ? await mappedId(client, 'Clients', clientRecordId, 'app.clients') : null;
       if (!clientId) {
-        await client.query(
-          `INSERT INTO migration.rejected_records
-            (import_run_id, table_name, record_id, content_hash, reason, fields_json)
-           VALUES ($1, 'Salespeople', $2, $3, 'missing_mapped_client', $4::jsonb)`,
-          [importRunId, record.id, record.contentHash, JSON.stringify(record.fields)],
-        );
+        await rejectRecord(client, { importRunId, tableName: 'Salespeople', record, reason: 'missing_mapped_client' });
         continue;
       }
       const result = await client.query<{ salesperson_id: string }>(
@@ -543,12 +586,7 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
       const projectRecordId = linkedRecord(record.fields, 'Project Linked') || linkedRecord(record.fields, 'Project') || linkedRecord(record.fields, 'Projects');
       const clientId = clientRecordId ? await mappedId(client, 'Clients', clientRecordId, 'app.clients') : null;
       if (!clientId) {
-        await client.query(
-          `INSERT INTO migration.rejected_records
-            (import_run_id, table_name, record_id, content_hash, reason, fields_json)
-           VALUES ($1, 'Leads', $2, $3, 'missing_mapped_client', $4::jsonb)`,
-          [importRunId, record.id, record.contentHash, JSON.stringify(record.fields)],
-        );
+        await rejectRecord(client, { importRunId, tableName: 'Leads', record, reason: 'missing_mapped_client' });
         continue;
       }
       const phoneRaw = stringField(record.fields, 'Phone Raw') || stringField(record.fields, 'Phone Normalized');
@@ -586,12 +624,7 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
 
       const projectId = projectRecordId ? await mappedId(client, 'Projects', projectRecordId, 'app.projects') : null;
       if (projectRecordId && !projectId) {
-        await client.query(
-          `INSERT INTO migration.rejected_records
-            (import_run_id, table_name, record_id, content_hash, reason, fields_json)
-           VALUES ($1, 'Leads', $2, $3, 'missing_mapped_project', $4::jsonb)`,
-          [importRunId, record.id, record.contentHash, JSON.stringify(record.fields)],
-        );
+        await rejectRecord(client, { importRunId, tableName: 'Leads', record, reason: 'missing_mapped_project' });
         continue;
       }
       const lead = await client.query<{ lead_id: string }>(
@@ -638,6 +671,268 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
         sourceRecordId: record.id,
         targetTable: 'app.leads',
         targetId: lead.rows[0]?.lead_id || '',
+        contentHash: record.contentHash,
+      });
+    }
+
+    const qualifications = loads.find((load) => load.tableName === 'Qualifications')?.valid || [];
+    for (const record of qualifications) {
+      const leadRecordId = linkedRecord(record.fields, 'Lead') || linkedRecord(record.fields, 'Leads');
+      const leadId = leadRecordId ? await mappedId(client, 'Leads', leadRecordId, 'app.leads') : null;
+      if (!leadId) {
+        await rejectRecord(client, { importRunId, tableName: 'Qualifications', record, reason: 'missing_mapped_lead' });
+        continue;
+      }
+      const existingId = await mappedId(client, 'Qualifications', record.id, 'app.qualification_sessions');
+      const session = existingId
+        ? await client.query<{ qualification_session_id: string }>(
+          `UPDATE app.qualification_sessions
+           SET status=$2, completed_at=COALESCE($3::timestamptz, completed_at)
+           WHERE qualification_session_id=$1
+           RETURNING qualification_session_id`,
+          [existingId, boolField(record.fields, 'Complete') ? 'completed' : 'in_progress', dateOrNull(record.fields, 'Completed At')],
+        )
+        : await client.query<{ qualification_session_id: string }>(
+          `INSERT INTO app.qualification_sessions (lead_id, status, completed_at)
+           VALUES ($1, $2, $3::timestamptz)
+           RETURNING qualification_session_id`,
+          [leadId, boolField(record.fields, 'Complete') ? 'completed' : 'in_progress', dateOrNull(record.fields, 'Completed At')],
+        );
+      const sessionId = session.rows[0]?.qualification_session_id;
+      if (!sessionId) throw new Error(`qualification_session_not_created:${record.id}`);
+      await upsertEntityMap(client, {
+        sourceTable: 'Qualifications',
+        sourceRecordId: record.id,
+        targetTable: 'app.qualification_sessions',
+        targetId: sessionId,
+        contentHash: record.contentHash,
+      });
+      const answerFields = [
+        'Location',
+        'Unit Type',
+        'Budget Min',
+        'Budget Max',
+        'Down Payment',
+        'Payment Preference',
+        'Timeline',
+        'Purpose',
+        'Call Interest',
+        'Site Visit Interest',
+        'Qualification Notes',
+      ];
+      for (const key of answerFields) {
+        const value = stringField(record.fields, key);
+        if (!value) continue;
+        await client.query(
+          `INSERT INTO app.qualification_answers
+            (qualification_session_id, question_key, normalized_value, raw_value, parser_source)
+           VALUES ($1, $2, $3, $3, 'airtable_import')
+           ON CONFLICT (qualification_session_id, question_key)
+           DO UPDATE SET normalized_value=EXCLUDED.normalized_value,
+                         raw_value=EXCLUDED.raw_value,
+                         parser_source=EXCLUDED.parser_source`,
+          [sessionId, key, value],
+        );
+      }
+    }
+
+    const scores = loads.find((load) => load.tableName === 'Scores')?.valid || [];
+    for (const record of scores) {
+      const leadRecordId = linkedRecord(record.fields, 'Lead') || linkedRecord(record.fields, 'Leads');
+      const leadId = leadRecordId ? await mappedId(client, 'Leads', leadRecordId, 'app.leads') : null;
+      if (!leadId) {
+        await rejectRecord(client, { importRunId, tableName: 'Scores', record, reason: 'missing_mapped_lead' });
+        continue;
+      }
+      const score = numberOrNull(record.fields, 'Score Total') ?? numberOrNull(record.fields, 'Lead Score');
+      if (score === null) {
+        await rejectRecord(client, { importRunId, tableName: 'Scores', record, reason: 'missing_score_total' });
+        continue;
+      }
+      const existingId = await mappedId(client, 'Scores', record.id, 'app.score_runs');
+      const result = existingId
+        ? await client.query<{ score_run_id: string }>(
+          `UPDATE app.score_runs
+           SET score=$2, temperature=$3, factors_json=$4::jsonb
+           WHERE score_run_id=$1
+           RETURNING score_run_id`,
+          [existingId, score, stringField(record.fields, 'Temperature'), JSON.stringify(record.fields)],
+        )
+        : await client.query<{ score_run_id: string }>(
+          `INSERT INTO app.score_runs (lead_id, scoring_version, score, temperature, factors_json)
+           VALUES ($1, 'legacy_airtable_import', $2, $3, $4::jsonb)
+           RETURNING score_run_id`,
+          [leadId, score, stringField(record.fields, 'Temperature'), JSON.stringify(record.fields)],
+        );
+      await upsertEntityMap(client, {
+        sourceTable: 'Scores',
+        sourceRecordId: record.id,
+        targetTable: 'app.score_runs',
+        targetId: result.rows[0]?.score_run_id || '',
+        contentHash: record.contentHash,
+      });
+    }
+
+    const messages = loads.find((load) => load.tableName === 'Messages')?.valid || [];
+    for (const record of messages) {
+      const leadRecordId = linkedRecord(record.fields, 'Lead') || linkedRecord(record.fields, 'Leads');
+      const leadId = leadRecordId ? await mappedId(client, 'Leads', leadRecordId, 'app.leads') : null;
+      if (!leadId) {
+        await rejectRecord(client, { importRunId, tableName: 'Messages', record, reason: 'missing_mapped_lead' });
+        continue;
+      }
+      const leadRow = await client.query<{ client_id: string; contact_id: string }>(
+        'SELECT client_id, contact_id FROM app.leads WHERE lead_id=$1',
+        [leadId],
+      );
+      const lead = leadRow.rows[0];
+      if (!lead) {
+        await rejectRecord(client, { importRunId, tableName: 'Messages', record, reason: 'missing_target_lead' });
+        continue;
+      }
+      const directionRaw = stringField(record.fields, 'Direction').toLocaleLowerCase();
+      const direction = directionRaw === 'outbound' ? 'outbound' : 'inbound';
+      const state = firstPresentField(record.fields, ['Read'])
+        ? 'read'
+        : firstPresentField(record.fields, ['Delivered'])
+          ? 'delivered'
+          : firstPresentField(record.fields, ['Sent'])
+            ? 'sent'
+            : 'accepted';
+      const existingId = await mappedId(client, 'Messages', record.id, 'app.messages');
+      const result = existingId
+        ? await client.query<{ message_id: string }>(
+          `UPDATE app.messages
+           SET direction=$2, message_text=$3, message_type=$4, provider_message_id=$5, state=$6, raw_payload=$7::jsonb
+           WHERE message_id=$1
+           RETURNING message_id`,
+          [
+            existingId,
+            direction,
+            stringField(record.fields, 'Message Text'),
+            stringField(record.fields, 'Message Type') || 'text',
+            stringField(record.fields, 'Provider Message ID'),
+            state,
+            JSON.stringify(record.fields),
+          ],
+        )
+        : await client.query<{ message_id: string }>(
+          `INSERT INTO app.messages
+            (lead_id, client_id, contact_id, direction, channel, from_address, to_address,
+             message_text, message_type, provider_message_id, state, raw_payload)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+           RETURNING message_id`,
+          [
+            leadId,
+            lead.client_id,
+            lead.contact_id,
+            direction,
+            stringField(record.fields, 'Channel') || 'whatsapp',
+            stringField(record.fields, 'From'),
+            stringField(record.fields, 'To'),
+            stringField(record.fields, 'Message Text'),
+            stringField(record.fields, 'Message Type') || 'text',
+            stringField(record.fields, 'Provider Message ID'),
+            state,
+            JSON.stringify(record.fields),
+          ],
+        );
+      await upsertEntityMap(client, {
+        sourceTable: 'Messages',
+        sourceRecordId: record.id,
+        targetTable: 'app.messages',
+        targetId: result.rows[0]?.message_id || '',
+        contentHash: record.contentHash,
+      });
+    }
+
+    const followups = loads.find((load) => load.tableName === 'FollowUps')?.valid || [];
+    for (const record of followups) {
+      const leadRecordId = linkedRecord(record.fields, 'Lead') || linkedRecord(record.fields, 'Leads');
+      const leadId = leadRecordId ? await mappedId(client, 'Leads', leadRecordId, 'app.leads') : null;
+      const dueAt = firstPresentField(record.fields, ['Due At', 'Scheduled At', 'Follow Up At']);
+      const dueIso = dueAt ? dateOrNull(record.fields, 'Due At') || dateOrNull(record.fields, 'Scheduled At') || dateOrNull(record.fields, 'Follow Up At') : null;
+      if (!leadId) {
+        await rejectRecord(client, { importRunId, tableName: 'FollowUps', record, reason: 'missing_mapped_lead' });
+        continue;
+      }
+      if (!dueIso) {
+        await rejectRecord(client, { importRunId, tableName: 'FollowUps', record, reason: 'missing_due_at' });
+        continue;
+      }
+      const existingId = await mappedId(client, 'FollowUps', record.id, 'app.followups');
+      const result = existingId
+        ? await client.query<{ followup_id: string }>(
+          `UPDATE app.followups
+           SET status=$2, due_at=$3::timestamptz, cancelled_reason=$4, updated_at=now()
+           WHERE followup_id=$1
+           RETURNING followup_id`,
+          [existingId, stringField(record.fields, 'Status') || 'scheduled', dueIso, stringField(record.fields, 'Stop Reason')],
+        )
+        : await client.query<{ followup_id: string }>(
+          `INSERT INTO app.followups (lead_id, status, due_at, cancelled_reason)
+           VALUES ($1, $2, $3::timestamptz, $4)
+           RETURNING followup_id`,
+          [leadId, stringField(record.fields, 'Status') || 'scheduled', dueIso, stringField(record.fields, 'Stop Reason')],
+        );
+      await upsertEntityMap(client, {
+        sourceTable: 'FollowUps',
+        sourceRecordId: record.id,
+        targetTable: 'app.followups',
+        targetId: result.rows[0]?.followup_id || '',
+        contentHash: record.contentHash,
+      });
+    }
+
+    const appointments = loads.find((load) => load.tableName === 'Appointments')?.valid || [];
+    for (const record of appointments) {
+      const leadRecordId = linkedRecord(record.fields, 'Lead') || linkedRecord(record.fields, 'Leads');
+      const leadId = leadRecordId ? await mappedId(client, 'Leads', leadRecordId, 'app.leads') : null;
+      const startsAt = dateOrNull(record.fields, 'Appointment Date') || dateOrNull(record.fields, 'Starts At');
+      if (!leadId) {
+        await rejectRecord(client, { importRunId, tableName: 'Appointments', record, reason: 'missing_mapped_lead' });
+        continue;
+      }
+      if (!startsAt) {
+        await rejectRecord(client, { importRunId, tableName: 'Appointments', record, reason: 'missing_appointment_time' });
+        continue;
+      }
+      const endsAt = dateOrNull(record.fields, 'Ends At') || addMinutes(startsAt, 60);
+      const existingId = await mappedId(client, 'Appointments', record.id, 'app.appointments');
+      const result = existingId
+        ? await client.query<{ appointment_id: string }>(
+          `UPDATE app.appointments
+           SET status=$2, starts_at=$3::timestamptz, ends_at=$4::timestamptz,
+               calendar_event_id=$5, updated_at=now()
+           WHERE appointment_id=$1
+           RETURNING appointment_id`,
+          [
+            existingId,
+            stringField(record.fields, 'Status') || stringField(record.fields, 'Appointment Status') || 'pending',
+            startsAt,
+            endsAt,
+            stringField(record.fields, 'Calendar Event ID'),
+          ],
+        )
+        : await client.query<{ appointment_id: string }>(
+          `INSERT INTO app.appointments
+            (lead_id, calendar_event_id, status, starts_at, ends_at, timezone)
+           VALUES ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6)
+           RETURNING appointment_id`,
+          [
+            leadId,
+            stringField(record.fields, 'Calendar Event ID'),
+            stringField(record.fields, 'Status') || stringField(record.fields, 'Appointment Status') || 'pending',
+            startsAt,
+            endsAt,
+            stringField(record.fields, 'Timezone') || 'Africa/Cairo',
+          ],
+        );
+      await upsertEntityMap(client, {
+        sourceTable: 'Appointments',
+        sourceRecordId: record.id,
+        targetTable: 'app.appointments',
+        targetId: result.rows[0]?.appointment_id || '',
         contentHash: record.contentHash,
       });
     }

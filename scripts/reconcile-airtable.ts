@@ -118,6 +118,30 @@ export async function reconcileAirtableImport(input: {
       details: {},
     });
 
+    for (const [sourceTable, targetTable, checkKey] of [
+      ['Qualifications', 'app.qualification_sessions', 'qualifications_mapped'],
+      ['Scores', 'app.score_runs', 'scores_mapped'],
+      ['Messages', 'app.messages', 'messages_mapped'],
+      ['FollowUps', 'app.followups', 'followups_mapped'],
+      ['Appointments', 'app.appointments', 'appointments_mapped'],
+    ] as const) {
+      const expected = Number(rawCounts[sourceTable] || 0);
+      const actual = await scalar(
+        client,
+        `SELECT count(*)::text AS count
+         FROM migration.entity_map
+         WHERE source_table=$1 AND target_table=$2`,
+        [sourceTable, targetTable],
+      );
+      checks.push({
+        checkKey,
+        status: actual === expected ? 'pass' : 'fail',
+        expectedCount: expected,
+        actualCount: actual,
+        details: {},
+      });
+    }
+
     const duplicateContacts = await scalar(
       client,
       `SELECT count(*)::text AS count
