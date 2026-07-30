@@ -122,3 +122,13 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 68 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live MP-08 staged turn verification remains pending owner Meta/n8n callback setup and test recipient.
 - Commit `f346dfd`: Added n8n inbound message compatibility route.
+
+## 2026-07-30
+
+- Commit `f2d19f9`: Recorded MP-08 n8n inbound state.
+- Implementation slice: Began MP-09 scoring foundation with migration `014_lead_scoring_idempotency.sql`, pure `real_estate_v1` scoring rules, and `LeadScoringService`. Completed qualification turns now score the lead inside the same PostgreSQL transaction as qualification completion, update `app.leads.lead_score` and `temperature`, persist `app.score_runs` with `(lead_id, scoring_version, input_hash)` idempotency, and append `lead.scored` audit records.
+- Decision: Scoring is snapshot-idempotent by scoring version and deterministic input hash; webhook replays and operator reruns of the same state reuse the same score run instead of creating duplicates.
+- Verification failure: The first `npx vitest run tests/runtime.integration.test.ts` run after adding scoring failed because the scorer read only `app.qualification_answers`; MP-08 had only persisted the final answer row, while the full qualification snapshot was still in `edge_conversations.answers_json`. Resolution: `LeadScoringService.scoreLead` now accepts the completed conversation answer snapshot from `EdgeInboundMessageProcessor` and overlays it onto persisted answer rows before computing the score.
+- Verification: `npm run lint`, `npx vitest run tests/lead-scoring.test.ts`, and `npx vitest run tests/runtime.integration.test.ts` passed after the scoring snapshot fix. Runtime integration ran 34 PostgreSQL/API tests including completed qualification scoring, duplicate replay preserving one score run, and missing-answer score reporting.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 9 files and 71 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Commit `e7ab270`: Added deterministic lead scoring foundation.

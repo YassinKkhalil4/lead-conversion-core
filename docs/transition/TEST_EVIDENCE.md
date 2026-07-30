@@ -503,3 +503,27 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 68 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested with sanitized n8n fixtures. No live Meta, Typebot, n8n, or Airtable call was made.
+
+## 2026-07-30 MP-09 Scoring Foundation
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/lead-scoring.test.ts`
+
+Result: passed. Scoring unit tests ran 2 tests covering deterministic `real_estate_v1` factors, hot/cold temperature thresholds, missing-answer detection, and stable input hashes across answer object ordering.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: failed on first run. Completed-qualification scoring produced score 35 instead of 99 because the scorer read only persisted `app.qualification_answers`; existing MP-08 completion persisted the final answer row while prior answers were still present in the durable edge conversation snapshot. Resolution: pass `decision.nextState.answers` into `LeadScoringService.scoreLead` from the completion transaction and overlay those answers onto persisted answer rows before scoring.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed after the scoring snapshot fix. Runtime integration ran 34 PostgreSQL/API tests, including qualification completion creating one idempotent `app.score_runs` row, atomic `app.leads.lead_score`/`temperature` update, `lead.scored` audit recording, duplicate inbound replay preserving one score run/audit event, and incomplete qualification data reporting missing answers without inventing values.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 71 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or salesperson-provider call was made.

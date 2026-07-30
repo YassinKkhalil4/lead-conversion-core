@@ -102,7 +102,7 @@ Remaining: live staged Meta/n8n turn verification pending owner setup. Broader f
 
 ## MP-09 Scoring, Routing, Commands, Alerts
 
-Status: not_started
+Status: implementing
 
 Deliverables: `real_estate_v1` scoring, deterministic routing, salesperson commands, authorized alerts.
 
@@ -110,7 +110,9 @@ Dependencies: salesperson/project export for final data parity.
 
 Verification gates: parity fixtures, cross-client rejection, deterministic tie-breaks.
 
-Remaining: all.
+Completed locally: deterministic `real_estate_v1` score calculation from normalized qualification answers and lead state; score-run idempotency using scoring version plus input hash; atomic update of `app.leads.lead_score` and `app.leads.temperature`; `lead.scored` audit events; PostgreSQL integration coverage for completed qualification scoring, duplicate reruns, and missing-answer reporting.
+
+Remaining: deterministic routing policy and persisted route runs; salesperson command handling; authorized alert enqueue/dispatch rules; parity against real salesperson/project export when available.
 
 ## MP-10 Follow-ups, SLA, Reporting
 

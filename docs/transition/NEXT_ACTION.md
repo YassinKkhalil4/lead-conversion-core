@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-09 Scoring, routing, commands, and alerts
 
-Exact next implementation task: Begin MP-09 by adding deterministic `real_estate_v1` lead scoring from completed qualification answers and lead/app state, persisting score runs in PostgreSQL, updating lead temperature/score atomically, recording audit events, and adding unit/PostgreSQL integration tests for score factors, idempotent reruns, and missing-answer behavior.
+Exact next implementation task: Continue MP-09 by adding deterministic routing policy after scoring. Persist route decisions in PostgreSQL, select eligible salespeople by client/project without cross-client leakage, use stable tie-breaks, update assignment state atomically, enqueue salesperson command/alert outbox records with deterministic idempotency keys, and add PostgreSQL integration tests for tie-breaks, duplicate reruns, no-eligible-salesperson handling, and cross-client rejection.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: f346dfd
+Last verified implementation commit: e7ab270
 
 Git worktree clean when recorded: yes

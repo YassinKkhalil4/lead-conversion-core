@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-015: Scoring Is Snapshot-Idempotent
+
+Decision: `real_estate_v1` scoring uses normalized qualification answers plus lead state as its input snapshot and persists score runs with a unique `(lead_id, scoring_version, input_hash)` identity for computed score runs; legacy imported score rows are excluded from that uniqueness predicate with the explicit `legacy-import` hash.
+
+Reason: The same qualification state must not create duplicate score runs on webhook replay or operator rerun, while changed answers or future scoring versions must remain auditable as distinct durable runs. Existing historical imports must not be forced into a synthetic uniqueness guarantee they did not originally have.
+
+Date: 2026-07-30
+
 ## DEC-002: Initial Canonical Source
 
 Decision: Start from `source/conversation-edge` after verifying the duplicate tree `source/lead-conversion-os-active-test-v2/conversation-edge` is byte-identical by `diff -rq`.
