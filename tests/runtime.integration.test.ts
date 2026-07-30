@@ -32,6 +32,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token_123456',
     META_APPROVED_TEMPLATE_NAMES: 'lead_welcome',
     N8N_COMPAT_ROUTES_ENABLED: 'true',
+    DIRECT_META_WEBHOOK_ENABLED: 'true',
+    DIRECT_LEAD_INGRESS_ENABLED: 'true',
   };
 
   let db: typeof import('../src/db/pool.js');
@@ -65,6 +67,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     process.env.META_WEBHOOK_VERIFY_TOKEN = env.META_WEBHOOK_VERIFY_TOKEN;
     process.env.META_APPROVED_TEMPLATE_NAMES = env.META_APPROVED_TEMPLATE_NAMES;
     process.env.N8N_COMPAT_ROUTES_ENABLED = env.N8N_COMPAT_ROUTES_ENABLED;
+    process.env.DIRECT_META_WEBHOOK_ENABLED = env.DIRECT_META_WEBHOOK_ENABLED;
+    process.env.DIRECT_LEAD_INGRESS_ENABLED = env.DIRECT_LEAD_INGRESS_ENABLED;
     db = await import('../src/db/pool.js');
     runtime = await import('../src/infrastructure/runtime.js');
     runtimeWorker = await import('../src/worker/runtime-worker.js');

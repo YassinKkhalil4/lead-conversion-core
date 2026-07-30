@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { InboxRepository, stableJson } from '../infrastructure/runtime.js';
 import { LeadIntakeService, type LeadIntakeInput } from '../services/lead-intake-service.js';
 import { requireSharedSecret } from './auth.js';
+import { getEnv } from '../config/env.js';
 
 const templatePayloadSchema = z.object({
   kind: z.literal('template'),
@@ -75,6 +76,10 @@ export async function leadIngressRoutes(app: FastifyInstance): Promise<void> {
     parse: (payload: Record<string, unknown>) => LeadIntakeInput;
   }): Promise<Record<string, unknown>> {
     requireSharedSecret(input.request);
+    if (!getEnv().DIRECT_LEAD_INGRESS_ENABLED) {
+      input.reply.code(503);
+      return { ok: false, error: 'direct_lead_ingress_disabled' };
+    }
     const payload = (input.request.body || {}) as Record<string, unknown>;
     const receiptInput = {
       provider: input.provider,

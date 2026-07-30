@@ -24,6 +24,10 @@ export async function metaWebhookRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/webhooks/meta/whatsapp', async (request: FastifyRequest, reply: FastifyReply) => {
     const env = getEnv();
+    if (!env.DIRECT_META_WEBHOOK_ENABLED) {
+      reply.code(503);
+      return { ok: false, error: 'direct_meta_webhook_disabled' };
+    }
     if (!env.META_WEBHOOK_VERIFY_TOKEN) {
       reply.code(503);
       return { ok: false, error: 'meta_webhook_verify_token_missing' };
@@ -38,6 +42,10 @@ export async function metaWebhookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/webhooks/meta/whatsapp', async (request: RawBodyRequest, reply: FastifyReply) => {
+    if (!getEnv().DIRECT_META_WEBHOOK_ENABLED) {
+      reply.code(503);
+      return { ok: false, error: 'direct_meta_webhook_disabled' };
+    }
     const rawBody = request.rawBody;
     if (!rawBody) {
       reply.code(400);

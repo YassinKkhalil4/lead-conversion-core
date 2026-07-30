@@ -22,6 +22,8 @@ const schema = z.object({
   WORKER_KIND: z.string().optional().default('outbox'),
   RUNTIME_WORKER_ENABLED: booleanString.default('false'),
   N8N_COMPAT_ROUTES_ENABLED: booleanString.default('false'),
+  DIRECT_META_WEBHOOK_ENABLED: booleanString.default('false'),
+  DIRECT_LEAD_INGRESS_ENABLED: booleanString.default('false'),
   DIRECT_META_SEND_ENABLED: booleanString.default('false'),
   META_WA_ACCESS_TOKEN: z.string().optional().default(''),
   META_WA_PHONE_NUMBER_ID: z.string().optional().default(''),
