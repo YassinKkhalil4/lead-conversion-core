@@ -47,8 +47,8 @@ export class ShadowEvaluator {
     const env = getEnv();
     await this.conversations.lockScope(client, input.clientRecordId, input.phoneNormalized);
 
-    const activeConfig = await this.configs.getActive(input.clientRecordId, client);
-    const state = await this.conversations.getOrCreate(client, input, activeConfig.version, {
+    const activeConfig = await this.configs.getActiveSnapshot(input.clientRecordId, client);
+    const state = await this.conversations.getOrCreate(client, input, activeConfig, {
       conversationEngine: env.DEFAULT_CONVERSATION_ENGINE,
       stateAuthority: input.stateAuthority || env.SHADOW_STATE_AUTHORITY,
     });

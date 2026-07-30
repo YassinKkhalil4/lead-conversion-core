@@ -65,6 +65,7 @@ export interface ConversationState {
   conversationEngine: ConversationEngine;
   stateAuthority: StateAuthority;
   configVersion: string;
+  configurationVersionId?: string | null | undefined;
   stateVersion: number;
 }
 

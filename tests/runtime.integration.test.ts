@@ -40,6 +40,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
+  let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
   let appModule: typeof import('../src/app.js');
 
   beforeAll(async () => {
@@ -60,6 +61,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
+    conversationRepository = await import('../src/repositories/conversation-repository.js');
     appModule = await import('../src/app.js');
   }, 30_000);
 
@@ -855,5 +857,114 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(rolledBack.versionKey).toBe(original.versionKey);
     expect((await repository.getActive('')).version).toBe(original.versionKey);
     expect((await db.pool.query('SELECT count(*) FROM configuration.versions')).rows[0]?.count).toBe('2');
+  });
+
+  it('pins conversations to immutable configuration version ids while preserving legacy config_version', async () => {
+    await db.pool.query('TRUNCATE edge_conversations, edge_config_snapshots RESTART IDENTITY CASCADE');
+    const service = new versionedConfig.VersionedConfigService();
+    const repository = new configRepository.ConfigRepository();
+    const conversations = new conversationRepository.ConversationRepository();
+    const sourcePath = join(process.cwd(), 'config/seed-real-estate.json');
+    const original = await service.publish({
+      sourcePath,
+      clientRecordId: null,
+      publishedBy: 'test-operator',
+    });
+    const active = await repository.getActiveSnapshot('rec_client_pin');
+    expect(active).toMatchObject({
+      versionKey: original.versionKey,
+      configurationVersionId: original.configurationVersionId,
+      source: 'versioned',
+    });
+
+    const client = await db.pool.connect();
+    try {
+      await conversations.getOrCreate(client, {
+        eventId: 'evt-config-pin-1',
+        metaMessageId: 'wamid.config.pin.1',
+        clientRecordId: 'rec_client_pin',
+        clientId: 'client-pin',
+        phoneNormalized: '+201099999991',
+        leadRecordId: 'rec_lead_pin',
+        leadId: 'lead-pin',
+        leadName: 'Pinned Lead',
+      }, active, { conversationEngine: 'legacy', stateAuthority: 'legacy' });
+    } finally {
+      client.release();
+    }
+
+    const inserted = await db.pool.query<{ config_version: string; configuration_version_id: string | null }>(
+      'SELECT config_version, configuration_version_id FROM edge_conversations WHERE client_record_id=$1 AND phone_normalized=$2',
+      ['rec_client_pin', '+201099999991'],
+    );
+    expect(inserted.rows[0]).toEqual({
+      config_version: original.versionKey,
+      configuration_version_id: original.configurationVersionId,
+    });
+
+    const variantPath = join(root, 'seed-real-estate-pin-variant.json');
+    const variant = JSON.parse(readFileSync(sourcePath, 'utf8')) as {
+      messages: Array<{ fields: Record<string, unknown> }>;
+    };
+    const fallback = variant.messages.find((message) => message.fields['Message Key'] === 'fallback');
+    if (!fallback) throw new Error('fallback_message_not_found');
+    fallback.fields.English = 'Pinned variant fallback message';
+    writeFileSync(variantPath, JSON.stringify(variant, null, 2));
+    const changed = await service.publish({
+      sourcePath: variantPath,
+      clientRecordId: null,
+      publishedBy: 'test-operator',
+    });
+    expect(changed.versionKey).not.toBe(original.versionKey);
+
+    const changedActive = await repository.getActiveSnapshot('rec_client_pin');
+    const secondClient = await db.pool.connect();
+    try {
+      await conversations.getOrCreate(secondClient, {
+        eventId: 'evt-config-pin-2',
+        metaMessageId: 'wamid.config.pin.2',
+        clientRecordId: 'rec_client_pin',
+        clientId: 'client-pin',
+        phoneNormalized: '+201099999991',
+        leadRecordId: 'rec_lead_pin',
+        leadName: 'Pinned Lead After Publish',
+      }, changedActive, { conversationEngine: 'legacy', stateAuthority: 'legacy' });
+    } finally {
+      secondClient.release();
+    }
+
+    const unchanged = await db.pool.query<{ config_version: string; configuration_version_id: string | null }>(
+      'SELECT config_version, configuration_version_id FROM edge_conversations WHERE client_record_id=$1 AND phone_normalized=$2',
+      ['rec_client_pin', '+201099999991'],
+    );
+    expect(unchanged.rows[0]).toEqual({
+      config_version: original.versionKey,
+      configuration_version_id: original.configurationVersionId,
+    });
+
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/internal/conversations/bootstrap',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientRecordId: 'rec_client_pin',
+          clientId: 'client-pin',
+          phoneNormalized: '+201099999991',
+          leadRecordId: 'rec_lead_pin',
+          leadName: 'Pinned Lead Migrated',
+          migrateConfig: true,
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { conversation?: { config_version: string; configuration_version_id: string | null } };
+      expect(body.conversation).toMatchObject({
+        config_version: changed.versionKey,
+        configuration_version_id: changed.configurationVersionId,
+      });
+    } finally {
+      await app.close();
+    }
   });
 });

@@ -202,7 +202,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const body = parsed.data;
-    const config = await configs.getActive(body.clientRecordId);
+    const config = await configs.getActiveSnapshot(body.clientRecordId);
     const result = await pool.query(
       `INSERT INTO edge_client_channels (
          phone_number_id,client_record_id,client_id,company_name,active,
@@ -219,7 +219,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
          updated_at=now()
        RETURNING *`,
       [body.phoneNumberId,body.clientRecordId,body.clientId,body.companyName,
-       body.active,config.version,body.directSendEnabled],
+       body.active,config.versionKey,body.directSendEnabled],
     );
     return { ok: true, channel: result.rows[0] };
   });
@@ -330,7 +330,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const body = parsed.data;
-    const config = await configs.getActive(body.clientRecordId);
+    const config = await configs.getActiveSnapshot(body.clientRecordId);
     const receivedAt = body.lastInboundAt || null;
     const result = await pool.query(
       `INSERT INTO edge_conversations (
@@ -340,11 +340,11 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
         retry_count, status, human_takeover, stop_follow_up, closed_status,
         appointment_status, assigned_salesperson_record_id, assigned_salesperson_phone,
         last_inbound_at, conversation_window_expires_at, conversation_engine,
-        state_authority, config_version
+        state_authority, config_version, configuration_version_id
        ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16,$17,$18,$19,$20,$21,
         $22::timestamptz, CASE WHEN $22::timestamptz IS NULL THEN NULL ELSE $22::timestamptz + interval '24 hours' END,
-        $23,$24,$25
+        $23,$24,$25,$26
        )
        ON CONFLICT (client_record_id, phone_normalized)
        DO UPDATE SET
@@ -371,17 +371,18 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
         conversation_window_expires_at=COALESCE(EXCLUDED.conversation_window_expires_at,edge_conversations.conversation_window_expires_at),
         conversation_engine=EXCLUDED.conversation_engine,
         state_authority=EXCLUDED.state_authority,
-        config_version=CASE WHEN $26 THEN EXCLUDED.config_version ELSE edge_conversations.config_version END,
+        config_version=CASE WHEN $27 THEN EXCLUDED.config_version ELSE edge_conversations.config_version END,
+        configuration_version_id=CASE WHEN $27 THEN EXCLUDED.configuration_version_id ELSE edge_conversations.configuration_version_id END,
         state_version=edge_conversations.state_version+1,
         updated_at=now()
-       RETURNING conversation_id, conversation_engine, state_authority, config_version, state_version`,
+       RETURNING conversation_id, conversation_engine, state_authority, config_version, configuration_version_id, state_version`,
       [
         body.clientRecordId, body.clientId, body.phoneNormalized, body.leadRecordId, body.leadId,
         body.leadName, body.companyName, body.projectName, body.projectRecordId,
         body.currentStage, body.currentQuestionKey, body.preferredLanguage, JSON.stringify(body.answers),
         body.retryCount, body.status, body.humanTakeover, body.stopFollowUp, body.closedStatus,
         body.appointmentStatus, body.assignedSalespersonRecordId, body.assignedSalespersonPhone,
-        receivedAt, body.conversationEngine, body.stateAuthority, config.version, body.migrateConfig,
+        receivedAt, body.conversationEngine, body.stateAuthority, config.versionKey, config.configurationVersionId, body.migrateConfig,
       ],
     );
     return { ok: true, conversation: result.rows[0] };

@@ -5,6 +5,7 @@ import type {
   ShadowEvaluateInput,
   StateAuthority,
 } from '../domain/types.js';
+import type { ConfigSnapshot } from './config-repository.js';
 
 interface ConversationRow {
   conversation_id: string;
@@ -34,6 +35,7 @@ interface ConversationRow {
   conversation_engine: ConversationEngine;
   state_authority: StateAuthority;
   config_version: string;
+  configuration_version_id: string | null;
   state_version: string | number;
 }
 
@@ -73,8 +75,17 @@ function rowToState(row: ConversationRow): ConversationState {
     conversationEngine: row.conversation_engine,
     stateAuthority: row.state_authority,
     configVersion: row.config_version,
+    configurationVersionId: row.configuration_version_id,
     stateVersion: Number(row.state_version),
   };
+}
+
+type ActiveConversationConfig = Pick<ConfigSnapshot, 'versionKey' | 'configurationVersionId'> | string;
+
+function normalizeActiveConfig(activeConfig: ActiveConversationConfig): Pick<ConfigSnapshot, 'versionKey' | 'configurationVersionId'> {
+  return typeof activeConfig === 'string'
+    ? { versionKey: activeConfig, configurationVersionId: null }
+    : activeConfig;
 }
 
 export class ConversationRepository {
@@ -94,9 +105,10 @@ export class ConversationRepository {
   async getOrCreate(
     client: PoolClient,
     input: ShadowEvaluateInput,
-    activeConfigVersion: string,
+    activeConfig: ActiveConversationConfig,
     defaults: { conversationEngine: ConversationEngine; stateAuthority: StateAuthority },
   ): Promise<ConversationState> {
+    const configPin = normalizeActiveConfig(activeConfig);
     const controlResult = await client.query<{
       status: string; current_stage: string; human_takeover: boolean; stop_follow_up: boolean;
       closed_status: string; appointment_status: string;
@@ -147,6 +159,7 @@ export class ConversationRepository {
         stateAuthority: authoritative,
         // Existing conversations stay pinned. A separate ownership/config migration changes this deliberately.
         configVersion: existing.configVersion,
+        configurationVersionId: existing.configurationVersionId,
       };
       await this.update(client, next);
       return next;
@@ -162,10 +175,10 @@ export class ConversationRepository {
         retry_count, status, human_takeover, stop_follow_up, closed_status,
         appointment_status, assigned_salesperson_record_id, assigned_salesperson_phone,
         last_inbound_at, conversation_window_expires_at, conversation_engine,
-        state_authority, config_version
+        state_authority, config_version, configuration_version_id
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16,$17,$18,$19,
-        $20,$21,$22,$23,$24,$25,$26
+        $20,$21,$22,$23,$24,$25,$26,$27
       ) RETURNING *`,
       [
         input.clientRecordId,
@@ -193,7 +206,8 @@ export class ConversationRepository {
         windowExpires,
         defaults.conversationEngine,
         input.stateAuthority || defaults.stateAuthority,
-        activeConfigVersion,
+        configPin.versionKey,
+        configPin.configurationVersionId,
       ],
     );
     const row = inserted.rows[0];
@@ -214,7 +228,7 @@ export class ConversationRepository {
         assigned_salesperson_phone=$20, last_inbound_at=NULLIF($21,'')::timestamptz,
         conversation_window_expires_at=NULLIF($22,'')::timestamptz,
         conversation_engine=$23, state_authority=$24, config_version=$25,
-        state_version=$26, updated_at=now()
+        configuration_version_id=$26, state_version=$27, updated_at=now()
        WHERE conversation_id=$1`,
       [
         state.conversationId,
@@ -242,6 +256,7 @@ export class ConversationRepository {
         state.conversationEngine,
         state.stateAuthority,
         state.configVersion,
+        state.configurationVersionId ?? null,
         state.stateVersion,
       ],
     );
