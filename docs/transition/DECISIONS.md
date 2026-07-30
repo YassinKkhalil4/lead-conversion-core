@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-023: Calendar Dispatch Rechecks Availability Before Create
+
+Decision: `calendar.create_event` dispatch performs a provider availability check immediately before creating the calendar event, and a busy result becomes a definite non-retryable rejection without calling create.
+
+Reason: Slot state is authoritative in PostgreSQL, but provider calendar availability can change after the customer selects a slot. Rechecking outside the booking transaction avoids external HTTP in database transactions while preventing known-busy provider slots from creating duplicate or invalid events.
+
+Date: 2026-07-30
+
 ## DEC-022: Appointment Booking State Precedes Calendar Side Effects
 
 Decision: Appointment slot booking uses PostgreSQL locks and idempotency keys to create one authoritative `app.appointments` row before inserting a durable `calendar.create_event` outbox command.

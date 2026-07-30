@@ -188,3 +188,9 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 99 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live Google Calendar availability/create-event verification remains pending owner-provided credentials and calendar IDs.
 - Commit `90c52ba`: Added appointment scheduling foundation.
+- Implementation slice: Continued MP-11 with Google Calendar free/busy support and `calendar.create_event` pre-create availability recheck. The dispatcher checks provider availability before event creation, treats busy slots as definite rejections without calling create, preserves retry hints from availability and create failures, and continues to avoid hardcoded provider success.
+- Decision: Calendar dispatch rechecks provider availability immediately before create while keeping external HTTP outside booking transactions.
+- Verification: `npm run lint` and `npx vitest run tests/calendar-outbox-dispatcher.test.ts` passed; focused calendar tests ran 6 tests covering availability available/busy/retryable paths, create retry hints, malformed payload rejection, and missing credential rejection.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 101 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live Google Calendar free/busy and create-event verification remains pending owner-provided credentials and calendar IDs.
+- Commit `4425613`: Added calendar availability recheck.
