@@ -357,8 +357,8 @@ export class EdgeInboundMessageProcessor {
         ORDER BY started_at DESC
         LIMIT 1
       ), inserted AS (
-        INSERT INTO app.qualification_sessions (lead_id, status)
-        SELECT $1, 'in_progress'
+        INSERT INTO app.qualification_sessions (lead_id, status, configuration_version_id)
+        SELECT $1, 'in_progress', $2
         WHERE NOT EXISTS (SELECT 1 FROM existing)
         RETURNING qualification_session_id
       )
@@ -366,7 +366,7 @@ export class EdgeInboundMessageProcessor {
       UNION ALL
       SELECT qualification_session_id FROM existing
       LIMIT 1`,
-      [leadId],
+      [leadId, decision.nextState.configurationVersionId ?? null],
     );
     const sessionId = session.rows[0]?.qualification_session_id;
     if (!sessionId) throw new Error('qualification_session_not_created');
@@ -399,9 +399,19 @@ export class EdgeInboundMessageProcessor {
     if (decision.outboxEvents.some((event) => event.eventType === 'qualification_completed')) {
       await client.query(
         `UPDATE app.qualification_sessions
-         SET status='completed', completed_at=now()
+         SET status='completed',
+             completed_at=now(),
+             configuration_version_id=COALESCE(configuration_version_id, $2)
          WHERE qualification_session_id=$1`,
-        [sessionId],
+        [sessionId, decision.nextState.configurationVersionId ?? null],
+      );
+      await client.query(
+        `UPDATE app.leads
+         SET status='qualified',
+             current_stage='qualified',
+             updated_at=now()
+         WHERE lead_id=$1`,
+        [leadId],
       );
     }
   }

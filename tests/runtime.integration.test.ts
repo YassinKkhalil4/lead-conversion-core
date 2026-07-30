@@ -222,6 +222,10 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     phone: string;
     phoneNumberId: string;
     humanTakeover?: boolean;
+    preferredLanguage?: 'English' | 'Arabic';
+    currentStage?: string;
+    currentQuestionKey?: string;
+    answers?: Record<string, string>;
   }): Promise<{ clientId: string; contactId: string; leadId: string; versionKey: string; configurationVersionId: string }> {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     const service = new versionedConfig.VersionedConfigService();
@@ -278,9 +282,9 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
          state_authority, config_version, configuration_version_id)
        VALUES (
          $1, $2, $3, $4, $5, 'MP08 Lead',
-         $6, $7, $8, 'English', 'asking_location',
-         'q_location', '{}'::jsonb, 'in_qualification', $9, 'edge',
-         'edge', $10, $11
+         $6, $7, $8, $9, $10,
+         $11, $12::jsonb, 'in_qualification', $13, 'edge',
+         'edge', $14, $15
        )`,
       [
         clientRecordId,
@@ -291,6 +295,10 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         `MP08 ${input.suffix} Client`,
         `MP08 ${input.suffix} Project`,
         `recMP08${input.suffix}PROJECT`,
+        input.preferredLanguage ?? 'English',
+        input.currentStage ?? 'asking_location',
+        input.currentQuestionKey ?? 'q_location',
+        JSON.stringify(input.answers ?? {}),
         input.humanTakeover ?? false,
         published.versionKey,
         published.configurationVersionId,
@@ -303,6 +311,45 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       versionKey: published.versionKey,
       configurationVersionId: published.configurationVersionId,
     };
+  }
+
+  async function receiveAndProcessMetaInbound(input: {
+    providerMessageId: string;
+    from: string;
+    phoneNumberId: string;
+    text: string;
+    expectedDuplicates?: number;
+  }): Promise<void> {
+    const app = await appModule.buildApp();
+    try {
+      const payload = metaInboundPayload({
+        providerMessageId: input.providerMessageId,
+        from: input.from,
+        phoneNumberId: input.phoneNumberId,
+        text: input.text,
+      });
+      const signed = signedMetaWebhook(payload);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ ok: true, received: 1, duplicates: input.expectedDuplicates ?? 0 });
+    } finally {
+      await app.close();
+    }
+
+    const processor = new metaInbox.MetaInboxProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processInbox: (event) => processor.process(event) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(input.expectedDuplicates ? 0 : 1);
   }
 
   it('deduplicates inbound events before business processing creates side effects', async () => {
@@ -1217,6 +1264,122 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('completes English qualification and does not duplicate handoff effects on replay', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'COMPLETE',
+      phone: '+201099999989',
+      phoneNumberId: 'phone-number-id-mp08-complete',
+      currentStage: 'asking_site_visit',
+      currentQuestionKey: 'q_site_visit',
+      answers: {
+        q_location: 'New Cairo',
+        q_unit_type: 'Apartment',
+        q_budget_min: '3000000',
+        q_budget_max: '5000000',
+        q_payment_plan: 'Installments',
+        q_down_payment: '500000',
+        q_timeline: '3 months',
+        q_purpose: 'Primary Residence',
+      },
+    });
+
+    await receiveAndProcessMetaInbound({
+      providerMessageId: 'wamid.mp08.complete.inbound.1',
+      from: '+201099999989',
+      phoneNumberId: 'phone-number-id-mp08-complete',
+      text: 'Yes, please',
+    });
+
+    expect((await db.pool.query(
+      `SELECT status, current_stage, current_question_key, answers_json->>'q_site_visit' AS site_visit
+       FROM edge_conversations
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    )).rows[0]).toEqual({
+      status: 'qualified',
+      current_stage: 'qualified',
+      current_question_key: '',
+      site_visit: 'Yes',
+    });
+    expect((await db.pool.query('SELECT status, current_stage FROM app.leads WHERE lead_id=$1', [seeded.leadId])).rows[0]).toEqual({
+      status: 'qualified',
+      current_stage: 'qualified',
+    });
+    expect((await db.pool.query(
+      `SELECT s.status, s.configuration_version_id, a.normalized_value
+       FROM app.qualification_sessions s
+       JOIN app.qualification_answers a USING (qualification_session_id)
+       WHERE s.lead_id=$1 AND a.question_key='q_site_visit'`,
+      [seeded.leadId],
+    )).rows[0]).toEqual({
+      status: 'completed',
+      configuration_version_id: seeded.configurationVersionId,
+      normalized_value: 'Yes',
+    });
+    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+
+    await receiveAndProcessMetaInbound({
+      providerMessageId: 'wamid.mp08.complete.inbound.1',
+      from: '+201099999989',
+      phoneNumberId: 'phone-number-id-mp08-complete',
+      text: 'Yes, please',
+      expectedDuplicates: 1,
+    });
+    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='conversation.inbound_processed'")).rows[0]?.count).toBe('1');
+  });
+
+  it('completes Arabic qualification from the final site-visit answer', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'COMPLETEAR',
+      phone: '+201099999988',
+      phoneNumberId: 'phone-number-id-mp08-complete-ar',
+      preferredLanguage: 'Arabic',
+      currentStage: 'asking_site_visit',
+      currentQuestionKey: 'q_site_visit',
+      answers: {
+        q_location: 'القاهرة الجديدة',
+        q_unit_type: 'Apartment',
+        q_budget_min: '3000000',
+        q_budget_max: '5000000',
+        q_payment_plan: 'Installments',
+        q_down_payment: '500000',
+        q_timeline: '3 months',
+        q_purpose: 'Investment',
+      },
+    });
+
+    await receiveAndProcessMetaInbound({
+      providerMessageId: 'wamid.mp08.complete.ar.inbound.1',
+      from: '+201099999988',
+      phoneNumberId: 'phone-number-id-mp08-complete-ar',
+      text: 'أيوه، يا ريت',
+    });
+
+    expect((await db.pool.query(
+      `SELECT status, current_stage, answers_json->>'q_site_visit' AS site_visit
+       FROM edge_conversations
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    )).rows[0]).toEqual({
+      status: 'qualified',
+      current_stage: 'qualified',
+      site_visit: 'Yes',
+    });
+    expect((await db.pool.query(
+      `SELECT s.status, a.normalized_value
+       FROM app.qualification_sessions s
+       JOIN app.qualification_answers a USING (qualification_session_id)
+       WHERE s.lead_id=$1 AND a.question_key='q_site_visit'`,
+      [seeded.leadId],
+    )).rows[0]).toEqual({
+      status: 'completed',
+      normalized_value: 'Yes',
+    });
   });
 
   it('ignores legacy-owned inbound conversations so Typebot fallback remains authoritative during cutover', async () => {
