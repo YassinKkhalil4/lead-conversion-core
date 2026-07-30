@@ -117,3 +117,8 @@
 - Verification: `npm run lint` and `npx vitest run tests/runtime.integration.test.ts` passed; runtime integration ran 32 PostgreSQL/API tests including app conversation projection, inbound app message projection, outbound app message linkage, qualification session linkage, opt-out projection, takeover projection, and final-turn replay idempotency.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 67 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Commit `999c7ab`: Projected durable conversations into app state.
+- Implementation slice: Added authenticated n8n-compatible inbound WhatsApp route behind `N8N_COMPAT_ROUTES_ENABLED`. Sanitized n8n payloads are mapped to durable `runtime.inbox_events` with provider `n8n` and event type `whatsapp.message_received`, deduplicated by stable source event identity, and processed by the same `MetaInboxProcessor` path as direct Meta webhooks.
+- Verification: `npm run lint` and `npx vitest run tests/runtime.integration.test.ts` passed; runtime integration ran 33 PostgreSQL/API tests including duplicate n8n inbound receipt and Edge processing through qualification state/outbox projection.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 68 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live MP-08 staged turn verification remains pending owner Meta/n8n callback setup and test recipient.
+- Commit `f346dfd`: Added n8n inbound message compatibility route.

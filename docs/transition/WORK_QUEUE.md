@@ -88,7 +88,7 @@ Remaining: live website/Facebook intake verification and live Airtable projectio
 
 ## MP-08 Conversation And Qualification
 
-Status: implementing
+Status: staging_blocked
 
 Deliverables: edge-owned Meta ingress processing, qualification sessions/answers, opt-out/takeover, Typebot drain policy.
 
@@ -96,9 +96,9 @@ Dependencies: staged Meta webhook for live turns.
 
 Verification gates: internal turns, Arabic/English fixtures, no external HTTP in transaction.
 
-Completed locally: durable Meta message receipt for signed webhook payloads, combined Meta inbox processor for status and inbound message events, edge-only ownership gate, legacy-owned Typebot fallback ignore path, qualification answer persistence, audit event recording, transactional outbound WhatsApp outbox enqueue without live Meta calls, explicit opt-out persistence to Edge/app lead/contact/control state, human-takeover suppression without outbound side effects, English/Arabic final-question completion, completed qualification sessions with configuration pins, qualified lead-state persistence, replay idempotency for final handoff effects, and source-to-app projection for app conversations, inbound app messages, outbound app messages, and qualification sessions.
+Completed locally: durable Meta message receipt for signed webhook payloads, authenticated n8n-compatible inbound receipt, combined Meta inbox processor for status and inbound message events, edge-only ownership gate, legacy-owned Typebot fallback ignore path, qualification answer persistence, audit event recording, transactional outbound WhatsApp outbox enqueue without live Meta calls, explicit opt-out persistence to Edge/app lead/contact/control state, human-takeover suppression without outbound side effects, English/Arabic final-question completion, completed qualification sessions with configuration pins, qualified lead-state persistence, replay idempotency for final handoff effects, and source-to-app projection for app conversations, inbound app messages, outbound app messages, and qualification sessions.
 
-Remaining: n8n-compatible inbound message path if needed for fallback, broader full-conversation multi-turn fixture coverage, live staged Meta turn verification pending owner setup.
+Remaining: live staged Meta/n8n turn verification pending owner setup. Broader full-conversation fixtures can be added as hardening, but the locally implementable core path has PostgreSQL/API coverage.
 
 ## MP-09 Scoring, Routing, Commands, Alerts
 

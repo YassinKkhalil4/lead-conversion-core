@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-30
 
-Current mini-project: MP-08 Conversation and qualification
+Current mini-project: MP-09 Scoring, routing, commands, and alerts
 
-Exact next implementation task: Continue MP-08 by adding the n8n-compatible inbound WhatsApp message receipt path behind `N8N_COMPAT_ROUTES_ENABLED`, mapping sanitized n8n payloads into durable `whatsapp.message_received` inbox events without direct provider calls, preserving edge/legacy ownership gates, and adding PostgreSQL/API tests for duplicate receipt and edge processing.
+Exact next implementation task: Begin MP-09 by adding deterministic `real_estate_v1` lead scoring from completed qualification answers and lead/app state, persisting score runs in PostgreSQL, updating lead temperature/score atomically, recording audit events, and adding unit/PostgreSQL integration tests for score factors, idempotent reruns, and missing-answer behavior.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: 999c7ab
+Last verified implementation commit: f346dfd
 
 Git worktree clean when recorded: yes
