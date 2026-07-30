@@ -664,6 +664,26 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local calendar dispatcher contract tests with sanitized fixtures. No live Google Calendar call was made.
 
+## 2026-07-30 MP-11 Calendar Delivery Reconciliation
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "appointment|delivery-unknown|concurrent slot"`
+
+Result: passed. Focused PostgreSQL tests ran 4 tests, including concurrent slot booking, durable `calendar.create_event` outbox creation, provider calendar event ID persistence back to `app.appointments` on delivered outbox commands, and preservation of `delivery_unknown` calendar creates without automatic replay.
+
+Command: `npx vitest run tests/calendar-outbox-dispatcher.test.ts tests/runtime.integration.test.ts`
+
+Result: passed. Focused dispatcher/runtime tests ran 60 tests, including calendar availability recheck, busy-slot rejection without create, retry hint preservation, malformed calendar payload rejection, missing credential rejection, appointment booking idempotency, and delivery-unknown replay safety.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 10 files and 102 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/runtime and calendar dispatcher contract tests with sanitized fixtures. No live Google Calendar call was made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

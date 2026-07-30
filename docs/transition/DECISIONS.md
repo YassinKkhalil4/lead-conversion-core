@@ -183,3 +183,11 @@ Decision: Durable inbound processing records explicit WhatsApp opt-outs as a no-
 Reason: Once a lead has explicitly opted out, the safest durable behavior is to stop all outbound side effects immediately. Any future opt-out confirmation policy must be explicitly configured and verified against provider/legal requirements before sending.
 
 Date: 2026-07-30
+
+## DEC-015: Calendar Delivery State Is Appointment Authority
+
+Decision: Marking a `calendar.create_event` outbox command delivered persists the provider calendar event ID onto the linked `app.appointments` row and confirms the appointment; delivery-unknown calendar creates remain in `runtime.outbox_commands.state='delivery_unknown'` and are not automatically replayed.
+
+Reason: Provider acceptance may have occurred even if the worker crashed before recording the provider ID. Automatic replay could create duplicate calendar events, so ambiguous creates require operator-visible reconciliation while preserving the original payload and attempt history.
+
+Date: 2026-07-30

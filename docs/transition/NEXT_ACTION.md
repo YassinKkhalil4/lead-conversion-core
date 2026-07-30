@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-11 Appointments and Google Calendar
 
-Exact next implementation task: Continue MP-11 by adding calendar reconciliation after dispatch. Persist provider calendar event IDs back to `app.appointments`, preserve delivery-unknown outcomes without blindly creating another event, add an operator-visible reconciliation command for ambiguous calendar creates, and add PostgreSQL/dispatcher tests for provider event ID persistence, delivery-unknown state, replay safety, and reconciliation without external mutations.
+Exact next implementation task: Continue MP-11 by adding operator-visible calendar reconciliation for ambiguous `calendar.create_event` outcomes. The next slice should expose a safe local reconciliation command/service for `runtime.outbox_commands.state='delivery_unknown'` calendar creates, allow an operator to attach a verified provider event ID or mark the create permanently failed, update the linked appointment/audit records transactionally, and add PostgreSQL tests proving reconciliation is idempotent and does not call Google automatically.
 
 Files expected to change:
 
@@ -13,12 +13,13 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `migrations/021_calendar_reconciliation.sql`
 - `src/services/appointment-service.ts`
 - `src/integrations/calendar/**`
 - `src/infrastructure/runtime.ts`
 - `src/worker-runner.ts`
 - `src/worker/calendar-outbox-dispatcher.ts`
+- `src/worker/calendar-reconciliation.ts`
+- `scripts/calendar-reconcile.ts`
 - `tests/runtime.integration.test.ts`
 - `tests/calendar-*.test.ts`
 
@@ -45,6 +46,6 @@ Known blockers:
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 
-Last verified implementation commit: 4425613
+Last verified implementation commit: 284b110
 
 Git worktree clean when recorded: yes

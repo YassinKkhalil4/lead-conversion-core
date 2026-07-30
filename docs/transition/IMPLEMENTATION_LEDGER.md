@@ -194,3 +194,10 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 101 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live Google Calendar free/busy and create-event verification remains pending owner-provided credentials and calendar IDs.
 - Commit `4425613`: Added calendar availability recheck.
+- Implementation slice: Continued MP-11 calendar delivery reconciliation. Runtime outbox delivery now persists provider calendar event IDs back to linked `app.appointments` rows and confirms the appointment. Delivery-unknown calendar create commands remain in durable `delivery_unknown` state, are not claimed for automatic replay, preserve the original payload/attempt history, and leave appointments booked without a provider event ID until operator reconciliation.
+- Decision: Calendar create delivery state is part of appointment authority; ambiguous provider acceptance must be reconciled explicitly instead of blindly issuing another create request.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "appointment|delivery-unknown|concurrent slot"` passed; focused PostgreSQL tests ran 4 tests covering appointment booking, provider event ID persistence, and delivery-unknown replay safety.
+- Verification: `npx vitest run tests/calendar-outbox-dispatcher.test.ts tests/runtime.integration.test.ts` passed; focused dispatcher/runtime tests ran 60 tests.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 102 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Commit `284b110`: Persisted calendar delivery outcomes.
