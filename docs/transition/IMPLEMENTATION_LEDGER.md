@@ -151,3 +151,10 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 9 files and 78 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: MP-09 live notification send and salesperson command verification remain pending owner Meta/n8n setup, approved notification content/templates, and real salesperson/project export parity.
 - Commit `229e01c`: Dispatched salesperson notification outbox commands.
+- Implementation slice: Began MP-10 with migration `017_followup_scheduling.sql` and `FollowupSchedulerService`. Follow-ups now have semantic keys, runtime scheduled-job links, explicit timezone, sequence key, and step order. Scheduling writes `app.followups` and `runtime.scheduled_jobs` in PostgreSQL, duplicate schedule requests reuse existing rows without duplicate audit, and cancellation updates both application follow-up rows and runtime jobs.
+- Implementation slice: Wired follow-up cancellation into durable opt-out, qualification completion, lead assignment, salesperson takeover, close-lost, and stop-follow-up paths.
+- Decision: Follow-ups use semantic runtime jobs as the durable scheduling authority; no in-process timers were introduced.
+- Verification failure: First MP-10 lint run failed because optional `correlationId`/`causationId` fields were passed as `undefined` under exact optional property types. Resolution: optional fields are now spread only when present.
+- Verification: `npm run lint` and `npx vitest run tests/runtime.integration.test.ts` passed after the optional-field fix; runtime integration ran 40 PostgreSQL/API tests including follow-up scheduling idempotency, timezone persistence, assignment cancellation, and close-lost cancellation.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 9 files and 79 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Commit `0adcb5b`: Added durable followup scheduling foundation.

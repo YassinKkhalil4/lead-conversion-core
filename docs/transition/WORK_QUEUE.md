@@ -116,7 +116,7 @@ Remaining: live staging verification for salesperson/operator notification sends
 
 ## MP-10 Follow-ups, SLA, Reporting
 
-Status: not_started
+Status: implementing
 
 Deliverables: durable scheduled followups, SLA reminders/escalations, daily reports.
 
@@ -124,7 +124,9 @@ Dependencies: client report recipients/templates for live sends.
 
 Verification gates: durable job restart, cancellation, SQL reconciliation.
 
-Remaining: all.
+Completed locally: semantic follow-up identity on `app.followups`; durable `runtime.scheduled_jobs` scheduling with explicit client timezone; duplicate schedule requests return the existing follow-up/job without duplicate rows or audit; cancellation of scheduled follow-ups/jobs on assignment, qualification completion, opt-out, takeover, close-lost, and stop-follow-up paths; PostgreSQL integration tests for duplicate prevention, timezone storage, assignment cancellation, and salesperson close-lost cancellation.
+
+Remaining: due follow-up job execution into `runtime.outbox_commands`; SLA reminder/escalation scheduling and cancellation; reporting jobs and SQL report generation; live report recipient/template verification when owner inputs are available.
 
 ## MP-11 Appointments And Calendar
 

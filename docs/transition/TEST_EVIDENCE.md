@@ -544,6 +544,30 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local dispatcher contract and PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or salesperson-provider call was made.
 
+## 2026-07-30 MP-10 Follow-Up Scheduling Foundation
+
+Command: `npm run lint`
+
+Result: failed on first run. Optional `correlationId`/`causationId` values were passed as `undefined` in new follow-up cancellation paths under exact optional property types. Resolution: optional fields are now included only when present.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed before the lint fix because runtime behavior was correct, but the TypeScript failure still required correction before commit. Runtime integration ran 40 PostgreSQL/API tests.
+
+Command: `npm run lint`
+
+Result: passed after the optional-field fix.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed after the optional-field fix. Runtime integration ran 40 PostgreSQL/API tests, including semantic follow-up scheduling into `app.followups` and `runtime.scheduled_jobs`, duplicate schedule prevention, explicit timezone persistence, cancellation on lead assignment, and cancellation on salesperson close-lost command.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 79 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or report-recipient provider call was made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

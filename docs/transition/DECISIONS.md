@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-019: Follow-Ups Use Semantic Runtime Jobs
+
+Decision: Follow-up scheduling persists both `app.followups` and `runtime.scheduled_jobs` using the same semantic key, including lead, sequence, stage, and step order.
+
+Reason: Follow-up work must be durable, deduplicated, cancellable, and recoverable by workers. In-process timers cannot be the scheduling authority.
+
+Date: 2026-07-30
+
 ## DEC-018: Notification Commands Dispatch Through The Messaging Adapter
 
 Decision: `salesperson.lead_assignment_notification` and `operator.routing_attention_required` outbox commands are dispatched by mapping their durable payloads to real Meta WhatsApp sends through `MessagingOutboxDispatcher`.
