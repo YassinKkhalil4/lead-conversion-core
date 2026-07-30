@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-05 WhatsApp messaging platform
 
-Exact next implementation task: Continue MP-05 by adding WhatsApp template inventory validation and 24-hour conversation-window policy before outbound message requests are accepted.
+Exact next implementation task: Continue MP-05 by adding Meta WhatsApp status webhook ingestion through the durable inbox path, including signature/raw-body handling, provider status mapping, message delivery event persistence, and idempotent duplicate handling.
 
 Files expected to change:
 
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: 21d307e
+Last verified implementation commit: 21d307e plus uncommitted MP-05 template/window policy slice verified by the full npm/lint/test/build/audit/smoke gate
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no

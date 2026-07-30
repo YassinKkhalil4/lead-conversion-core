@@ -10,7 +10,6 @@ export async function buildApp() {
     loggerInstance: logger,
     bodyLimit: 1_000_000,
     requestIdHeader: 'x-request-id',
-    disableRequestLogging: false,
   });
 
   await app.register(healthRoutes);

@@ -25,6 +25,12 @@ export type MessagingPayload =
       text: string;
       buttonText: string;
       options: MessagingInteractiveOption[];
+    }
+  | {
+      kind: 'template';
+      templateName: string;
+      languageCode: string;
+      components: Array<Record<string, unknown>>;
     };
 
 export interface SendMessageCommand {

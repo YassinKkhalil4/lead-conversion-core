@@ -24,6 +24,12 @@ const payloadSchema = z.discriminatedUnion('kind', [
     buttonText: z.string().min(1),
     options: z.array(optionSchema).min(1).max(10),
   }),
+  z.object({
+    kind: z.literal('template'),
+    templateName: z.string().min(1),
+    languageCode: z.string().min(2),
+    components: z.array(z.record(z.unknown())).default([]),
+  }),
 ]);
 
 const commandPayloadSchema = z.object({

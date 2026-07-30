@@ -105,6 +105,12 @@ const messagePayloadSchema = z.discriminatedUnion('kind', [
     buttonText: z.string().min(1),
     options: z.array(messageOptionSchema).min(1).max(10),
   }),
+  z.object({
+    kind: z.literal('template'),
+    templateName: z.string().min(1),
+    languageCode: z.string().min(2),
+    components: z.array(z.record(z.unknown())).optional().default([]),
+  }),
 ]);
 const whatsappSendSchema = z.object({
   clientId: z.string().uuid(),
@@ -115,6 +121,7 @@ const whatsappSendSchema = z.object({
   phoneNumberId: z.string().optional().default(''),
   toE164: z.string().min(5),
   payload: messagePayloadSchema,
+  conversationWindowExpiresAt: z.string().datetime().optional(),
   actorId: z.string().optional().default('internal-api'),
 });
 

@@ -62,6 +62,18 @@ function buildMetaPayload(payload: MessagingPayload, toE164: string): Record<str
       },
     };
   }
+  if (payload.kind === 'template') {
+    return {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: payload.templateName,
+        language: { code: payload.languageCode },
+        components: payload.components,
+      },
+    };
+  }
   return {
     messaging_product: 'whatsapp',
     to,

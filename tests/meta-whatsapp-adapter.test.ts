@@ -145,4 +145,27 @@ describe('MetaWhatsAppAdapter', () => {
     });
     expect((payload.interactive as { action: { buttons: unknown[] } }).action.buttons).toHaveLength(3);
   });
+
+  it('builds template payloads for Meta', () => {
+    const payload = metaWhatsAppInternals.buildMetaPayload(
+      {
+        kind: 'template',
+        templateName: 'lead_permission_v1',
+        languageCode: 'en_US',
+        components: [],
+      },
+      '+201000000001',
+    );
+
+    expect(payload).toEqual({
+      messaging_product: 'whatsapp',
+      to: '201000000001',
+      type: 'template',
+      template: {
+        name: 'lead_permission_v1',
+        language: { code: 'en_US' },
+        components: [],
+      },
+    });
+  });
 });

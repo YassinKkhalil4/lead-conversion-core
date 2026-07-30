@@ -24,6 +24,7 @@ const schema = z.object({
   DIRECT_META_SEND_ENABLED: booleanString.default('false'),
   META_WA_ACCESS_TOKEN: z.string().optional().default(''),
   META_WA_PHONE_NUMBER_ID: z.string().optional().default(''),
+  META_APPROVED_TEMPLATE_NAMES: z.string().optional().default(''),
   GRAPH_API_VERSION: z.string().default('v25.0'),
   AIRTABLE_BASE_ID: z.string().default('appJxsLRRxegknqY6'),
   AIRTABLE_TOKEN: z.string().optional().default(''),

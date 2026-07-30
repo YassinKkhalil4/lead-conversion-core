@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
@@ -24,6 +25,12 @@ const messagePayloadSchema = z.discriminatedUnion('kind', [
     buttonText: z.string().min(1),
     options: z.array(optionSchema).min(1).max(10),
   }),
+  z.object({
+    kind: z.literal('template'),
+    templateName: z.string().min(1),
+    languageCode: z.string().min(2),
+    components: z.array(z.record(z.unknown())).default([]),
+  }),
 ]);
 
 const requestSchema = z.object({
@@ -35,6 +42,7 @@ const requestSchema = z.object({
   phoneNumberId: z.string().default(''),
   toE164: z.string().min(5),
   payload: messagePayloadSchema,
+  conversationWindowExpiresAt: z.string().datetime().optional(),
   actorId: z.string().default('system'),
 });
 
@@ -47,7 +55,7 @@ export interface MessageRequestResult {
 }
 
 export function messageText(payload: MessagingPayload): string {
-  return payload.text;
+  return payload.kind === 'template' ? payload.templateName : payload.text;
 }
 
 export function messageIdempotencyKey(input: Pick<MessageRequestInput, 'clientId' | 'requestKey' | 'payload'>): string {
@@ -58,10 +66,18 @@ export class MessageRequestService {
   constructor(
     private readonly outbox = new RuntimeOutboxRepository(),
     private readonly audit = new AuditRepository(),
+    private readonly policy = {
+      approvedTemplateNames: getEnv().META_APPROVED_TEMPLATE_NAMES
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean),
+      now: () => new Date(),
+    },
   ) {}
 
   async requestWhatsAppSend(input: MessageRequestInput): Promise<MessageRequestResult> {
     const parsed = requestSchema.parse(input);
+    this.validatePolicy(parsed);
     const idempotencyKey = messageIdempotencyKey(parsed);
     const client = await pool.connect();
     try {
@@ -134,6 +150,22 @@ export class MessageRequestService {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  private validatePolicy(parsed: z.output<typeof requestSchema>): void {
+    if (parsed.payload.kind === 'template') {
+      if (!this.policy.approvedTemplateNames.includes(parsed.payload.templateName)) {
+        throw new Error(`whatsapp_template_not_approved:${parsed.payload.templateName}`);
+      }
+      return;
+    }
+    if (!parsed.conversationWindowExpiresAt) {
+      throw new Error('conversation_window_required_for_session_message');
+    }
+    const expiresAt = Date.parse(parsed.conversationWindowExpiresAt);
+    if (!Number.isFinite(expiresAt) || expiresAt <= this.policy.now().getTime()) {
+      throw new Error('conversation_window_expired');
     }
   }
 }

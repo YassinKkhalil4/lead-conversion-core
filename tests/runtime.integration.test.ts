@@ -402,6 +402,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       phoneNumberId: 'phone-number-id-test',
       toE164: '+201000000001',
       payload: { kind: 'text', text: 'Welcome' },
+      conversationWindowExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       actorId: 'test-worker',
     });
     const second = await service.requestWhatsAppSend({
@@ -410,6 +411,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       phoneNumberId: 'phone-number-id-test',
       toE164: '+201000000001',
       payload: { kind: 'text', text: 'Welcome' },
+      conversationWindowExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       actorId: 'test-worker',
     });
 
@@ -443,6 +445,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
           phoneNumberId: 'phone-number-id-test',
           toE164: '+201000000002',
           payload: { kind: 'text', text: 'Welcome from route' },
+          conversationWindowExpiresAt: new Date(Date.now() + 60_000).toISOString(),
         },
       });
 
@@ -456,6 +459,58 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('enforces WhatsApp session-window and approved-template policy before enqueueing sends', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-message-policy', 'Message Policy Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    const service = new messageRequests.MessageRequestService(
+      new runtime.RuntimeOutboxRepository(),
+      new runtime.AuditRepository(),
+      {
+        approvedTemplateNames: ['lead_permission_v1'],
+        now: () => new Date('2026-07-30T00:00:00.000Z'),
+      },
+    );
+
+    await expect(service.requestWhatsAppSend({
+      clientId,
+      requestKey: 'lead-3:expired-session',
+      phoneNumberId: 'phone-number-id-test',
+      toE164: '+201000000003',
+      payload: { kind: 'text', text: 'This should not enqueue' },
+      conversationWindowExpiresAt: '2026-07-29T23:59:00.000Z',
+    })).rejects.toThrow(/conversation_window_expired/);
+    await expect(service.requestWhatsAppSend({
+      clientId,
+      requestKey: 'lead-3:unapproved-template',
+      phoneNumberId: 'phone-number-id-test',
+      toE164: '+201000000003',
+      payload: {
+        kind: 'template',
+        templateName: 'not_approved',
+        languageCode: 'en_US',
+        components: [],
+      },
+    })).rejects.toThrow(/whatsapp_template_not_approved/);
+
+    await service.requestWhatsAppSend({
+      clientId,
+      requestKey: 'lead-3:approved-template',
+      phoneNumberId: 'phone-number-id-test',
+      toE164: '+201000000003',
+      payload: {
+        kind: 'template',
+        templateName: 'lead_permission_v1',
+        languageCode: 'en_US',
+        components: [],
+      },
+    });
+    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
   });
 
   it('records append-only audit entries with actor and correlation metadata', async () => {
