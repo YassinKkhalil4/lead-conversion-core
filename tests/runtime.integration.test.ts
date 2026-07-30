@@ -47,6 +47,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let slaService: typeof import('../src/services/sla-service.js');
   let reportingService: typeof import('../src/services/reporting-service.js');
   let appointmentService: typeof import('../src/services/appointment-service.js');
+  let calendarReconciliation: typeof import('../src/worker/calendar-reconciliation.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -77,6 +78,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     slaService = await import('../src/services/sla-service.js');
     reportingService = await import('../src/services/reporting-service.js');
     appointmentService = await import('../src/services/appointment-service.js');
+    calendarReconciliation = await import('../src/worker/calendar-reconciliation.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -2313,6 +2315,122 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       status: 'booked',
       calendar_event_id: '',
     });
+  });
+
+  it('confirms a delivery-unknown calendar create through operator reconciliation', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'APPRECON',
+      phone: '+201099999966',
+      phoneNumberId: 'phone-number-id-mp11-recon',
+    });
+    await db.pool.query("UPDATE app.clients SET calendar_id='calendar-test-primary' WHERE client_id=$1", [seeded.clientId]);
+    const service = new appointmentService.AppointmentService();
+    const offer = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt: [new Date(Date.now() + 86_400_000).toISOString()],
+      durationMinutes: 45,
+      correlationId: 'appointment-reconcile-test',
+    });
+    const booking = await service.bookSlot({
+      appointmentOfferId: offer.appointmentOfferId,
+      appointmentSlotId: offer.slotIds[0] || '',
+      sourceEventId: 'appointment-reconcile-book',
+      bookedBy: seeded.leadId,
+      correlationId: 'appointment-reconcile-test',
+    });
+    expect(booking.outcome).toBe('booked');
+    const outbox = new runtime.RuntimeOutboxRepository();
+    expect((await outbox.claim('calendar-worker-reconcile')).map((row) => row.outboxCommandId)).toEqual([booking.outboxCommandId]);
+    await outbox.markDeliveryUnknown(booking.outboxCommandId, 'provider accepted but worker crashed');
+
+    const reconciler = new calendarReconciliation.CalendarReconciliationService();
+    expect((await reconciler.listAmbiguous()).map((row) => row.outboxCommandId)).toEqual([booking.outboxCommandId]);
+    const confirmed = await reconciler.confirmCreated({
+      outboxCommandId: booking.outboxCommandId,
+      providerEventId: 'google-event-reconciled',
+      operatorId: 'ops-calendar',
+      correlationId: 'appointment-reconcile-test',
+    });
+    expect(confirmed).toMatchObject({
+      outcome: 'confirmed',
+      outboxCommandId: booking.outboxCommandId,
+      appointmentId: booking.appointmentId,
+      providerEventId: 'google-event-reconciled',
+    });
+    expect((await db.pool.query('SELECT state, provider_message_id FROM runtime.outbox_commands WHERE outbox_command_id=$1', [booking.outboxCommandId])).rows[0]).toEqual({
+      state: 'delivered',
+      provider_message_id: 'google-event-reconciled',
+    });
+    expect((await db.pool.query('SELECT status, calendar_event_id FROM app.appointments WHERE appointment_id=$1', [booking.appointmentId])).rows[0]).toEqual({
+      status: 'confirmed',
+      calendar_event_id: 'google-event-reconciled',
+    });
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='calendar.create_reconciled' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect(await reconciler.confirmCreated({
+      outboxCommandId: booking.outboxCommandId,
+      providerEventId: 'google-event-reconciled',
+      operatorId: 'ops-calendar',
+      correlationId: 'appointment-reconcile-test',
+    })).toMatchObject({ outcome: 'already_reconciled' });
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='calendar.create_reconciled' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('marks a delivery-unknown calendar create permanently failed through operator reconciliation', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'APPFAILRECON',
+      phone: '+201099999965',
+      phoneNumberId: 'phone-number-id-mp11-fail-recon',
+    });
+    await db.pool.query("UPDATE app.clients SET calendar_id='calendar-test-primary' WHERE client_id=$1", [seeded.clientId]);
+    const service = new appointmentService.AppointmentService();
+    const offer = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt: [new Date(Date.now() + 86_400_000).toISOString()],
+      durationMinutes: 45,
+      correlationId: 'appointment-fail-reconcile-test',
+    });
+    const booking = await service.bookSlot({
+      appointmentOfferId: offer.appointmentOfferId,
+      appointmentSlotId: offer.slotIds[0] || '',
+      sourceEventId: 'appointment-fail-reconcile-book',
+      bookedBy: seeded.leadId,
+      correlationId: 'appointment-fail-reconcile-test',
+    });
+    expect(booking.outcome).toBe('booked');
+    const outbox = new runtime.RuntimeOutboxRepository();
+    expect((await outbox.claim('calendar-worker-fail-reconcile')).map((row) => row.outboxCommandId)).toEqual([booking.outboxCommandId]);
+    await outbox.markDeliveryUnknown(booking.outboxCommandId, 'provider accepted but response was lost');
+
+    const reconciler = new calendarReconciliation.CalendarReconciliationService();
+    const failed = await reconciler.markCreateFailed({
+      outboxCommandId: booking.outboxCommandId,
+      reason: 'operator verified no provider event exists',
+      operatorId: 'ops-calendar',
+      correlationId: 'appointment-fail-reconcile-test',
+    });
+    expect(failed).toMatchObject({
+      outcome: 'failed',
+      outboxCommandId: booking.outboxCommandId,
+      appointmentId: booking.appointmentId,
+    });
+    expect((await db.pool.query('SELECT state, last_error FROM runtime.outbox_commands WHERE outbox_command_id=$1', [booking.outboxCommandId])).rows[0]).toEqual({
+      state: 'permanently_failed',
+      last_error: 'operator verified no provider event exists',
+    });
+    expect(await outbox.claim('calendar-worker-after-fail-reconcile')).toHaveLength(0);
+    expect((await db.pool.query('SELECT status, calendar_event_id FROM app.appointments WHERE appointment_id=$1', [booking.appointmentId])).rows[0]).toEqual({
+      status: 'booked',
+      calendar_event_id: '',
+    });
+    expect((await db.pool.query("SELECT count(*) FROM runtime.dead_letters WHERE source_table='runtime.outbox_commands' AND source_id=$1", [booking.outboxCommandId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='calendar.create_reconciliation_failed' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect(await reconciler.markCreateFailed({
+      outboxCommandId: booking.outboxCommandId,
+      reason: 'operator verified no provider event exists',
+      operatorId: 'ops-calendar',
+      correlationId: 'appointment-fail-reconcile-test',
+    })).toMatchObject({ outcome: 'already_reconciled' });
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='calendar.create_reconciliation_failed' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
   });
 
   it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {

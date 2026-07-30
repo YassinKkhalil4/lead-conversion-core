@@ -18,6 +18,8 @@
     "seed:prod": "node dist/scripts/seed.js",
     "import:airtable": "tsx scripts/import-airtable.ts",
     "reconcile:airtable": "tsx scripts/reconcile-airtable.ts",
+    "calendar:reconcile": "tsx scripts/calendar-reconcile.ts",
+    "calendar:reconcile:prod": "node dist/scripts/calendar-reconcile.js",
     "sync-config": "tsx scripts/sync-config.ts",
     "config": "tsx scripts/config.ts",
     "config:prod": "node dist/scripts/config.js",
