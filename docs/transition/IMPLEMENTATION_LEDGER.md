@@ -50,3 +50,4 @@
 - Verification: `npm run lint && npm test` passed with 7 Vitest files and 47 tests after Meta status webhook ingestion implementation.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Deferred external verification: live Meta webhook challenge/status delivery remains pending rotated Meta app secret, verification token, callback URL, and subscribed test webhook events.
+- Commit `e133c40`: Added Meta WhatsApp status webhook durable inbox receipt, processing, delivery-event persistence, and local PostgreSQL/API tests.
