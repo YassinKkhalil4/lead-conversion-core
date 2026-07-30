@@ -142,6 +142,78 @@ describe('MessagingOutboxDispatcher', () => {
     }));
   });
 
+  it('maps SLA assignment reminders to real WhatsApp sends', async () => {
+    const provider: MessageProvider = {
+      send: vi.fn(async () => ({
+        outcome: 'accepted' as const,
+        providerMessageId: 'wamid.sla.reminder.accepted',
+        providerResponse: {},
+      })),
+    };
+    const dispatcher = new MessagingOutboxDispatcher({ meta: provider });
+
+    await expect(dispatcher.dispatch(command({
+      commandType: 'salesperson.sla_assignment_reminder',
+      destination: '+201044444444',
+      idempotencyKey: 'sla.notify:11111111-1111-4111-8111-111111111111',
+      payload: {
+        slaJobId: '11111111-1111-4111-8111-111111111111',
+        leadId: '22222222-2222-4222-8222-222222222222',
+        assignmentId: '33333333-3333-4333-8333-333333333333',
+        salespersonId: '44444444-4444-4444-8444-444444444444',
+        contactName: 'Lead Name',
+        contactPhoneE164: '+201099999999',
+      },
+    }))).resolves.toEqual({
+      outcome: 'delivered',
+      providerMessageId: 'wamid.sla.reminder.accepted',
+    });
+    expect(provider.send).toHaveBeenCalledWith(expect.objectContaining({
+      destination: expect.objectContaining({ toE164: '+201044444444' }),
+      payload: expect.objectContaining({
+        kind: 'text',
+        text: expect.stringContaining('Lead assignment still needs acknowledgement.'),
+      }),
+      idempotencyKey: 'sla.notify:11111111-1111-4111-8111-111111111111',
+    }));
+  });
+
+  it('maps SLA escalations to real WhatsApp sends', async () => {
+    const provider: MessageProvider = {
+      send: vi.fn(async () => ({
+        outcome: 'accepted' as const,
+        providerMessageId: 'wamid.sla.escalation.accepted',
+        providerResponse: {},
+      })),
+    };
+    const dispatcher = new MessagingOutboxDispatcher({ meta: provider });
+
+    await expect(dispatcher.dispatch(command({
+      commandType: 'operator.sla_escalation',
+      destination: '+201099900001',
+      idempotencyKey: 'sla.notify:55555555-5555-4555-8555-555555555555',
+      payload: {
+        slaJobId: '55555555-5555-4555-8555-555555555555',
+        slaType: 'stale_qualified_escalation',
+        leadId: '22222222-2222-4222-8222-222222222222',
+        contactName: 'Lead Name',
+        contactPhoneE164: '+201099999999',
+        reason: 'stale_qualified_lead',
+      },
+    }))).resolves.toEqual({
+      outcome: 'delivered',
+      providerMessageId: 'wamid.sla.escalation.accepted',
+    });
+    expect(provider.send).toHaveBeenCalledWith(expect.objectContaining({
+      destination: expect.objectContaining({ toE164: '+201099900001' }),
+      payload: expect.objectContaining({
+        kind: 'text',
+        text: expect.stringContaining('SLA escalation.'),
+      }),
+      idempotencyKey: 'sla.notify:55555555-5555-4555-8555-555555555555',
+    }));
+  });
+
   it('rejects malformed notification payloads without calling the provider', async () => {
     const provider: MessageProvider = {
       send: vi.fn(async () => ({

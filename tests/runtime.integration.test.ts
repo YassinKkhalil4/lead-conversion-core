@@ -44,6 +44,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let leadRouting: typeof import('../src/services/lead-routing-service.js');
   let followupScheduler: typeof import('../src/services/followup-scheduler-service.js');
   let followupJob: typeof import('../src/services/followup-job-processor.js');
+  let slaService: typeof import('../src/services/sla-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -71,6 +72,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     leadRouting = await import('../src/services/lead-routing-service.js');
     followupScheduler = await import('../src/services/followup-scheduler-service.js');
     followupJob = await import('../src/services/followup-job-processor.js');
+    slaService = await import('../src/services/sla-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -1828,6 +1830,159 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(await worker.tick()).toBe(1);
     expect((await db.pool.query('SELECT status FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [scheduled.scheduledJobId])).rows[0]?.status).toBe('completed');
     expect((await db.pool.query('SELECT count(*) FROM app.messages WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('schedules assignment SLA jobs idempotently and cancels them on acknowledgement', async () => {
+    const assigned = await seedAssignedLead({
+      suffix: 'SLAACK',
+      phone: '+201099999977',
+      salespersonPhone: '+201088888881',
+    });
+    const service = new slaService.SlaService();
+    const first = await service.scheduleForAssignment(db.pool, {
+      leadAssignmentId: assigned.assignmentId,
+      correlationId: 'sla-ack-test',
+    });
+    const second = await service.scheduleForAssignment(db.pool, {
+      leadAssignmentId: assigned.assignmentId,
+      correlationId: 'sla-ack-test',
+    });
+
+    expect(first.map((job) => job.scheduled)).toEqual([true, true]);
+    expect(second.map((job) => job.slaJobId)).toEqual(first.map((job) => job.slaJobId));
+    expect((await db.pool.query('SELECT count(*) FROM app.sla_jobs WHERE lead_id=$1', [assigned.leadId])).rows[0]?.count).toBe('2');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.scheduled_jobs WHERE job_type='sla.notify' AND aggregate_key=$1", [assigned.leadId])).rows[0]?.count).toBe('2');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='sla.scheduled' AND aggregate_id=$1", [assigned.leadId])).rows[0]?.count).toBe('2');
+
+    await receiveSalespersonCommand({
+      clientId: assigned.clientId,
+      leadId: assigned.leadId,
+      assignmentId: assigned.assignmentId,
+      fromE164: '+201088888881',
+      messageText: 'ACK',
+      sourceEventId: 'sla-ack-command-1',
+    });
+    const processor = new metaInbox.MetaInboxProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processInbox: (event) => processor.process(event) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+
+    expect((await db.pool.query('SELECT acknowledged_at IS NOT NULL AS acknowledged FROM app.lead_assignments WHERE lead_assignment_id=$1', [assigned.assignmentId])).rows[0]?.acknowledged).toBe(true);
+    expect((await db.pool.query("SELECT count(*) FROM app.sla_jobs WHERE lead_assignment_id=$1 AND status='cancelled' AND cancelled_reason='assignment_acknowledged'", [assigned.assignmentId])).rows[0]?.count).toBe('2');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.scheduled_jobs WHERE aggregate_key=$1 AND job_type='sla.notify' AND status='cancelled'", [assigned.leadId])).rows[0]?.count).toBe('2');
+  });
+
+  it('executes due assignment SLA reminders and escalations idempotently', async () => {
+    const assigned = await seedAssignedLead({
+      suffix: 'SLAEXEC',
+      phone: '+201099999976',
+      salespersonPhone: '+201088888882',
+    });
+    await db.pool.query("UPDATE app.clients SET manager_phone_e164='+201099900001' WHERE client_id=$1", [assigned.clientId]);
+    const service = new slaService.SlaService();
+    await service.scheduleForAssignment(db.pool, {
+      leadAssignmentId: assigned.assignmentId,
+      correlationId: 'sla-exec-test',
+    });
+    await db.pool.query(
+      "UPDATE runtime.scheduled_jobs SET due_at=now()-interval '1 second' WHERE job_type='sla.notify' AND aggregate_key=$1",
+      [assigned.leadId],
+    );
+
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => service.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(2);
+    expect(await worker.tick()).toBe(0);
+
+    expect((await db.pool.query("SELECT count(*) FROM app.sla_jobs WHERE lead_id=$1 AND status='sent'", [assigned.leadId])).rows[0]?.count).toBe('2');
+    const commands = await db.pool.query<{ command_type: string; destination: string }>(
+      `SELECT command_type, destination
+       FROM runtime.outbox_commands
+       WHERE aggregate_key=$1
+       ORDER BY command_type`,
+      [assigned.leadId],
+    );
+    expect(commands.rows).toEqual([
+      { command_type: 'operator.sla_escalation', destination: '+201099900001' },
+      { command_type: 'salesperson.sla_assignment_reminder', destination: '+201088888882' },
+    ]);
+    expect((await db.pool.query("SELECT count(*) FROM runtime.scheduled_jobs WHERE job_type='sla.notify' AND aggregate_key=$1 AND status='completed'", [assigned.leadId])).rows[0]?.count).toBe('2');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='sla.sent' AND aggregate_id=$1", [assigned.leadId])).rows[0]?.count).toBe('2');
+  });
+
+  it('recovers expired stale-qualified SLA job leases before escalation', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'SLALEASE',
+      phone: '+201099999975',
+      phoneNumberId: 'phone-number-id-mp10-sla-lease',
+    });
+    await db.pool.query("UPDATE app.clients SET manager_phone_e164='+201099900002' WHERE client_id=$1", [seeded.clientId]);
+    await db.pool.query(
+      "UPDATE app.leads SET status='qualified', current_stage='qualified' WHERE lead_id=$1",
+      [seeded.leadId],
+    );
+    const service = new slaService.SlaService();
+    const scheduled = await service.scheduleStaleQualifiedLead(db.pool, {
+      leadId: seeded.leadId,
+      delaySeconds: 0,
+      correlationId: 'sla-lease-test',
+    });
+    await db.pool.query(
+      `UPDATE runtime.scheduled_jobs
+       SET status='processing',
+           locked_by='abandoned-worker',
+           lock_expires_at=now()-interval '1 second',
+           due_at=now()-interval '1 second'
+       WHERE scheduled_job_id=$1`,
+      [scheduled.scheduledJobId],
+    );
+
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => service.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+    expect((await db.pool.query("SELECT status FROM app.sla_jobs WHERE sla_job_id=$1", [scheduled.slaJobId])).rows[0]?.status).toBe('sent');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.sla_escalation' AND aggregate_key=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('cancels stale-qualified SLA jobs that no longer qualify at execution time', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'SLACANCEL',
+      phone: '+201099999974',
+      phoneNumberId: 'phone-number-id-mp10-sla-cancel',
+    });
+    await db.pool.query("UPDATE app.clients SET manager_phone_e164='+201099900003' WHERE client_id=$1", [seeded.clientId]);
+    await db.pool.query(
+      "UPDATE app.leads SET status='qualified', current_stage='qualified' WHERE lead_id=$1",
+      [seeded.leadId],
+    );
+    const service = new slaService.SlaService();
+    const scheduled = await service.scheduleStaleQualifiedLead(db.pool, {
+      leadId: seeded.leadId,
+      delaySeconds: 0,
+      correlationId: 'sla-cancel-test',
+    });
+    await db.pool.query(
+      "UPDATE app.leads SET status='lost', current_stage='closed_lost', stop_follow_up=true WHERE lead_id=$1",
+      [seeded.leadId],
+    );
+    await db.pool.query('UPDATE runtime.scheduled_jobs SET due_at=now()-interval \'1 second\' WHERE scheduled_job_id=$1', [scheduled.scheduledJobId]);
+
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => service.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM app.sla_jobs WHERE sla_job_id=$1', [scheduled.slaJobId])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'stop_follow_up_true',
+    });
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands WHERE aggregate_key=$1', [seeded.leadId])).rows[0]?.count).toBe('0');
   });
 
   it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {

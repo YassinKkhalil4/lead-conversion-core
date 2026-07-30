@@ -3,6 +3,7 @@ import { pool } from '../db/pool.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import { REAL_ESTATE_ROUTING_VERSION, routeRealEstateLead } from '../domain/lead-routing.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
+import { SlaService } from './sla-service.js';
 
 type Db = typeof pool | PoolClient;
 
@@ -18,6 +19,7 @@ export class LeadRoutingService {
     private readonly outbox = new RuntimeOutboxRepository(),
     private readonly audit = new AuditRepository(),
     private readonly followups = new FollowupSchedulerService(),
+    private readonly sla = new SlaService(),
   ) {}
 
   async routeLead(client: Db, input: {
@@ -266,6 +268,12 @@ export class LeadRoutingService {
         await this.followups.cancelForLead(client, {
           leadId: input.leadId,
           reason: 'lead_assigned',
+          actorId: input.actorId || 'lead-routing-service',
+          ...(input.correlationId ? { correlationId: input.correlationId } : {}),
+          causationId: routingRunId,
+        });
+        await this.sla.scheduleForAssignment(client, {
+          leadAssignmentId: assignmentId,
           actorId: input.actorId || 'lead-routing-service',
           ...(input.correlationId ? { correlationId: input.correlationId } : {}),
           causationId: routingRunId,

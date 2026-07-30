@@ -3,6 +3,7 @@ import { pool } from '../db/pool.js';
 import { AuditRepository, sha256Hex, stableJson, type ClaimedInboxEvent } from '../infrastructure/runtime.js';
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
+import { SlaService } from './sla-service.js';
 
 const commandPayloadSchema = z.object({
   webhookType: z.literal('salesperson.command_received'),
@@ -40,6 +41,7 @@ export class SalespersonCommandProcessor {
   constructor(
     private readonly audit = new AuditRepository(),
     private readonly followups = new FollowupSchedulerService(),
+    private readonly sla = new SlaService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -106,8 +108,24 @@ export class SalespersonCommandProcessor {
 
       if (status === 'processed' && assignment && intent) {
         await this.applyCommand(client, { assignment, intent });
+        if (intent === 'acknowledge') {
+          await this.sla.cancelForAssignment(client, {
+            leadAssignmentId: assignment.lead_assignment_id,
+            reason: 'assignment_acknowledged',
+            actorId: 'salesperson-command-processor',
+            correlationId: event.dedupeKey,
+            causationId: event.inboxEventId,
+          });
+        }
         if (['close_lost', 'stop_follow_up', 'takeover'].includes(intent)) {
           await this.followups.cancelForLead(client, {
+            leadId: assignment.lead_id,
+            reason: `salesperson_${intent}`,
+            actorId: 'salesperson-command-processor',
+            correlationId: event.dedupeKey,
+            causationId: event.inboxEventId,
+          });
+          await this.sla.cancelForLead(client, {
             leadId: assignment.lead_id,
             reason: `salesperson_${intent}`,
             actorId: 'salesperson-command-processor',

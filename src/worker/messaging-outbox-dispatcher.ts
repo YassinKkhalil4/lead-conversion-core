@@ -62,6 +62,28 @@ const routingAlertSchema = z.object({
   phoneNumberId: z.string().default(''),
 });
 
+const slaAssignmentReminderSchema = z.object({
+  slaJobId: z.string().uuid(),
+  leadId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  salespersonId: z.string().uuid(),
+  contactName: z.string().default(''),
+  contactPhoneE164: z.string().min(5),
+  phoneNumberId: z.string().default(''),
+});
+
+const slaEscalationSchema = z.object({
+  slaJobId: z.string().uuid(),
+  slaType: z.enum(['assignment_ack_escalation', 'stale_qualified_escalation']),
+  leadId: z.string().uuid(),
+  assignmentId: z.string().default(''),
+  salespersonId: z.string().default(''),
+  contactName: z.string().default(''),
+  contactPhoneE164: z.string().min(5),
+  reason: z.string().min(1),
+  phoneNumberId: z.string().default(''),
+});
+
 function textLine(label: string, value: string): string {
   return value ? `${label}: ${value}` : '';
 }
@@ -93,6 +115,33 @@ function notificationPayload(command: ClaimedOutboxCommand): { phoneNumberId: st
     ].filter(Boolean);
     return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
   }
+  if (command.commandType === 'salesperson.sla_assignment_reminder') {
+    const parsed = slaAssignmentReminderSchema.safeParse(command.payload);
+    if (!parsed.success) return null;
+    const lines = [
+      'Lead assignment still needs acknowledgement.',
+      textLine('Lead', parsed.data.contactName),
+      textLine('Phone', parsed.data.contactPhoneE164),
+      `Assignment ID: ${parsed.data.assignmentId}`,
+      `SLA ID: ${parsed.data.slaJobId}`,
+    ].filter(Boolean);
+    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
+  }
+  if (command.commandType === 'operator.sla_escalation') {
+    const parsed = slaEscalationSchema.safeParse(command.payload);
+    if (!parsed.success) return null;
+    const lines = [
+      'SLA escalation.',
+      `Reason: ${parsed.data.reason}`,
+      textLine('Lead', parsed.data.contactName),
+      textLine('Phone', parsed.data.contactPhoneE164),
+      textLine('Salesperson ID', parsed.data.salespersonId),
+      textLine('Assignment ID', parsed.data.assignmentId),
+      `Lead ID: ${parsed.data.leadId}`,
+      `SLA ID: ${parsed.data.slaJobId}`,
+    ].filter(Boolean);
+    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
+  }
   return null;
 }
 
@@ -100,7 +149,13 @@ export class MessagingOutboxDispatcher {
   constructor(private readonly providers: { meta: MessageProvider }) {}
 
   async dispatch(command: ClaimedOutboxCommand): Promise<OutboxDispatchResult> {
-    if (!['whatsapp.send_message', 'salesperson.lead_assignment_notification', 'operator.routing_attention_required'].includes(command.commandType)) {
+    if (![
+      'whatsapp.send_message',
+      'salesperson.lead_assignment_notification',
+      'operator.routing_attention_required',
+      'salesperson.sla_assignment_reminder',
+      'operator.sla_escalation',
+    ].includes(command.commandType)) {
       return { outcome: 'permanently_failed', error: `unsupported_outbox_command:${command.commandType}` };
     }
 

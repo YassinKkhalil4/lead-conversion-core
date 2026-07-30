@@ -46,6 +46,7 @@ export interface ClaimedInboxEvent {
 
 export interface ClaimedJob {
   scheduledJobId: string;
+  jobType: string;
   attemptCount: number;
   payload: Record<string, unknown>;
 }
@@ -564,6 +565,7 @@ export class JobRepository {
       await client.query('BEGIN');
       const result = await client.query<{
         scheduled_job_id: string;
+        job_type: string;
         attempt_count: number;
         payload_json: Record<string, unknown>;
       }>(
@@ -587,7 +589,7 @@ export class JobRepository {
             attempt_count=attempt_count+1
         FROM candidates
         WHERE j.scheduled_job_id=candidates.scheduled_job_id
-        RETURNING j.scheduled_job_id, j.attempt_count, j.payload_json`,
+        RETURNING j.scheduled_job_id, j.job_type, j.attempt_count, j.payload_json`,
         [limit, workerId, leaseSeconds],
       );
       for (const row of result.rows) {
@@ -601,6 +603,7 @@ export class JobRepository {
       await client.query('COMMIT');
       return result.rows.map((row) => ({
         scheduledJobId: row.scheduled_job_id,
+        jobType: row.job_type,
         attemptCount: row.attempt_count,
         payload: row.payload_json,
       }));

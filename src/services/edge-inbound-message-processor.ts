@@ -17,6 +17,7 @@ import type { MessagingPayload } from '../integrations/messaging/types.js';
 import { LeadScoringService } from './lead-scoring-service.js';
 import { LeadRoutingService } from './lead-routing-service.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
+import { SlaService } from './sla-service.js';
 
 const inboundMessageSchema = z.object({
   webhookType: z.literal('whatsapp.message_received'),
@@ -100,6 +101,7 @@ export class EdgeInboundMessageProcessor {
     private readonly scorer = new LeadScoringService(),
     private readonly router = new LeadRoutingService(),
     private readonly followups = new FollowupSchedulerService(),
+    private readonly sla = new SlaService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -552,7 +554,7 @@ export class EdgeInboundMessageProcessor {
         correlationId: scoringContext.correlationId,
         causationId: scoringContext.causationId,
       });
-      await this.router.routeLead(client, {
+      const routing = await this.router.routeLead(client, {
         leadId,
         scoreRunId: score.scoreRunId,
         actorType: 'worker',
@@ -560,6 +562,14 @@ export class EdgeInboundMessageProcessor {
         correlationId: scoringContext.correlationId,
         causationId: score.scoreRunId,
       });
+      if (routing.outcome === 'no_eligible_salesperson') {
+        await this.sla.scheduleStaleQualifiedLead(client, {
+          leadId,
+          actorId: 'edge-inbound-message-processor',
+          correlationId: scoringContext.correlationId,
+          causationId: routing.routingRunId,
+        });
+      }
     }
   }
 
@@ -592,6 +602,12 @@ export class EdgeInboundMessageProcessor {
       [state.leadId, phoneNormalized],
     );
     await this.followups.cancelForLead(client, {
+      leadId: state.leadId,
+      reason: 'lead_opted_out',
+      actorId: 'edge-inbound-message-processor',
+      causationId: 'lead_opted_out',
+    });
+    await this.sla.cancelForLead(client, {
       leadId: state.leadId,
       reason: 'lead_opted_out',
       actorId: 'edge-inbound-message-processor',
