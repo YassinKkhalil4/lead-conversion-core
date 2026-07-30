@@ -528,6 +528,22 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or salesperson-provider call was made.
 
+## 2026-07-30 MP-09 Notification Dispatch
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/messaging-outbox-dispatcher.test.ts tests/runtime.integration.test.ts`
+
+Result: passed. Focused tests ran 45 tests, including mapping `salesperson.lead_assignment_notification` to a real WhatsApp provider send command, preserving provider accepted outcomes, rejecting malformed `operator.routing_attention_required` payloads without provider calls, and all runtime salesperson command ingestion coverage.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 78 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local dispatcher contract and PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or salesperson-provider call was made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

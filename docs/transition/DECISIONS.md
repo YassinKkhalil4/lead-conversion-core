@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-018: Notification Commands Dispatch Through The Messaging Adapter
+
+Decision: `salesperson.lead_assignment_notification` and `operator.routing_attention_required` outbox commands are dispatched by mapping their durable payloads to real Meta WhatsApp sends through `MessagingOutboxDispatcher`.
+
+Reason: The outbox must not accumulate command types that the worker immediately marks unsupported once dispatch is enabled. Mapping to the existing provider adapter preserves real provider retry/permanent/unknown classification without hardcoded success responses.
+
+Date: 2026-07-30
+
 ## DEC-017: Salesperson Commands Are Durable Inbox Events
 
 Decision: Salesperson command compatibility ingress stores sanitized WhatsApp/n8n command payloads in `runtime.inbox_events` before processing, and command effects are applied only by the worker after validating the sender is the active assignee for the lead/client.

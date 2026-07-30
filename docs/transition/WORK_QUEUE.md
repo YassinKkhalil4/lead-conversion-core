@@ -102,7 +102,7 @@ Remaining: live staged Meta/n8n turn verification pending owner setup. Broader f
 
 ## MP-09 Scoring, Routing, Commands, Alerts
 
-Status: implementing
+Status: staging_blocked
 
 Deliverables: `real_estate_v1` scoring, deterministic routing, salesperson commands, authorized alerts.
 
@@ -110,9 +110,9 @@ Dependencies: salesperson/project export for final data parity.
 
 Verification gates: parity fixtures, cross-client rejection, deterministic tie-breaks.
 
-Completed locally: deterministic `real_estate_v1` score calculation from normalized qualification answers and lead state; score-run idempotency using scoring version plus input hash; atomic update of `app.leads.lead_score` and `app.leads.temperature`; `lead.scored` audit events; deterministic `real_estate_v1` routing runs with same-client/project salesperson eligibility; cross-client salesperson rejection even when project links are malformed; stable candidate tie-breaks; active-assignment reuse on rerun; durable `salesperson.lead_assignment_notification` and `operator.routing_attention_required` outbox commands; authenticated n8n-compatible salesperson command receipt into `runtime.inbox_events`; durable command processing for acknowledgement, takeover, close-lost, and stop-follow-up; unauthorized sender rejection; PostgreSQL/API integration coverage for completed qualification scoring, duplicate reruns, missing-answer reporting, routing tie-breaks, no-eligible routing, cross-client rejection, duplicate command idempotency, unauthorized command rejection, and command state mutations.
+Completed locally: deterministic `real_estate_v1` score calculation from normalized qualification answers and lead state; score-run idempotency using scoring version plus input hash; atomic update of `app.leads.lead_score` and `app.leads.temperature`; `lead.scored` audit events; deterministic `real_estate_v1` routing runs with same-client/project salesperson eligibility; cross-client salesperson rejection even when project links are malformed; stable candidate tie-breaks; active-assignment reuse on rerun; durable `salesperson.lead_assignment_notification` and `operator.routing_attention_required` outbox commands; real dispatcher mapping for those notification command types through the Meta WhatsApp adapter path with provider retry/permanent/unknown classification preserved; authenticated n8n-compatible salesperson command receipt into `runtime.inbox_events`; durable command processing for acknowledgement, takeover, close-lost, and stop-follow-up; unauthorized sender rejection; PostgreSQL/API integration coverage for completed qualification scoring, duplicate reruns, missing-answer reporting, routing tie-breaks, no-eligible routing, cross-client rejection, duplicate command idempotency, unauthorized command rejection, command state mutations, notification dispatch mapping, and malformed notification rejection.
 
-Remaining: alert/notification dispatch adapter and worker behavior for `salesperson.lead_assignment_notification` and `operator.routing_attention_required`; live parity against real salesperson/project export when available.
+Remaining: live staging verification for salesperson/operator notification sends and command ingestion; approved notification copy/templates; parity against real salesperson/project export when available.
 
 ## MP-10 Follow-ups, SLA, Reporting
 

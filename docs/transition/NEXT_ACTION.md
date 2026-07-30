@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-30
 
-Current mini-project: MP-09 Scoring, routing, commands, and alerts
+Current mini-project: MP-10 Follow-ups, SLA, reporting
 
-Exact next implementation task: Continue MP-09 by adding outbound dispatch handling for durable salesperson/operator notification command types. Implement a real adapter path that maps `salesperson.lead_assignment_notification` and `operator.routing_attention_required` to configured WhatsApp template/text sends without hardcoded success, keeps the provider disabled unless configured, preserves retry/permanent-failure classification, and adds unit/PostgreSQL worker tests proving unsupported or unconfigured sends fail safely without losing outbox history.
+Exact next implementation task: Begin MP-10 by adding durable follow-up scheduling. Persist semantic follow-up jobs in `runtime.scheduled_jobs` from lead/conversation state, prevent duplicate follow-up jobs per lead/stage, store timezone explicitly, cancel or supersede jobs on opt-out, human takeover, assignment, close-lost, or qualification completion, and add PostgreSQL integration tests for duplicate prevention, cancellation, lease recovery, and no in-process scheduling authority.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: d0f7e36
+Last verified implementation commit: 229e01c
 
 Git worktree clean when recorded: yes
