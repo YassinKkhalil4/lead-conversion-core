@@ -24,4 +24,4 @@
 - Decision: Runtime worker does not claim provider side effects unless a real dispatcher is configured; tests may inject handlers, but production code must not simulate successful sends.
 - Verification: `npm run lint && npm test` passed with 5 Vitest files and 31 tests after MP-04 runtime implementation.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
-- Commit `10688f7`: Added durable runtime queue foundations for inbox/outbox/jobs/audit plus PostgreSQL integration tests and transition documentation.
+- Commit `e4d1907`: Added durable runtime queue foundations for inbox/outbox/jobs/audit plus PostgreSQL integration tests and transition documentation.

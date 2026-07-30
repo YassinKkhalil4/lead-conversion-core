@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified commit: 10688f7
+Last verified implementation commit: e4d1907
 
 Git worktree clean when recorded: yes
