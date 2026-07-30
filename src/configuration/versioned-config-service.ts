@@ -41,6 +41,14 @@ export interface PublishConfigResult {
   activeScopeKey: string;
 }
 
+export interface ActiveConfigResult {
+  configurationVersionId: string;
+  versionKey: string;
+  scopeKey: string;
+  clientRecordId: string;
+  activatedAt: string;
+}
+
 function scopeKey(clientRecordId: string | null): string {
   return clientRecordId ? `client_record:${clientRecordId}` : 'default';
 }
@@ -97,6 +105,79 @@ export class VersionedConfigService {
       [scope],
     );
     return result.rows[0]?.config_json || null;
+  }
+
+  async getActiveMetadata(scope: string): Promise<ActiveConfigResult | null> {
+    const result = await pool.query<{
+      configuration_version_id: string;
+      version_key: string;
+      scope_key: string;
+      client_record_id: string;
+      activated_at: Date | string;
+    }>(
+      `SELECT v.configuration_version_id, v.version_key, a.scope_key, a.client_record_id, a.activated_at
+       FROM configuration.active_versions a
+       JOIN configuration.versions v USING (configuration_version_id)
+       WHERE a.scope_key=$1
+       LIMIT 1`,
+      [scope],
+    );
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      configurationVersionId: row.configuration_version_id,
+      versionKey: row.version_key,
+      scopeKey: row.scope_key,
+      clientRecordId: row.client_record_id,
+      activatedAt: row.activated_at instanceof Date ? row.activated_at.toISOString() : new Date(row.activated_at).toISOString(),
+    };
+  }
+
+  async activateVersion(input: {
+    versionKey: string;
+    clientRecordId?: string | null;
+    activatedBy: string;
+  }): Promise<ActiveConfigResult> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const version = await client.query<{
+        configuration_version_id: string;
+        client_record_id: string;
+        config_json: CompiledConfig;
+      }>(
+        `SELECT configuration_version_id, client_record_id, config_json
+         FROM configuration.versions
+         WHERE version_key=$1 AND status='published'
+         LIMIT 1`,
+        [input.versionKey],
+      );
+      const row = version.rows[0];
+      if (!row) throw new Error(`published_configuration_version_not_found:${input.versionKey}`);
+      const recordId = input.clientRecordId ?? row.client_record_id ?? '';
+      const scope = scopeKey(recordId || null);
+      await client.query(
+        `INSERT INTO configuration.active_versions
+          (scope_key, client_record_id, configuration_version_id, activated_by)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (scope_key) DO UPDATE SET
+          configuration_version_id=EXCLUDED.configuration_version_id,
+          client_record_id=EXCLUDED.client_record_id,
+          activated_by=EXCLUDED.activated_by,
+          activated_at=now()`,
+        [scope, recordId, row.configuration_version_id, input.activatedBy],
+      );
+      await this.legacyRepository.save(row.config_json, client);
+      await client.query('COMMIT');
+      const active = await this.getActiveMetadata(scope);
+      if (!active) throw new Error('active_configuration_not_found_after_activation');
+      return active;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async publish(input: PublishConfigInput): Promise<PublishConfigResult> {
@@ -165,5 +246,9 @@ export class VersionedConfigService {
   async diff(sourcePath: string, clientRecordId?: string | null): Promise<ConfigDiff> {
     const config = await this.loadAndCompile(sourcePath, clientRecordId);
     return diffCompiledConfigs(await this.getActive(scopeKey(config.clientRecordId)), config);
+  }
+
+  scopeKey(clientRecordId?: string | null): string {
+    return scopeKey(clientRecordId || null);
   }
 }

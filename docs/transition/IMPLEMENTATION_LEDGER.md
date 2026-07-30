@@ -62,3 +62,6 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Verification: `npm run config -- validate --input=config/seed-real-estate.json` passed with dummy local env values and reported 9 questions and 7 messages.
 - Commit `cc7a0d4`: Added versioned configuration foundation with immutable published versions, active pointers, config CLI, and PostgreSQL tests.
+- Implementation slice: Added configuration active metadata/rollback activation, `npm run config -- active`, `npm run config -- rollback --version=...`, and runtime `ConfigRepository` reads from `configuration.active_versions` with legacy snapshot fallback.
+- Verification: `npm run lint && npm test` passed with 7 Vitest files and 51 tests after active/rollback configuration implementation.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.

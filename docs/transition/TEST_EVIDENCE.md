@@ -287,3 +287,15 @@ Command: `DATABASE_URL=postgresql://127.0.0.1:1/unused EDGE_SHARED_SECRET=test_s
 Result: passed. CLI validation returned `ok=true`, version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, checksum `2163da54e79c23e0d79fc3ef58451be23a02d2e311fdff4df5d685ae26408466`, 9 questions, and 7 messages.
 
 Verification level: local PostgreSQL integration tested.
+
+## 2026-07-30 MP-06 Active And Rollback Configuration
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 7 test files and 51 tests, including PostgreSQL integration coverage that publishing a changed config moves the active pointer, runtime `ConfigRepository.getActive` reads from `configuration.active_versions`, `npm run config -- rollback --version=<version>` restores the prior published version, both published version rows remain present, and legacy `edge_config_snapshots` remains synchronized as a rollback path.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 51 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL integration and CLI rollback tested.

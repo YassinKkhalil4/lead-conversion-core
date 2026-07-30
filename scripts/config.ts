@@ -33,6 +33,20 @@ async function main(): Promise<void> {
     }), null, 2));
     return;
   }
+  if (command === 'active') {
+    console.log(JSON.stringify(await service.getActiveMetadata(service.scopeKey(clientRecordId)), null, 2));
+    return;
+  }
+  if (command === 'rollback') {
+    const versionKey = argValue('version');
+    if (!versionKey) throw new Error('rollback_requires_--version');
+    console.log(JSON.stringify(await service.activateVersion({
+      versionKey,
+      clientRecordId,
+      activatedBy: actor,
+    }), null, 2));
+    return;
+  }
 
   throw new Error(`unknown_config_command:${command}`);
 }

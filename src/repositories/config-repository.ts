@@ -25,6 +25,17 @@ export class ConfigRepository {
 
   async getActive(clientRecordId: string, client: PoolClient | null = null): Promise<CompiledConfig> {
     const db = client ?? pool;
+    const scopeKey = clientRecordId ? `client_record:${clientRecordId}` : 'default';
+    const activeVersion = await db.query<{ config_json: CompiledConfig }>(
+      `SELECT v.config_json
+       FROM configuration.active_versions a
+       JOIN configuration.versions v USING (configuration_version_id)
+       WHERE a.scope_key=$1
+       LIMIT 1`,
+      [scopeKey],
+    );
+    if (activeVersion.rows[0]) return activeVersion.rows[0].config_json;
+
     const specific = await db.query<{ config_json: CompiledConfig }>(
       `SELECT config_json FROM edge_config_snapshots
        WHERE active = true AND client_record_id = $1
@@ -45,6 +56,12 @@ export class ConfigRepository {
 
   async getByVersion(version: string, client: PoolClient | null = null): Promise<CompiledConfig> {
     const db = client ?? pool;
+    const activeVersion = await db.query<{ config_json: CompiledConfig }>(
+      `SELECT config_json FROM configuration.versions WHERE version_key=$1 LIMIT 1`,
+      [version],
+    );
+    if (activeVersion.rows[0]) return activeVersion.rows[0].config_json;
+
     const result = await db.query<{ config_json: CompiledConfig }>(
       `SELECT config_json FROM edge_config_snapshots WHERE config_version=$1 LIMIT 1`,
       [version],

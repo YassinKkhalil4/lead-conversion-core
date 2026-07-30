@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -39,6 +39,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let messageRequests: typeof import('../src/services/message-request-service.js');
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
+  let configRepository: typeof import('../src/repositories/config-repository.js');
   let appModule: typeof import('../src/app.js');
 
   beforeAll(async () => {
@@ -58,6 +59,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     messageRequests = await import('../src/services/message-request-service.js');
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
+    configRepository = await import('../src/repositories/config-repository.js');
     appModule = await import('../src/app.js');
   }, 30_000);
 
@@ -816,5 +818,42 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     await expect(
       db.pool.query("UPDATE configuration.versions SET config_json='{}'::jsonb WHERE configuration_version_id=$1", [published.configurationVersionId]),
     ).rejects.toThrow(/published_configuration_versions_are_immutable/);
+  });
+
+  it('activates and rolls back published configuration versions for runtime reads', async () => {
+    const service = new versionedConfig.VersionedConfigService();
+    const repository = new configRepository.ConfigRepository();
+    const sourcePath = join(process.cwd(), 'config/seed-real-estate.json');
+    const original = await service.publish({
+      sourcePath,
+      clientRecordId: null,
+      publishedBy: 'test-operator',
+    });
+
+    const variantPath = join(root, 'seed-real-estate-variant.json');
+    const variant = JSON.parse(readFileSync(sourcePath, 'utf8')) as {
+      messages: Array<{ fields: Record<string, unknown> }>;
+    };
+    const fallback = variant.messages.find((message) => message.fields['Message Key'] === 'fallback');
+    if (!fallback) throw new Error('fallback_message_not_found');
+    fallback.fields.English = 'Variant fallback message';
+    writeFileSync(variantPath, JSON.stringify(variant, null, 2));
+    const changed = await service.publish({
+      sourcePath: variantPath,
+      clientRecordId: null,
+      publishedBy: 'test-operator',
+    });
+    expect(changed.versionKey).not.toBe(original.versionKey);
+    expect((await service.getActiveMetadata('default'))?.versionKey).toBe(changed.versionKey);
+    expect((await repository.getActive('')).version).toBe(changed.versionKey);
+
+    const rollbackOutput = execFileSync('npm', ['run', '--silent', 'config', '--', 'rollback', `--version=${original.versionKey}`, '--actor=test-operator'], {
+      env,
+      encoding: 'utf8',
+    });
+    const rolledBack = JSON.parse(rollbackOutput) as { versionKey: string };
+    expect(rolledBack.versionKey).toBe(original.versionKey);
+    expect((await repository.getActive('')).version).toBe(original.versionKey);
+    expect((await db.pool.query('SELECT count(*) FROM configuration.versions')).rows[0]?.count).toBe('2');
   });
 });
