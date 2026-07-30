@@ -181,3 +181,10 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 9 files and 92 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live report recipient/template verification remains pending owner-provided recipient/template decisions and Meta staging verification.
 - Commit `18a33a6`: Added durable daily reporting jobs.
+- Implementation slice: Began MP-11 with migration `020_appointment_scheduling.sql`, `AppointmentService`, calendar provider interfaces, disabled-by-default `GoogleCalendarAdapter`, and `CalendarOutboxDispatcher`. Appointment offers and slots now use semantic identities, booking uses PostgreSQL locks and idempotency keys, duplicate replies return the original appointment/outbox IDs, and booked appointments enqueue durable `calendar.create_event` commands after local state is committed to the transaction.
+- Decision: Appointment booking state precedes calendar side effects; Google Calendar dispatch is disabled unless real credentials are configured and never returns hardcoded success.
+- Verification: `npm run lint` passed after the appointment/calendar foundation.
+- Verification: `npx vitest run tests/calendar-outbox-dispatcher.test.ts tests/runtime.integration.test.ts` passed; focused tests ran 57 tests covering offer idempotency, cancellation, concurrent booking, duplicate reply replay, calendar command mapping, retry hints, malformed payload rejection, and missing Google credential rejection.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 10 files and 99 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live Google Calendar availability/create-event verification remains pending owner-provided credentials and calendar IDs.
+- Commit `90c52ba`: Added appointment scheduling foundation.

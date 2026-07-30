@@ -8,6 +8,7 @@ Status: pending owner configuration and provider verification.
 - Configure redirect URI for the operator authorization flow.
 - Authorize least-privilege Calendar access.
 - Store refresh token only in secret storage.
+- Provide runtime secret material through secret storage only; current local adapter expects `GOOGLE_CALENDAR_ENABLED=true` and `GOOGLE_CALENDAR_ACCESS_TOKEN` when live dispatch is intentionally enabled.
 - Select staging test calendar.
 - Select production calendar per client.
 

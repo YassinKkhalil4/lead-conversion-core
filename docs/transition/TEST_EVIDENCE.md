@@ -632,6 +632,22 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local PostgreSQL/API and dispatcher contract integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, Google Calendar, or report-recipient provider call was made.
 
+## 2026-07-30 MP-11 Appointment Scheduling Foundation
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/calendar-outbox-dispatcher.test.ts tests/runtime.integration.test.ts`
+
+Result: passed. Focused tests ran 57 tests, including appointment offer idempotency independent of slot order, offer cancellation before booking, concurrent booking of one slot producing one appointment, duplicate booking replay returning the original appointment/outbox IDs, durable `calendar.create_event` outbox insertion, calendar dispatcher created/retryable/malformed-payload behavior, and Google adapter missing-credential rejection.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 10 files and 99 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API and calendar dispatcher contract integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or Google Calendar call was made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

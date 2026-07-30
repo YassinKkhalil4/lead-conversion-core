@@ -8,6 +8,14 @@ Reason: The supplied evidence folder is not a Git repository and contains secret
 
 Date: 2026-07-30
 
+## DEC-022: Appointment Booking State Precedes Calendar Side Effects
+
+Decision: Appointment slot booking uses PostgreSQL locks and idempotency keys to create one authoritative `app.appointments` row before inserting a durable `calendar.create_event` outbox command.
+
+Reason: Calendar creation is an external side effect and must not run inside the booking transaction. PostgreSQL remains the authority for offer, slot, and appointment state; provider dispatch can retry or dead-letter without duplicating the customer booking.
+
+Date: 2026-07-30
+
 ## DEC-021: Daily Reports Are Generated From Authoritative SQL At Execution Time
 
 Decision: Daily reports persist semantic `app.daily_reports` rows linked to `runtime.scheduled_jobs`, and workers generate report summaries from authoritative PostgreSQL tables when the job executes before inserting one idempotent `operator.daily_report` outbox command.
