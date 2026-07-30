@@ -30,6 +30,8 @@ const schema = z.object({
   META_WEBHOOK_VERIFY_TOKEN: z.string().optional().default(''),
   META_STATUS_PROCESSOR_ENABLED: booleanString.default('false'),
   GRAPH_API_VERSION: z.string().default('v25.0'),
+  GOOGLE_CALENDAR_ENABLED: booleanString.default('false'),
+  GOOGLE_CALENDAR_ACCESS_TOKEN: z.string().optional().default(''),
   AIRTABLE_BASE_ID: z.string().default('appJxsLRRxegknqY6'),
   AIRTABLE_TOKEN: z.string().optional().default(''),
   AIRTABLE_QUESTIONS_TABLE: z.string().default('Questions'),

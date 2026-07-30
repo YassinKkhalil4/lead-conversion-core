@@ -46,6 +46,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let followupJob: typeof import('../src/services/followup-job-processor.js');
   let slaService: typeof import('../src/services/sla-service.js');
   let reportingService: typeof import('../src/services/reporting-service.js');
+  let appointmentService: typeof import('../src/services/appointment-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -75,6 +76,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     followupJob = await import('../src/services/followup-job-processor.js');
     slaService = await import('../src/services/sla-service.js');
     reportingService = await import('../src/services/reporting-service.js');
+    appointmentService = await import('../src/services/appointment-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -2149,6 +2151,127 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
     expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.daily_report' AND aggregate_key=$1", [assigned.clientId])).rows[0]?.count).toBe('1');
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='report.daily_sent' AND aggregate_id=$1", [assigned.clientId])).rows[0]?.count).toBe('1');
+  });
+
+  it('creates appointment offers and slots idempotently with semantic identities', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'APPOFFER',
+      phone: '+201099999970',
+      phoneNumberId: 'phone-number-id-mp11-offer',
+    });
+    const service = new appointmentService.AppointmentService();
+    const startsAt = [
+      new Date(Date.now() + 86_400_000).toISOString(),
+      new Date(Date.now() + 90_000_000).toISOString(),
+    ];
+    const first = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt,
+      durationMinutes: 45,
+      correlationId: 'appointment-offer-test',
+    });
+    const second = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt: [...startsAt].reverse(),
+      durationMinutes: 45,
+      correlationId: 'appointment-offer-test',
+    });
+
+    expect(first.inserted).toBe(true);
+    expect(second.inserted).toBe(false);
+    expect(second.appointmentOfferId).toBe(first.appointmentOfferId);
+    expect(second.slotIds).toEqual(first.slotIds);
+    expect((await db.pool.query('SELECT count(*) FROM app.appointment_offers WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM app.appointment_slots WHERE appointment_offer_id=$1', [first.appointmentOfferId])).rows[0]?.count).toBe('2');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='appointment.offer_created' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+  });
+
+  it('cancels appointment offers before booking without external side effects', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'APPCANCEL',
+      phone: '+201099999969',
+      phoneNumberId: 'phone-number-id-mp11-cancel',
+    });
+    const service = new appointmentService.AppointmentService();
+    const offer = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt: [new Date(Date.now() + 86_400_000).toISOString()],
+      durationMinutes: 45,
+      correlationId: 'appointment-cancel-test',
+    });
+    expect(await service.cancelOffer({
+      appointmentOfferId: offer.appointmentOfferId,
+      reason: 'operator_superseded',
+      correlationId: 'appointment-cancel-test',
+    })).toBe(true);
+    const booking = await service.bookSlot({
+      appointmentOfferId: offer.appointmentOfferId,
+      appointmentSlotId: offer.slotIds[0] || '',
+      sourceEventId: 'appointment-cancel-book',
+      bookedBy: seeded.leadId,
+      correlationId: 'appointment-cancel-test',
+    });
+
+    expect(booking.outcome).toBe('cancelled');
+    expect((await db.pool.query('SELECT status, cancelled_reason FROM app.appointment_offers WHERE appointment_offer_id=$1', [offer.appointmentOfferId])).rows[0]).toEqual({
+      status: 'cancelled',
+      cancelled_reason: 'operator_superseded',
+    });
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+  });
+
+  it('books one appointment under concurrent slot replies and deduplicates replay', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'APPBOOK',
+      phone: '+201099999968',
+      phoneNumberId: 'phone-number-id-mp11-book',
+    });
+    await db.pool.query("UPDATE app.clients SET calendar_id='calendar-test-primary' WHERE client_id=$1", [seeded.clientId]);
+    const service = new appointmentService.AppointmentService();
+    const offer = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt: [new Date(Date.now() + 86_400_000).toISOString()],
+      durationMinutes: 45,
+      correlationId: 'appointment-book-test',
+    });
+
+    const [first, second] = await Promise.all([
+      service.bookSlot({
+        appointmentOfferId: offer.appointmentOfferId,
+        appointmentSlotId: offer.slotIds[0] || '',
+        sourceEventId: 'appointment-book-a',
+        bookedBy: seeded.leadId,
+        correlationId: 'appointment-book-test',
+      }),
+      service.bookSlot({
+        appointmentOfferId: offer.appointmentOfferId,
+        appointmentSlotId: offer.slotIds[0] || '',
+        sourceEventId: 'appointment-book-b',
+        bookedBy: seeded.leadId,
+        correlationId: 'appointment-book-test',
+      }),
+    ]);
+    const outcomes = [first.outcome, second.outcome].sort();
+    expect(outcomes).toEqual(['already_booked', 'booked']);
+    const booked = first.outcome === 'booked' ? first : second;
+    const duplicate = await service.bookSlot({
+      appointmentOfferId: offer.appointmentOfferId,
+      appointmentSlotId: offer.slotIds[0] || '',
+      sourceEventId: booked === first ? 'appointment-book-a' : 'appointment-book-b',
+      bookedBy: seeded.leadId,
+      correlationId: 'appointment-book-test',
+    });
+
+    expect(duplicate).toMatchObject({
+      outcome: 'duplicate',
+      appointmentId: booked.appointmentId,
+      outboxCommandId: booked.outboxCommandId,
+    });
+    expect((await db.pool.query('SELECT count(*) FROM app.appointments WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT status FROM app.appointment_slots WHERE appointment_slot_id=$1", [offer.slotIds[0]])).rows[0]?.status).toBe('booked');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='calendar.create_event' AND aggregate_key=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT current_stage FROM app.leads WHERE lead_id=$1', [seeded.leadId])).rows[0]?.current_stage).toBe('appointment_booked');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='appointment.booked' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
   });
 
   it('receives duplicate salesperson acknowledge commands durably and processes one authorized effect', async () => {
