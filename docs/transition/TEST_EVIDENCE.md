@@ -299,3 +299,15 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 51 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL integration and CLI rollback tested.
+
+## 2026-07-30 MP-06 Invalid Configuration Fixtures
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 8 test files and 53 tests, including a malformed configuration fixture with no active questions that is rejected before publish and a deterministic config diff unit test for added/removed question and message keys.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 53 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local unit and fixture tested.

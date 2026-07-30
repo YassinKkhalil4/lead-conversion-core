@@ -72,7 +72,7 @@ Dependencies: complete config source for final parity.
 
 Verification gates: invalid config rejection, parity compile, rollback, conversation pinning.
 
-Remaining: invalid config fixture tests, conversation pinning to `configuration.versions`, Airtable configuration import parity, and final config-source reconciliation.
+Remaining: conversation pinning to `configuration.versions`, Airtable configuration import parity, and final config-source reconciliation.
 
 ## MP-07 Lead Intake And CRM
 

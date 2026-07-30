@@ -1,0 +1,35 @@
+{
+  "industry": "real_estate",
+  "clientRecordId": null,
+  "questions": [
+    {
+      "id": "recInactiveQuestion",
+      "fields": {
+        "Question Key": "q_inactive",
+        "English": "Inactive question",
+        "Arabic": "سؤال غير نشط",
+        "Question Type": "Free Text",
+        "Order": 1,
+        "Active": false,
+        "Stage Key": "inactive",
+        "Saves To": "q_inactive",
+        "Parser Hint": "none",
+        "Industry": "real_estate",
+        "Client": []
+      }
+    }
+  ],
+  "options": [],
+  "messages": [
+    {
+      "id": "recFallback",
+      "fields": {
+        "Message Key": "fallback",
+        "English": "Fallback",
+        "Arabic": "رسالة احتياطية",
+        "Active": true,
+        "Client": []
+      }
+    }
+  ]
+}

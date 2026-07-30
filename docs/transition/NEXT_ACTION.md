@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-06 Versioned configuration
 
-Exact next implementation task: Continue MP-06 by adding invalid configuration fixture tests and conversation pinning to `configuration.versions` identifiers while preserving legacy `config_version` compatibility during transition.
+Exact next implementation task: Continue MP-06 by adding conversation pinning to `configuration.versions` identifiers while preserving legacy `config_version` compatibility during transition.
 
 Files expected to change:
 
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: f3423da
+Last verified implementation commit: f3423da plus uncommitted MP-06 invalid configuration fixture slice verified by the full npm/lint/test/build/audit/smoke gate
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no
