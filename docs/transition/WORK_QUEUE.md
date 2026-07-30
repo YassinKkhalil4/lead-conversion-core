@@ -64,15 +64,15 @@ Remaining: live staging verification pending owner action for rotated credential
 
 ## MP-06 Versioned Configuration
 
-Status: implementing
+Status: staging_blocked
 
-Deliverables: import/validate/diff/publish/rollback/active CLI, immutable published config, and conversation pins to immutable configuration version IDs with legacy `config_version` compatibility.
+Deliverables: import/validate/diff/publish/rollback/active CLI, immutable published config, conversation pins to immutable configuration version IDs with legacy `config_version` compatibility, and Airtable export compilation for Questions, Question Options, and Conversation Messages.
 
 Dependencies: complete config source for final parity.
 
-Verification gates: invalid config rejection, parity compile, rollback, conversation pinning.
+Verification gates: invalid config rejection, seed/export parity compile, rollback, conversation pinning.
 
-Remaining: Airtable configuration import parity and final config-source reconciliation.
+Remaining: final real-export config-source reconciliation is blocked until the owner supplies the complete Airtable export or rotated Airtable access.
 
 ## MP-07 Lead Intake And CRM
 

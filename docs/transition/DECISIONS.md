@@ -87,3 +87,11 @@ Decision: Store `configuration_version_id` on legacy `edge_conversations` in add
 Reason: Conversations must remain pinned to the configuration they started with during cutover, while operators still need a deliberate compatibility path to move a legacy conversation onto a newer immutable published configuration.
 
 Date: 2026-07-30
+
+## DEC-012: Airtable Configuration Export Validation
+
+Decision: Compile Airtable configuration exports only from the verified Questions, Question Options, and Conversation Messages field names, require stable Airtable record IDs, normalize CSV booleans and linked-record fields, and reject malformed rows before publishing.
+
+Reason: The real Airtable export is unavailable. Local parity can be proven against sanitized Airtable-shaped exports, but production configuration authority must not be published from rows with missing IDs, duplicate IDs, invalid active flags, missing links, or missing display text.
+
+Date: 2026-07-30

@@ -75,3 +75,9 @@
 - Verification: `npm run lint`, `npm test`, and `npm run build` passed after the conversation-pin implementation; Vitest ran 8 files and 54 tests.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Commit `38390e8`: Pinned conversations to immutable configuration version IDs while preserving legacy `config_version` compatibility.
+- Implementation slice: Added Airtable configuration export compilation for Questions, Question Options, and Conversation Messages, including CSV/JSON loading, stable record ID enforcement, duplicate rejection, active/link/text validation, seed/export deterministic version parity, CLI `--airtable-export` validation, and publish-from-export support.
+- Decision: MP-06 config export publication rejects malformed rows before publish and does not infer unsupported field mappings beyond the documented provisional configuration field map.
+- Verification: `npm run lint` and `npx vitest run tests/config-versioning.test.ts` passed; focused config tests ran 4 tests.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 56 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: final MP-06 config-source reconciliation against the real Airtable export remains pending owner action.
+- Commit `bb8314a`: Added Airtable configuration export parity.

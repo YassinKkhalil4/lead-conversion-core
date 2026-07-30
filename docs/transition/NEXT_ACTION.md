@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-30
 
-Current mini-project: MP-06 Versioned configuration
+Current mini-project: MP-07 Lead intake and CRM
 
-Exact next implementation task: Continue MP-06 by implementing Airtable configuration import parity for Questions, Question Options, and Conversation Messages against the provisional field map, while preserving the existing seed JSON publication path.
+Exact next implementation task: Implement the authenticated internal lead intake command that validates a source lead payload, upserts `app.contacts` and `app.leads` idempotently in PostgreSQL, records audit metadata, and enqueues the first-contact WhatsApp outbox command without calling an external provider inside the transaction.
 
 Files expected to change:
 
@@ -13,10 +13,10 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `docs/transition/AIRTABLE_FIELD_MAP.md`
-- `config/**`
-- `src/configuration/**`
+- `migrations/00*_*.sql`
+- `src/domain/**`
 - `src/services/**`
+- `src/routes/**`
 - `scripts/**`
 - `tests/**/*`
 
@@ -40,7 +40,8 @@ Known blockers:
 - Complete real Airtable export is unavailable for production reconciliation.
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
+- Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: 38390e8
+Last verified implementation commit: bb8314a
 
 Git worktree clean when recorded: yes

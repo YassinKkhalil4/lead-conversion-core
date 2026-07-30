@@ -331,3 +331,19 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 54 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested.
+
+## 2026-07-30 MP-06 Airtable Configuration Export Parity
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/config-versioning.test.ts`
+
+Result: passed. Focused config tests ran 4 tests, including seed-to-Airtable-export deterministic version parity, CLI `npm run config -- validate --airtable-export=<dir>`, duplicate Airtable config record rejection, missing linked question rejection, and missing message text rejection.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 56 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local unit, CLI, and fixture-generated Airtable export parity tested. Final compatibility with the real Airtable export remains pending owner action.
