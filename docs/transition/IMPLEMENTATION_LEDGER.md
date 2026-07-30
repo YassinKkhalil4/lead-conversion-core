@@ -55,3 +55,4 @@
 - Verification: `npm run lint && npm test` passed with 7 Vitest files and 49 tests after n8n compatibility route implementation.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Deferred external verification: MP-05 live staging remains blocked on owner Meta credentials, approved templates, callback URL, webhook subscription, and test recipient.
+- Commit `f516fc6`: Added n8n WhatsApp compatibility send and status routes behind an explicit compatibility flag.
