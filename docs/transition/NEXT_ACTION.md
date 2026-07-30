@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-08 Conversation and qualification
 
-Exact next implementation task: Continue MP-08 by hardening source-to-app conversation projection for durable inbound turns: ensure inbound/outbound message rows and qualification state can be traced from legacy `edge_conversations` to `app.conversations` where an app conversation exists or should be created, preserve idempotency on replay, and add PostgreSQL integration coverage without changing live provider behavior.
+Exact next implementation task: Continue MP-08 by adding the n8n-compatible inbound WhatsApp message receipt path behind `N8N_COMPAT_ROUTES_ENABLED`, mapping sanitized n8n payloads into durable `whatsapp.message_received` inbox events without direct provider calls, preserving edge/legacy ownership gates, and adding PostgreSQL/API tests for duplicate receipt and edge processing.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: 564c8d3
+Last verified implementation commit: 999c7ab
 
 Git worktree clean when recorded: yes

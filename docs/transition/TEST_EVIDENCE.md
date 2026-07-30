@@ -471,3 +471,19 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 67 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested with sanitized Meta fixtures. No live Meta, Typebot, n8n, or Airtable call was made.
+
+## 2026-07-30 MP-08 Source-To-App Conversation Projection
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed. Runtime integration ran 32 PostgreSQL/API tests, including `app.conversations` upsert by lead, inbound app message projection with Meta provider message IDs, outbound app message linkage to the projected app conversation, qualification session linkage to the projected app conversation, opt-out and human-takeover projection without outbound effects, and duplicate final-turn replay preserving projected row counts.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 67 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized Meta fixtures. No live Meta, Typebot, n8n, or Airtable call was made.
