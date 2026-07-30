@@ -5,6 +5,7 @@ import { healthRoutes } from './routes/health.js';
 import { activeRoutes } from './routes/active.js';
 import { internalRoutes } from './routes/internal.js';
 import { metaWebhookRoutes } from './routes/meta-webhooks.js';
+import { n8nCompatRoutes } from './routes/n8n-compat.js';
 import { shadowRoutes } from './routes/shadow.js';
 
 export async function buildApp() {
@@ -39,6 +40,7 @@ export async function buildApp() {
   await app.register(shadowRoutes);
   await app.register(internalRoutes);
   await app.register(metaWebhookRoutes);
+  await app.register(n8nCompatRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     request.log.error({ error }, 'Request failed');

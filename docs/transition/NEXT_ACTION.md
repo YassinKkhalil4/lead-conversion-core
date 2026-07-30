@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-30
 
-Current mini-project: MP-05 WhatsApp messaging platform
+Current mini-project: MP-06 Versioned configuration
 
-Exact next implementation task: Continue MP-05 by adding the n8n compatibility route for outbound message requests/status acknowledgements, backed by the PostgreSQL message request and durable outbox path, with rollback flags and tests that prove no live provider call occurs while disabled.
+Exact next implementation task: Begin MP-06 by adding immutable published configuration tables/migrations and a validation/diff/publish CLI that can import the current seed configuration without mutating executable code.
 
 Files expected to change:
 
@@ -13,10 +13,10 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `src/integrations/**`
-- `src/worker/**`
+- `migrations/00*_*.sql`
+- `src/configuration/**`
 - `src/services/**`
-- `src/routes/**`
+- `scripts/**`
 - `tests/**/*`
 
 Required verification:
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: e133c40
+Last verified implementation commit: e133c40 plus uncommitted MP-05 n8n compatibility slice verified by the full npm/lint/test/build/audit/smoke gate
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no

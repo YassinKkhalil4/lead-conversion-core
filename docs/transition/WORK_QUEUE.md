@@ -52,7 +52,7 @@ Remaining: provider-specific dispatchers and business processors are intentional
 
 ## MP-05 WhatsApp Messaging Platform
 
-Status: implementing
+Status: staging_blocked
 
 Deliverables: internal message request API, Meta adapter, templates, window policy, status events, delivery unknown handling, n8n compatibility route.
 
@@ -60,7 +60,7 @@ Dependencies: Meta credentials/templates for live verification.
 
 Verification gates: contract fixtures for payloads/status/errors/timeouts; durable outbox dispatcher integration; live staging pending owner action.
 
-Remaining: n8n compatibility route, live staging verification pending owner action.
+Remaining: live staging verification pending owner action for rotated credentials, approved templates, callback URL, status webhook subscription, and test recipient.
 
 ## MP-06 Versioned Configuration
 

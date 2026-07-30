@@ -259,3 +259,15 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 47 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested with sanitized fixtures. Live Meta status webhook verification remains pending owner action.
+
+## 2026-07-30 MP-05 n8n Compatibility Routes
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 7 test files and 49 tests, including PostgreSQL/API integration coverage for `/compat/n8n/messages/whatsapp/send` resolving a legacy Airtable client ID, creating a queued `app.messages` row, creating a pending `runtime.outbox_commands` row without a provider message ID, and `/compat/n8n/messages/whatsapp/status` receiving duplicate status acknowledgements through durable inbox and processing one idempotent delivery event.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 49 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested. No live provider call was made; routes remain behind `N8N_COMPAT_ROUTES_ENABLED`.

@@ -163,7 +163,7 @@ export class MetaStatusProcessor {
   constructor(private readonly audit = new AuditRepository()) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
-    if (event.provider !== 'meta' || event.eventType !== 'whatsapp.message_status') {
+    if (!['meta', 'n8n'].includes(event.provider) || event.eventType !== 'whatsapp.message_status') {
       return { outcome: 'ignored', reason: `unsupported_inbox_event:${event.provider}:${event.eventType}` };
     }
     const parsed = storedStatusSchema.safeParse(event.payload);
@@ -215,13 +215,14 @@ export class MetaStatusProcessor {
       await this.audit.record(client, {
         eventType: 'message.delivery_status_received',
         actorType: 'external_user',
-        actorId: 'meta',
+        actorId: event.provider,
         aggregateType: 'message',
         aggregateId: row.message_id,
         correlationId: event.dedupeKey,
         causationId: event.inboxEventId,
         payload: {
           provider: 'meta',
+          source: event.provider,
           providerStatus: status.providerStatus,
           providerMessageId: status.providerMessageId,
         },

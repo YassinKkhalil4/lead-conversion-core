@@ -30,6 +30,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     EDGE_INTERNAL_SECRET: 'test_internal_secret_123456',
     META_APP_SECRET: 'test_meta_app_secret_123456',
     META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token_123456',
+    N8N_COMPAT_ROUTES_ENABLED: 'true',
   };
 
   let db: typeof import('../src/db/pool.js');
@@ -49,6 +50,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     process.env.EDGE_INTERNAL_SECRET = env.EDGE_INTERNAL_SECRET;
     process.env.META_APP_SECRET = env.META_APP_SECRET;
     process.env.META_WEBHOOK_VERIFY_TOKEN = env.META_WEBHOOK_VERIFY_TOKEN;
+    process.env.N8N_COMPAT_ROUTES_ENABLED = env.N8N_COMPAT_ROUTES_ENABLED;
     db = await import('../src/db/pool.js');
     runtime = await import('../src/infrastructure/runtime.js');
     runtimeWorker = await import('../src/worker/runtime-worker.js');
@@ -591,6 +593,107 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect((await db.pool.query('SELECT count(*) FROM app.message_delivery_events')).rows[0]?.count).toBe('1');
       expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='message.delivery_status_received'")).rows[0]?.count).toBe('1');
       expect(await worker.tick()).toBe(0);
+      expect((await db.pool.query('SELECT count(*) FROM app.message_delivery_events')).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('accepts n8n-compatible outbound send requests without live provider calls', async () => {
+    await db.pool.query(
+      `INSERT INTO app.clients (client_key, legacy_airtable_id, company_name)
+       VALUES ('client-n8n-send', 'recN8NCLIENT001', 'n8n Send Client')`,
+    );
+    const app = await appModule.buildApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/messages/whatsapp/send',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientRecordId: 'recN8NCLIENT001',
+          sourceEventId: 'n8n-send-001',
+          phoneNumberId: 'phone-number-id-test',
+          phoneNormalized: '+201000000004',
+          text: 'n8n compatibility send',
+          conversationWindowExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { ok?: boolean; messageId?: string; outboxCommandId?: string };
+      expect(body.ok).toBe(true);
+      expect(body.messageId).toBeTruthy();
+      expect(body.outboxCommandId).toBeTruthy();
+      expect((await db.pool.query('SELECT state, provider_message_id FROM app.messages WHERE message_id=$1', [body.messageId])).rows[0]).toEqual({
+        state: 'queued',
+        provider_message_id: '',
+      });
+      expect((await db.pool.query('SELECT state, provider_message_id FROM runtime.outbox_commands WHERE outbox_command_id=$1', [body.outboxCommandId])).rows[0]).toEqual({
+        state: 'pending',
+        provider_message_id: '',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('receives n8n-compatible status acknowledgements through durable inbox', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      `INSERT INTO app.clients (client_key, legacy_airtable_id, company_name)
+       VALUES ('client-n8n-status', 'recN8NCLIENT002', 'n8n Status Client')
+       RETURNING client_id`,
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    await db.pool.query(
+      `INSERT INTO app.messages
+        (client_id, direction, channel, to_address, message_text, message_type, provider_message_id, state)
+       VALUES ($1, 'outbound', 'whatsapp', '+201000000005', 'n8n status target', 'text', 'wamid.n8n.delivered', 'accepted')`,
+      [clientId],
+    );
+
+    const app = await appModule.buildApp();
+    try {
+      const first = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/messages/whatsapp/status',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientRecordId: 'recN8NCLIENT002',
+          providerMessageId: 'wamid.n8n.delivered',
+          status: 'delivered',
+          providerTimestamp: '2026-07-30T01:00:00.000Z',
+          recipientId: '201000000005',
+          sourceEventId: 'n8n-status-001',
+        },
+      });
+      const duplicate = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/messages/whatsapp/status',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientRecordId: 'recN8NCLIENT002',
+          providerMessageId: 'wamid.n8n.delivered',
+          status: 'delivered',
+          providerTimestamp: '2026-07-30T01:00:00.000Z',
+          recipientId: '201000000005',
+          sourceEventId: 'n8n-status-001',
+        },
+      });
+      expect(first.statusCode).toBe(200);
+      expect(first.json()).toMatchObject({ ok: true, received: 1, duplicate: false });
+      expect(duplicate.statusCode).toBe(200);
+      expect(duplicate.json()).toMatchObject({ ok: true, received: 1, duplicate: true });
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE provider='n8n' AND event_type='whatsapp.message_status'")).rows[0]?.count).toBe('1');
+
+      const processor = new metaStatus.MetaStatusProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(1);
+      expect((await db.pool.query("SELECT state FROM app.messages WHERE provider_message_id='wamid.n8n.delivered'")).rows[0]?.state).toBe('delivered');
       expect((await db.pool.query('SELECT count(*) FROM app.message_delivery_events')).rows[0]?.count).toBe('1');
     } finally {
       await app.close();
