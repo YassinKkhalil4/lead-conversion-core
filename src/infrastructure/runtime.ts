@@ -37,6 +37,9 @@ export function retryDelaySeconds(attemptCount: number, retryAfterSeconds?: numb
 
 export interface ClaimedInboxEvent {
   inboxEventId: string;
+  provider: string;
+  eventType: string;
+  dedupeKey: string;
   attemptCount: number;
   payload: Record<string, unknown>;
 }
@@ -122,6 +125,9 @@ export class InboxRepository {
       await client.query('BEGIN');
       const result = await client.query<{
         inbox_event_id: string;
+        provider: string;
+        event_type: string;
+        dedupe_key: string;
         attempt_count: number;
         payload_json: Record<string, unknown>;
       }>(
@@ -142,7 +148,7 @@ export class InboxRepository {
             attempt_count=attempt_count+1
         FROM candidates
         WHERE i.inbox_event_id=candidates.inbox_event_id
-        RETURNING i.inbox_event_id, i.attempt_count, i.payload_json`,
+        RETURNING i.inbox_event_id, i.provider, i.event_type, i.dedupe_key, i.attempt_count, i.payload_json`,
         [limit, workerId, leaseSeconds],
       );
       for (const row of result.rows) {
@@ -156,6 +162,9 @@ export class InboxRepository {
       await client.query('COMMIT');
       return result.rows.map((row) => ({
         inboxEventId: row.inbox_event_id,
+        provider: row.provider,
+        eventType: row.event_type,
+        dedupeKey: row.dedupe_key,
         attemptCount: row.attempt_count,
         payload: row.payload_json,
       }));
@@ -401,7 +410,13 @@ export class RuntimeOutboxRepository {
         SET state='delivered', provider_message_id=$2, completed_at=now(),
             lock_owner='', locked_at=NULL, lock_expires_at=NULL
         WHERE outbox_command_id=$1
-        RETURNING outbox_command_id, attempt_count
+        RETURNING outbox_command_id, attempt_count, command_type, payload_json
+      ), message_update AS (
+        UPDATE app.messages m
+        SET provider_message_id=$2, state='accepted'
+        FROM updated
+        WHERE updated.command_type='whatsapp.send_message'
+          AND m.message_id = NULLIF(updated.payload_json->>'messageId', '')::uuid
       )
       UPDATE runtime.outbox_command_attempts a
       SET outcome='delivered', provider_message_id=$2, finished_at=now()

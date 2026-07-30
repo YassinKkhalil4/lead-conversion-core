@@ -247,3 +247,15 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 45 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API and unit tested. Live template inventory verification remains pending owner action.
+
+## 2026-07-30 MP-05 Meta Status Webhook Ingestion
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 7 test files and 47 tests, including PostgreSQL/API integration coverage for Meta webhook challenge verification, raw-body HMAC signature rejection without durable receipt, signed status webhook durable receipt into `runtime.inbox_events`, duplicate webhook deduplication, runtime inbox worker processing, `app.message_delivery_events` idempotency, outbound `app.messages` state updates, audit recording, and provider-message-id linking after outbox acceptance.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 47 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized fixtures. Live Meta status webhook verification remains pending owner action.

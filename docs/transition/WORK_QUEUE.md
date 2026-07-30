@@ -60,7 +60,7 @@ Dependencies: Meta credentials/templates for live verification.
 
 Verification gates: contract fixtures for payloads/status/errors/timeouts; durable outbox dispatcher integration; live staging pending owner action.
 
-Remaining: status webhook ingestion, n8n compatibility route, live staging verification pending owner action.
+Remaining: n8n compatibility route, live staging verification pending owner action.
 
 ## MP-06 Versioned Configuration
 

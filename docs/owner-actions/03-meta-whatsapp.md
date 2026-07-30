@@ -2,7 +2,7 @@
 
 Status: pending owner configuration and live provider verification.
 
-Local contract tests use sanitized fixtures only. No Meta credential, template approval, webhook subscription, or live send has been verified.
+Local contract tests use sanitized fixtures only. Local tests cover webhook challenge handling and raw-body HMAC verification with dummy secrets. No Meta credential, template approval, webhook subscription, live status callback, or live send has been verified.
 
 ## Required Setup
 

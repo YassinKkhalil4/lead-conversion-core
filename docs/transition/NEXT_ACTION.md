@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-05 WhatsApp messaging platform
 
-Exact next implementation task: Continue MP-05 by adding Meta WhatsApp status webhook ingestion through the durable inbox path, including signature/raw-body handling, provider status mapping, message delivery event persistence, and idempotent duplicate handling.
+Exact next implementation task: Continue MP-05 by adding the n8n compatibility route for outbound message requests/status acknowledgements, backed by the PostgreSQL message request and durable outbox path, with rollback flags and tests that prove no live provider call occurs while disabled.
 
 Files expected to change:
 
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: 58c6e33
+Last verified implementation commit: 58c6e33 plus uncommitted MP-05 Meta status webhook slice verified by the full npm/lint/test/build/audit/smoke gate
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no

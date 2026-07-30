@@ -1,8 +1,10 @@
+import { PassThrough } from 'node:stream';
 import Fastify from 'fastify';
 import { logger } from './config/logger.js';
 import { healthRoutes } from './routes/health.js';
 import { activeRoutes } from './routes/active.js';
 import { internalRoutes } from './routes/internal.js';
+import { metaWebhookRoutes } from './routes/meta-webhooks.js';
 import { shadowRoutes } from './routes/shadow.js';
 
 export async function buildApp() {
@@ -12,10 +14,31 @@ export async function buildApp() {
     requestIdHeader: 'x-request-id',
   });
 
+  app.addHook('preParsing', (request, _reply, payload, done) => {
+    if (request.method !== 'POST' || !request.url.startsWith('/webhooks/meta/whatsapp')) {
+      done(null, payload);
+      return;
+    }
+    const replay = new PassThrough();
+    const chunks: Buffer[] = [];
+    payload.on('data', (chunk: Buffer | string) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      chunks.push(buffer);
+      replay.write(buffer);
+    });
+    payload.on('end', () => {
+      Object.assign(request, { rawBody: Buffer.concat(chunks) });
+      replay.end();
+    });
+    payload.on('error', (error: Error) => replay.destroy(error));
+    done(null, replay);
+  });
+
   await app.register(healthRoutes);
   await app.register(activeRoutes);
   await app.register(shadowRoutes);
   await app.register(internalRoutes);
+  await app.register(metaWebhookRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     request.log.error({ error }, 'Request failed');

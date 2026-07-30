@@ -28,12 +28,15 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     DATABASE_URL: databaseUrl,
     EDGE_SHARED_SECRET: 'test_shared_secret_123456',
     EDGE_INTERNAL_SECRET: 'test_internal_secret_123456',
+    META_APP_SECRET: 'test_meta_app_secret_123456',
+    META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token_123456',
   };
 
   let db: typeof import('../src/db/pool.js');
   let runtime: typeof import('../src/infrastructure/runtime.js');
   let runtimeWorker: typeof import('../src/worker/runtime-worker.js');
   let messageRequests: typeof import('../src/services/message-request-service.js');
+  let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
   let appModule: typeof import('../src/app.js');
 
   beforeAll(async () => {
@@ -44,10 +47,13 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     process.env.DATABASE_URL = databaseUrl;
     process.env.EDGE_SHARED_SECRET = env.EDGE_SHARED_SECRET;
     process.env.EDGE_INTERNAL_SECRET = env.EDGE_INTERNAL_SECRET;
+    process.env.META_APP_SECRET = env.META_APP_SECRET;
+    process.env.META_WEBHOOK_VERIFY_TOKEN = env.META_WEBHOOK_VERIFY_TOKEN;
     db = await import('../src/db/pool.js');
     runtime = await import('../src/infrastructure/runtime.js');
     runtimeWorker = await import('../src/worker/runtime-worker.js');
     messageRequests = await import('../src/services/message-request-service.js');
+    metaStatus = await import('../src/services/meta-status-webhook-service.js');
     appModule = await import('../src/app.js');
   }, 30_000);
 
@@ -63,6 +69,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         runtime.outbox_commands,
         runtime.scheduled_jobs,
         audit.events,
+        app.message_delivery_events,
         app.messages,
         app.leads,
         app.contacts,
@@ -110,6 +117,47 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       payload: { text: 'welcome' },
       maxAttempts,
     });
+  }
+
+  function metaStatusPayload(providerMessageId = 'wamid.status.delivered'): Record<string, unknown> {
+    return {
+      object: 'whatsapp_business_account',
+      entry: [
+        {
+          id: 'waba-sanitized',
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: '201000000000',
+                  phone_number_id: 'phone-number-id-test',
+                },
+                statuses: [
+                  {
+                    id: providerMessageId,
+                    status: 'delivered',
+                    timestamp: '1785370000',
+                    recipient_id: '201000000001',
+                    conversation: { id: 'conversation-sanitized' },
+                    pricing: { billable: true, pricing_model: 'CBP', category: 'service' },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  function signedMetaWebhook(payload: Record<string, unknown>): { rawBody: string; signature: string } {
+    const rawBody = JSON.stringify(payload);
+    return {
+      rawBody,
+      signature: metaStatus.metaSignature(Buffer.from(rawBody), env.META_APP_SECRET),
+    };
   }
 
   it('deduplicates inbound events before business processing creates side effects', async () => {
@@ -425,6 +473,11 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     );
     expect(outboxPayload.rows[0]?.payload_json.messageId).toBe(first.messageId);
     expect(outboxPayload.rows[0]?.idempotency_key).toBe(first.idempotencyKey);
+    await new runtime.RuntimeOutboxRepository().markDelivered(first.outboxCommandId, 'wamid.accepted.from.outbox');
+    expect((await db.pool.query('SELECT provider_message_id, state FROM app.messages WHERE message_id=$1', [first.messageId])).rows[0]).toEqual({
+      provider_message_id: 'wamid.accepted.from.outbox',
+      state: 'accepted',
+    });
   });
 
   it('accepts internal WhatsApp send requests through the authenticated API route', async () => {
@@ -456,6 +509,89 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect(body.outboxCommandId).toBeTruthy();
       expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('verifies Meta webhook challenges and rejects invalid status signatures without durable receipt', async () => {
+    const app = await appModule.buildApp();
+    try {
+      const challenge = await app.inject({
+        method: 'GET',
+        url: '/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=test_meta_verify_token_123456&hub.challenge=challenge-ok',
+      });
+      expect(challenge.statusCode).toBe(200);
+      expect(challenge.body).toBe('challenge-ok');
+
+      const invalid = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': 'sha256=invalid',
+        },
+        payload: JSON.stringify(metaStatusPayload()),
+      });
+      expect(invalid.statusCode).toBe(401);
+      expect((await db.pool.query('SELECT count(*) FROM runtime.inbox_events')).rows[0]?.count).toBe('0');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('durably receives duplicate Meta status webhooks and processes one delivery event idempotently', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-status-webhook', 'Status Webhook Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    await db.pool.query(
+      `INSERT INTO app.messages
+        (client_id, direction, channel, to_address, message_text, message_type, provider_message_id, state)
+       VALUES ($1, 'outbound', 'whatsapp', '+201000000001', 'Delivered status target', 'text', 'wamid.status.delivered', 'accepted')`,
+      [clientId],
+    );
+
+    const app = await appModule.buildApp();
+    try {
+      const signed = signedMetaWebhook(metaStatusPayload());
+      const first = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      const second = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(first.statusCode).toBe(200);
+      expect(first.json()).toMatchObject({ ok: true, received: 1, duplicates: 0 });
+      expect(second.statusCode).toBe(200);
+      expect(second.json()).toMatchObject({ ok: true, received: 1, duplicates: 1 });
+      expect((await db.pool.query('SELECT count(*) FROM runtime.webhook_receipts WHERE signature_valid=true AND raw_body IS NOT NULL')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE event_type='whatsapp.message_status'")).rows[0]?.count).toBe('1');
+
+      const processor = new metaStatus.MetaStatusProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(1);
+      expect((await db.pool.query("SELECT state FROM app.messages WHERE provider_message_id='wamid.status.delivered'")).rows[0]?.state).toBe('delivered');
+      expect((await db.pool.query('SELECT count(*) FROM app.message_delivery_events')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='message.delivery_status_received'")).rows[0]?.count).toBe('1');
+      expect(await worker.tick()).toBe(0);
+      expect((await db.pool.query('SELECT count(*) FROM app.message_delivery_events')).rows[0]?.count).toBe('1');
     } finally {
       await app.close();
     }

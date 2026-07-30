@@ -45,3 +45,8 @@
 - Verification: `npm run lint && npm test` passed with 7 Vitest files and 45 tests after template/window policy implementation.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Commit `58c6e33`: Enforced WhatsApp approved-template and session-window policy before message request enqueue.
+- Implementation slice: Added migration `009_message_status_ingestion.sql`, raw-body capture for the Meta webhook route, signed Meta WhatsApp webhook receipt into durable inbox, status event extraction, status processor, message delivery event idempotency, message state updates, and audit recording.
+- Implementation slice: Updated runtime inbox claims with provider/event metadata and updated outbox delivered handling to copy provider message IDs onto `app.messages` rows for later status matching.
+- Verification: `npm run lint && npm test` passed with 7 Vitest files and 47 tests after Meta status webhook ingestion implementation.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Deferred external verification: live Meta webhook challenge/status delivery remains pending rotated Meta app secret, verification token, callback URL, and subscribed test webhook events.
