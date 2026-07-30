@@ -17,3 +17,11 @@
 - Implementation slice: Hardened importer manifest/rejection behavior, added provisional Airtable field map, improved restore verification, and added PostgreSQL-backed importer tests for idempotency, missing relationships, and rollback.
 - Commit `52721ad`: Converted repository instructions to Codex `AGENTS.md`, removed Claude-specific files, added persistent work queue/next-action/ledger, hardened MP-03 importer audit behavior, and verified with npm/source/PostgreSQL gates.
 - Implementation slice: Added historical import adapters for Qualifications, Scores, Messages, FollowUps, and Appointments. Expanded synthetic export fixtures and reconciliation to 12 checks.
+- Commit `416a077`: Expanded Airtable historical import adapters and reconciliation checks for qualifications, scores, messages, follow-ups, and appointments.
+- Implementation slice: Added MP-04 durable runtime hardening migration for inbox receipts/events, outbox commands, scheduled jobs, attempt history, dead letters, and append-only audit metadata.
+- Implementation slice: Added runtime repositories for durable inbox receive/dedupe/claim/retry/dead-letter/ignore/replay, transactional outbox enqueue/claim/delivery/retry/permanent-failure/delivery-unknown handling, scheduled job schedule/cancel/claim/complete/retry, and audit event recording.
+- Implementation slice: Added disabled-by-default runtime worker with explicit handler boundary for inbox, outbox, and scheduled job processing. Legacy `edge_outbox` worker remains available for compatibility until cutover evidence exists.
+- Decision: Runtime worker does not claim provider side effects unless a real dispatcher is configured; tests may inject handlers, but production code must not simulate successful sends.
+- Verification: `npm run lint && npm test` passed with 5 Vitest files and 31 tests after MP-04 runtime implementation.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Commit `10688f7`: Added durable runtime queue foundations for inbox/outbox/jobs/audit plus PostgreSQL integration tests and transition documentation.

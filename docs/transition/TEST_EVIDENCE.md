@@ -187,3 +187,15 @@ Finding: relationship and phone failures needed explicit verification.
 Resolution: added tests and fixtures for invalid phones, duplicate IDs, missing relationships, idempotent reruns, and rollback after mid-transaction failure.
 
 Verification level: unit tested and local PostgreSQL integration tested.
+
+## 2026-07-30 MP-04 Durable Runtime Foundation
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 5 test files and 31 tests, including PostgreSQL-backed runtime integration coverage for duplicate inbound events, deterministic fallback event IDs, concurrent inbox claims, expired inbox lease recovery, retryable inbox rescheduling, inbox dead-lettering, safe inbox replay, atomic business mutation plus outbox insertion, rollback with no outbox record, concurrent outbox claims, expired outbox lease recovery, delivery-unknown handling, increasing bounded retry delay, max-attempt dead-lettering, unique durable job identities, cancelled jobs, runtime worker orchestration, and append-only audit entries.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 5 files and 31 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL integration tested.

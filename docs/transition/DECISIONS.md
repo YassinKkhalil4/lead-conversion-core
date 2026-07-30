@@ -63,3 +63,11 @@ Decision: `/ready` compares applied migration rows against migration files on di
 Reason: A database connection plus latest-row display does not prove the required schema is present.
 
 Date: 2026-07-30
+
+## DEC-009: Runtime Worker Handler Boundary
+
+Decision: Introduce the durable runtime worker with injectable inbox, outbox, and scheduled-job handlers, and keep it disabled unless real handlers are configured.
+
+Reason: MP-04 owns durable queue semantics, leases, retries, and audit history. Provider-specific dispatch and business processors belong to later MPs; the worker must not fake successful production side effects while those adapters are disabled.
+
+Date: 2026-07-30

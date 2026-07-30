@@ -20,6 +20,7 @@ const schema = z.object({
   OUTBOX_TARGET_SECRET: z.string().optional().default(''),
   WORKER_NAME: z.string().optional().default(''),
   WORKER_KIND: z.string().optional().default('outbox'),
+  RUNTIME_WORKER_ENABLED: booleanString.default('false'),
   DIRECT_META_SEND_ENABLED: booleanString.default('false'),
   META_WA_ACCESS_TOKEN: z.string().optional().default(''),
   META_WA_PHONE_NUMBER_ID: z.string().optional().default(''),

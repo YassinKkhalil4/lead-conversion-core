@@ -28,7 +28,7 @@ Remaining: Docker image run and dump metadata inspection when daemon is availabl
 
 ## MP-03 PostgreSQL Core And Airtable Migration
 
-Status: implementing
+Status: locally_verified
 
 Deliverables: app/runtime/configuration/audit/migration schemas, per-table importer, raw records, reject capture, entity maps, relationship validation, collision reporting, dry-run/apply summaries, reconciliation report, projection readiness.
 
@@ -40,7 +40,7 @@ Remaining: configuration publication adapters for Questions/Question Options/Con
 
 ## MP-04 Durable Inbox, Outbox, Jobs, Audit
 
-Status: not_started
+Status: locally_verified
 
 Deliverables: inbox receipt/claim/retry/dead-letter/replay, outbox commands/attempt history/provider failure classification, scheduled jobs, audit service.
 
@@ -48,7 +48,7 @@ Dependencies: none for internal implementation.
 
 Verification gates: real PostgreSQL concurrency/lease/retry/dead-letter/atomicity/job/audit tests.
 
-Remaining: all.
+Remaining: provider-specific dispatchers and business processors are intentionally deferred to MP-05 through MP-10. The runtime worker is present but disabled unless real handlers are configured.
 
 ## MP-05 WhatsApp Messaging Platform
 
