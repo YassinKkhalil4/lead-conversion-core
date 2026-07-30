@@ -199,3 +199,15 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 5 files and 31 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL integration tested.
+
+## 2026-07-30 MP-05 Meta WhatsApp Adapter Contract
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 6 test files and 37 tests, including sanitized Meta WhatsApp adapter fixtures for disabled configuration, accepted provider response, rate-limit retry with retry hint, validation permanent failure, thrown fetch delivery-unknown classification, and bounded interactive payload generation.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 6 files and 37 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local contract-fixture tested. Live Meta verification remains pending owner action for rotated credentials, template approvals, and staging webhook access.

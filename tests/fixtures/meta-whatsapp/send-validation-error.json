@@ -1,0 +1,12 @@
+{
+  "error": {
+    "message": "Invalid parameter",
+    "type": "OAuthException",
+    "code": 100,
+    "error_data": {
+      "messaging_product": "whatsapp",
+      "details": "Message body is required"
+    },
+    "fbtrace_id": "SANITIZED_TRACE"
+  }
+}

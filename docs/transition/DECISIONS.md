@@ -71,3 +71,11 @@ Decision: Introduce the durable runtime worker with injectable inbox, outbox, an
 Reason: MP-04 owns durable queue semantics, leases, retries, and audit history. Provider-specific dispatch and business processors belong to later MPs; the worker must not fake successful production side effects while those adapters are disabled.
 
 Date: 2026-07-30
+
+## DEC-010: Meta Adapter Disabled By Default
+
+Decision: Add the Meta WhatsApp adapter behind an explicit enabled configuration and classify provider outcomes from real response shapes instead of returning hardcoded success.
+
+Reason: Live Meta credentials and template approvals are pending owner action. The code can be contract-tested with sanitized fixtures, but production must not send or pretend to send messages until credentials, templates, and staging webhooks are verified.
+
+Date: 2026-07-30

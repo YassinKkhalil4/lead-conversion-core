@@ -1,6 +1,8 @@
 # Owner Action: Meta WhatsApp
 
-Status: pending owner configuration and provider verification.
+Status: pending owner configuration and live provider verification.
+
+Local contract tests use sanitized fixtures only. No Meta credential, template approval, webhook subscription, or live send has been verified.
 
 ## Required Setup
 

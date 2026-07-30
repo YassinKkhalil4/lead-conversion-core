@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-05 WhatsApp messaging platform
 
-Exact next implementation task: Begin MP-05 by adding the provider-neutral messaging port, disabled Meta WhatsApp adapter shape, sanitized provider contract fixtures, and tests that classify accepted, retryable, permanent, and ambiguous provider outcomes without sending real customer messages.
+Exact next implementation task: Continue MP-05 by wiring a durable outbox dispatcher for `whatsapp.send_message` commands that maps Meta adapter outcomes onto runtime outbox states without holding database transactions during provider HTTP calls.
 
 Files expected to change:
 
@@ -13,10 +13,10 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `docs/owner-actions/**`
 - `src/integrations/**`
-- `src/domain/**`
 - `src/worker/**`
+- `src/services/**`
+- `src/routes/**`
 - `tests/**/*`
 
 Required verification:
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: e4d1907
+Last verified implementation commit: e4d1907 plus uncommitted MP-05 Meta adapter slice verified by the full npm/lint/test/build/audit/smoke gate
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no

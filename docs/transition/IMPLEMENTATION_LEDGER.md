@@ -25,3 +25,8 @@
 - Verification: `npm run lint && npm test` passed with 5 Vitest files and 31 tests after MP-04 runtime implementation.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Commit `e4d1907`: Added durable runtime queue foundations for inbox/outbox/jobs/audit plus PostgreSQL integration tests and transition documentation.
+- Commit `60990c0`: Recorded MP-05 next-action transition state after the MP-04 runtime foundation commit.
+- Implementation slice: Added provider-neutral messaging types and disabled-by-default Meta WhatsApp adapter that classifies accepted, retryable, permanently failed, and delivery-unknown outcomes from provider response shapes.
+- Verification: `npm run lint && npm test` passed with 6 Vitest files and 37 tests after the MP-05 Meta adapter contract fixtures were added.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Deferred external verification: live Meta send/status verification remains pending rotated credentials, approved templates, and staging webhook access.
