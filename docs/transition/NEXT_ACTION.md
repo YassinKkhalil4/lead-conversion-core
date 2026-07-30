@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Continue MP-12 by producing a direct callback compatibility report and Caddy route plan from the implemented route flags and existing endpoints. Update runbooks and owner-action docs with exact staging/prod route shapes, required flags, rollback sequence, and verification commands. Do not modify DNS, Caddy, provider accounts, or legacy infrastructure.
+Exact next implementation task: Continue MP-12 by hardening deployment verification around the direct ingress plan. Update `scripts/verify-deployment.sh` so it can optionally verify direct Meta challenge and direct lead route disabled/enabled behavior against a supplied staging base URL without sending real customer messages, then add local script-safe checks where feasible. Do not modify DNS, Caddy, provider accounts, or legacy infrastructure.
 
 Files expected to change:
 
@@ -14,6 +14,7 @@ Files expected to change:
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
 - `docs/transition/CUTOVER_RUNBOOK.md`
+- `docs/transition/DIRECT_INGRESS_PLAN.md`
 - `docs/transition/DECOMMISSION_RUNBOOK.md`
 - `docs/owner-actions/06-staging-dns-and-access.md`
 - `docs/owner-actions/07-production-cutover.md`

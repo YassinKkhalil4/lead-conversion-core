@@ -736,6 +736,10 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local PostgreSQL read-only readiness reporting and full npm gate. No DNS, Caddy, provider, n8n, Typebot, or production route changes were made.
 
+## 2026-07-30 MP-12 Direct Ingress Plan
+
+Verification: documentation-only route plan derived from implemented route flags and existing endpoint contracts. No command was required beyond the previous full gate for `8738391` and `16c0ac5`; no DNS, Caddy, provider, n8n, Typebot, or production route changes were made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

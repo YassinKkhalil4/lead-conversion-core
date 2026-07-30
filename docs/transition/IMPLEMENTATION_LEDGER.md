@@ -221,3 +221,4 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed; focused PostgreSQL tests ran 2 tests covering clean readiness and stale queue/dead-letter failure checks.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 11 files and 108 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Commit `16c0ac5`: Added cutover readiness report.
+- Implementation slice: Added `docs/transition/DIRECT_INGRESS_PLAN.md` documenting local route contracts, explicit direct-ingress flags, staging route sequence, production canary route sequence, rollback, and decommission hold.
