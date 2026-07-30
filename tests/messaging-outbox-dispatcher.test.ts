@@ -101,4 +101,64 @@ describe('MessagingOutboxDispatcher', () => {
     expect(result.error).toContain('invalid_whatsapp_send_payload');
     expect(provider.send).not.toHaveBeenCalled();
   });
+
+  it('maps salesperson assignment notifications to real WhatsApp sends', async () => {
+    const provider: MessageProvider = {
+      send: vi.fn(async () => ({
+        outcome: 'accepted' as const,
+        providerMessageId: 'wamid.assignment.accepted',
+        providerResponse: {},
+      })),
+    };
+    const dispatcher = new MessagingOutboxDispatcher({ meta: provider });
+
+    await expect(dispatcher.dispatch(command({
+      commandType: 'salesperson.lead_assignment_notification',
+      destination: '+201044444444',
+      idempotencyKey: 'salesperson.notify:assignment-1',
+      payload: {
+        leadId: '11111111-1111-4111-8111-111111111111',
+        routingRunId: '22222222-2222-4222-8222-222222222222',
+        assignmentId: '33333333-3333-4333-8333-333333333333',
+        salespersonId: '44444444-4444-4444-8444-444444444444',
+        clientId: '55555555-5555-4555-8555-555555555555',
+        contactName: 'Lead Name',
+        contactPhoneE164: '+201099999999',
+        projectName: 'Project Name',
+        leadScore: 91,
+        temperature: 'hot',
+      },
+    }))).resolves.toEqual({
+      outcome: 'delivered',
+      providerMessageId: 'wamid.assignment.accepted',
+    });
+    expect(provider.send).toHaveBeenCalledWith(expect.objectContaining({
+      destination: expect.objectContaining({ toE164: '+201044444444' }),
+      payload: expect.objectContaining({
+        kind: 'text',
+        text: expect.stringContaining('New lead assigned.'),
+      }),
+      idempotencyKey: 'salesperson.notify:assignment-1',
+    }));
+  });
+
+  it('rejects malformed notification payloads without calling the provider', async () => {
+    const provider: MessageProvider = {
+      send: vi.fn(async () => ({
+        outcome: 'accepted' as const,
+        providerMessageId: 'wamid.should-not-send',
+        providerResponse: {},
+      })),
+    };
+    const dispatcher = new MessagingOutboxDispatcher({ meta: provider });
+
+    await expect(dispatcher.dispatch(command({
+      commandType: 'operator.routing_attention_required',
+      payload: { reason: 'missing IDs' },
+    }))).resolves.toEqual({
+      outcome: 'permanently_failed',
+      error: 'invalid_notification_payload:operator.routing_attention_required',
+    });
+    expect(provider.send).not.toHaveBeenCalled();
+  });
 });

@@ -39,29 +39,104 @@ const commandPayloadSchema = z.object({
   message: payloadSchema,
 });
 
+const assignmentNotificationSchema = z.object({
+  leadId: z.string().uuid(),
+  routingRunId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  salespersonId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  contactName: z.string().default(''),
+  contactPhoneE164: z.string().min(5),
+  projectName: z.string().default(''),
+  leadScore: z.number().int().nullable().optional(),
+  temperature: z.string().default(''),
+  phoneNumberId: z.string().default(''),
+});
+
+const routingAlertSchema = z.object({
+  leadId: z.string().uuid(),
+  routingRunId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  companyName: z.string().default(''),
+  reason: z.string().min(1),
+  phoneNumberId: z.string().default(''),
+});
+
+function textLine(label: string, value: string): string {
+  return value ? `${label}: ${value}` : '';
+}
+
+function notificationPayload(command: ClaimedOutboxCommand): { phoneNumberId: string; message: SendMessageCommand['payload'] } | null {
+  if (command.commandType === 'salesperson.lead_assignment_notification') {
+    const parsed = assignmentNotificationSchema.safeParse(command.payload);
+    if (!parsed.success) return null;
+    const lines = [
+      'New lead assigned.',
+      textLine('Lead', parsed.data.contactName),
+      textLine('Phone', parsed.data.contactPhoneE164),
+      textLine('Project', parsed.data.projectName),
+      textLine('Score', parsed.data.leadScore === undefined || parsed.data.leadScore === null ? '' : String(parsed.data.leadScore)),
+      textLine('Temperature', parsed.data.temperature),
+      `Assignment ID: ${parsed.data.assignmentId}`,
+    ].filter(Boolean);
+    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
+  }
+  if (command.commandType === 'operator.routing_attention_required') {
+    const parsed = routingAlertSchema.safeParse(command.payload);
+    if (!parsed.success) return null;
+    const lines = [
+      'Routing attention required.',
+      textLine('Company', parsed.data.companyName),
+      `Reason: ${parsed.data.reason}`,
+      `Lead ID: ${parsed.data.leadId}`,
+      `Routing run ID: ${parsed.data.routingRunId}`,
+    ].filter(Boolean);
+    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
+  }
+  return null;
+}
+
 export class MessagingOutboxDispatcher {
   constructor(private readonly providers: { meta: MessageProvider }) {}
 
   async dispatch(command: ClaimedOutboxCommand): Promise<OutboxDispatchResult> {
-    if (command.commandType !== 'whatsapp.send_message') {
+    if (!['whatsapp.send_message', 'salesperson.lead_assignment_notification', 'operator.routing_attention_required'].includes(command.commandType)) {
       return { outcome: 'permanently_failed', error: `unsupported_outbox_command:${command.commandType}` };
     }
 
-    const parsed = commandPayloadSchema.safeParse(command.payload);
-    if (!parsed.success) {
-      return { outcome: 'permanently_failed', error: `invalid_whatsapp_send_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
+    let sendCommand: SendMessageCommand;
+    if (command.commandType === 'whatsapp.send_message') {
+      const parsed = commandPayloadSchema.safeParse(command.payload);
+      if (!parsed.success) {
+        return { outcome: 'permanently_failed', error: `invalid_whatsapp_send_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
+      }
+      sendCommand = {
+        destination: {
+          channel: 'whatsapp',
+          provider: parsed.data.provider,
+          phoneNumberId: parsed.data.phoneNumberId,
+          toE164: parsed.data.toE164 || command.destination,
+        },
+        payload: parsed.data.message,
+        idempotencyKey: command.idempotencyKey,
+      };
+    } else {
+      const mapped = notificationPayload(command);
+      if (!mapped) {
+        return { outcome: 'permanently_failed', error: `invalid_notification_payload:${command.commandType}` };
+      }
+      sendCommand = {
+        destination: {
+          channel: 'whatsapp',
+          provider: 'meta',
+          phoneNumberId: mapped.phoneNumberId,
+          toE164: command.destination,
+        },
+        payload: mapped.message,
+        idempotencyKey: command.idempotencyKey,
+      };
     }
 
-    const sendCommand: SendMessageCommand = {
-      destination: {
-        channel: 'whatsapp',
-        provider: parsed.data.provider,
-        phoneNumberId: parsed.data.phoneNumberId,
-        toE164: parsed.data.toE164 || command.destination,
-      },
-      payload: parsed.data.message,
-      idempotencyKey: command.idempotencyKey,
-    };
     const result = await this.providers.meta.send(sendCommand);
     if (result.outcome === 'accepted') {
       return { outcome: 'delivered', providerMessageId: result.providerMessageId };
