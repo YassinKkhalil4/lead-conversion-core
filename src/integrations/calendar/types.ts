@@ -14,6 +14,14 @@ export type CalendarProviderResult =
   | { outcome: 'permanently_failed'; error: string; providerResponse?: Record<string, unknown> }
   | { outcome: 'delivery_unknown'; error: string; providerResponse?: Record<string, unknown> };
 
+export type CalendarAvailabilityResult =
+  | { outcome: 'available'; providerResponse?: Record<string, unknown> }
+  | { outcome: 'busy'; error: string; providerResponse?: Record<string, unknown> }
+  | { outcome: 'retryable'; error: string; retryAfterSeconds?: number; providerResponse?: Record<string, unknown> }
+  | { outcome: 'permanently_failed'; error: string; providerResponse?: Record<string, unknown> }
+  | { outcome: 'delivery_unknown'; error: string; providerResponse?: Record<string, unknown> };
+
 export interface CalendarProvider {
+  checkAvailability(command: CreateCalendarEventCommand): Promise<CalendarAvailabilityResult>;
   createEvent(command: CreateCalendarEventCommand): Promise<CalendarProviderResult>;
 }

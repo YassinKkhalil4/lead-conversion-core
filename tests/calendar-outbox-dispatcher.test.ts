@@ -29,6 +29,9 @@ function command(overrides: Partial<ClaimedOutboxCommand> = {}): ClaimedOutboxCo
 describe('CalendarOutboxDispatcher', () => {
   it('maps created provider events to delivered outbox outcomes', async () => {
     const provider: CalendarProvider = {
+      checkAvailability: vi.fn(async () => ({
+        outcome: 'available' as const,
+      })),
       createEvent: vi.fn(async () => ({
         outcome: 'created' as const,
         providerEventId: 'google-event-sanitized',
@@ -50,10 +53,18 @@ describe('CalendarOutboxDispatcher', () => {
       endsAt: '2026-07-31T09:45:00.000Z',
       timezone: 'Africa/Cairo',
     });
+    expect(provider.checkAvailability).toHaveBeenCalledWith(expect.objectContaining({
+      calendarId: 'calendar-primary',
+      startsAt: '2026-07-31T09:00:00.000Z',
+      endsAt: '2026-07-31T09:45:00.000Z',
+    }));
   });
 
   it('preserves retry hints from retryable provider outcomes', async () => {
     const provider: CalendarProvider = {
+      checkAvailability: vi.fn(async () => ({
+        outcome: 'available' as const,
+      })),
       createEvent: vi.fn(async () => ({
         outcome: 'retryable' as const,
         error: 'google rate limit',
@@ -69,8 +80,55 @@ describe('CalendarOutboxDispatcher', () => {
     });
   });
 
+  it('rejects busy availability without creating an event', async () => {
+    const provider: CalendarProvider = {
+      checkAvailability: vi.fn(async () => ({
+        outcome: 'busy' as const,
+        error: 'google_calendar_slot_busy',
+      })),
+      createEvent: vi.fn(async () => ({
+        outcome: 'created' as const,
+        providerEventId: 'should-not-create',
+        providerResponse: {},
+      })),
+    };
+    const dispatcher = new CalendarOutboxDispatcher({ calendar: provider });
+
+    await expect(dispatcher.dispatch(command())).resolves.toEqual({
+      outcome: 'permanently_failed',
+      error: 'google_calendar_slot_busy',
+    });
+    expect(provider.createEvent).not.toHaveBeenCalled();
+  });
+
+  it('preserves retry hints from availability recheck failures', async () => {
+    const provider: CalendarProvider = {
+      checkAvailability: vi.fn(async () => ({
+        outcome: 'retryable' as const,
+        error: 'google freebusy rate limit',
+        retryAfterSeconds: 12,
+      })),
+      createEvent: vi.fn(async () => ({
+        outcome: 'created' as const,
+        providerEventId: 'should-not-create',
+        providerResponse: {},
+      })),
+    };
+    const dispatcher = new CalendarOutboxDispatcher({ calendar: provider });
+
+    await expect(dispatcher.dispatch(command())).resolves.toEqual({
+      outcome: 'retryable',
+      error: 'google freebusy rate limit',
+      retryAfterSeconds: 12,
+    });
+    expect(provider.createEvent).not.toHaveBeenCalled();
+  });
+
   it('rejects malformed calendar payloads without calling the provider', async () => {
     const provider: CalendarProvider = {
+      checkAvailability: vi.fn(async () => ({
+        outcome: 'available' as const,
+      })),
       createEvent: vi.fn(async () => ({
         outcome: 'created' as const,
         providerEventId: 'should-not-create',
@@ -83,6 +141,7 @@ describe('CalendarOutboxDispatcher', () => {
     expect(result.outcome).toBe('permanently_failed');
     if (result.outcome !== 'permanently_failed') throw new Error('expected_permanent_failure');
     expect(result.error).toContain('invalid_calendar_create_event_payload');
+    expect(provider.checkAvailability).not.toHaveBeenCalled();
     expect(provider.createEvent).not.toHaveBeenCalled();
   });
 

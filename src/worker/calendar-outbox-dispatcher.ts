@@ -26,7 +26,7 @@ export class CalendarOutboxDispatcher {
     if (!parsed.success) {
       return { outcome: 'permanently_failed', error: `invalid_calendar_create_event_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
     }
-    const result = await this.providers.calendar.createEvent({
+    const createCommand = {
       calendarId: parsed.data.calendarId || command.destination,
       idempotencyKey: command.idempotencyKey,
       summary: parsed.data.summary,
@@ -34,7 +34,18 @@ export class CalendarOutboxDispatcher {
       startsAt: parsed.data.startsAt,
       endsAt: parsed.data.endsAt,
       timezone: parsed.data.timezone,
-    });
+    };
+    const availability = await this.providers.calendar.checkAvailability(createCommand);
+    if (availability.outcome === 'busy') return { outcome: 'permanently_failed', error: availability.error };
+    if (availability.outcome === 'retryable') {
+      return availability.retryAfterSeconds === undefined
+        ? { outcome: 'retryable', error: availability.error }
+        : { outcome: 'retryable', error: availability.error, retryAfterSeconds: availability.retryAfterSeconds };
+    }
+    if (availability.outcome === 'delivery_unknown') return { outcome: 'delivery_unknown', error: availability.error };
+    if (availability.outcome === 'permanently_failed') return { outcome: 'permanently_failed', error: availability.error };
+
+    const result = await this.providers.calendar.createEvent(createCommand);
     if (result.outcome === 'created') return { outcome: 'delivered', providerMessageId: result.providerEventId };
     if (result.outcome === 'retryable') {
       return result.retryAfterSeconds === undefined

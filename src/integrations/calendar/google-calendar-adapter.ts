@@ -1,5 +1,10 @@
 import { getEnv } from '../../config/env.js';
-import type { CalendarProvider, CalendarProviderResult, CreateCalendarEventCommand } from './types.js';
+import type {
+  CalendarAvailabilityResult,
+  CalendarProvider,
+  CalendarProviderResult,
+  CreateCalendarEventCommand,
+} from './types.js';
 
 interface GoogleCalendarAdapterOptions {
   accessToken: string;
@@ -24,6 +29,39 @@ export class GoogleCalendarAdapter implements CalendarProvider {
     const env = getEnv();
     if (!env.GOOGLE_CALENDAR_ENABLED) throw new Error('google_calendar_disabled');
     return new GoogleCalendarAdapter({ accessToken: env.GOOGLE_CALENDAR_ACCESS_TOKEN });
+  }
+
+  async checkAvailability(command: CreateCalendarEventCommand): Promise<CalendarAvailabilityResult> {
+    const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${this.options.accessToken}`,
+        'content-type': 'application/json',
+        'x-goog-request-reason': command.idempotencyKey,
+      },
+      body: JSON.stringify({
+        timeMin: command.startsAt,
+        timeMax: command.endsAt,
+        timeZone: command.timezone,
+        items: [{ id: command.calendarId }],
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const providerResponse = await parseResponse(response);
+    if (response.ok) {
+      const calendars = providerResponse.calendars as Record<string, { busy?: unknown[] }> | undefined;
+      const busy = calendars?.[command.calendarId]?.busy || [];
+      return busy.length === 0
+        ? { outcome: 'available', providerResponse }
+        : { outcome: 'busy', error: 'google_calendar_slot_busy', providerResponse };
+    }
+    if ([408, 425, 429, 500, 502, 503, 504].includes(response.status)) {
+      const retryAfter = retryAfterSeconds(response);
+      return retryAfter === undefined
+        ? { outcome: 'retryable', error: `google_calendar_freebusy_retryable:${response.status}`, providerResponse }
+        : { outcome: 'retryable', error: `google_calendar_freebusy_retryable:${response.status}`, retryAfterSeconds: retryAfter, providerResponse };
+    }
+    return { outcome: 'permanently_failed', error: `google_calendar_freebusy_rejected:${response.status}`, providerResponse };
   }
 
   async createEvent(command: CreateCalendarEventCommand): Promise<CalendarProviderResult> {
