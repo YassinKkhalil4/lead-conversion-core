@@ -1,0 +1,10 @@
+{
+  "exportVersion": "synthetic-v1",
+  "exportedAt": "2026-07-30T00:00:00.000Z",
+  "tables": [
+    { "name": "Clients", "file": "Clients.json", "expectedRecords": 1 },
+    { "name": "Projects", "file": "Projects.json", "expectedRecords": 1 },
+    { "name": "Salespeople", "file": "Salespeople.csv", "expectedRecords": 1 },
+    { "name": "Leads", "file": "Leads.json", "expectedRecords": 1 }
+  ]
+}

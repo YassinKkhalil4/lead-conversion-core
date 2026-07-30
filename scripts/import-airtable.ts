@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { PoolClient } from 'pg';
+import { z } from 'zod';
 
 type AirtableFields = Record<string, unknown>;
 
@@ -17,22 +18,40 @@ interface TableLoad {
   records: AirtableRecord[];
   valid: AirtableRecord[];
   rejected: Array<{ record: AirtableRecord; reason: string }>;
+  loadErrors: string[];
 }
 
 interface ImportSummary {
   inputDir: string;
   dryRun: boolean;
+  manifest: {
+    present: boolean;
+    exportedAt: string;
+    errors: string[];
+  };
   tables: Record<string, {
     total: number;
     valid: number;
     rejected: number;
     missing: boolean;
+    loadErrors: string[];
+    rejectedReasons: Record<string, number>;
   }>;
   totalRecords: number;
   validRecords: number;
   rejectedRecords: number;
   missingTables: string[];
 }
+
+const manifestSchema = z.object({
+  exportVersion: z.string().min(1).optional(),
+  exportedAt: z.string().min(1).optional(),
+  tables: z.array(z.object({
+    name: z.string().min(1),
+    file: z.string().min(1).optional(),
+    expectedRecords: z.number().int().min(0).optional(),
+  })).optional(),
+}).passthrough();
 
 const REQUIRED_TABLES = [
   'Clients',
@@ -105,6 +124,11 @@ function normalizePhone(raw: string): string {
   return raw.trim();
 }
 
+function phoneLooksUsable(raw: string): boolean {
+  const normalized = normalizePhone(raw);
+  return /^\+20\d{10}$/.test(normalized) || /^\+\d{8,15}$/.test(normalized);
+}
+
 function parseCsv(text: string): AirtableFields[] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -167,6 +191,32 @@ function coerceJsonRecords(parsed: unknown, tableName: string): AirtableFields[]
   });
 }
 
+async function loadManifest(inputDir: string): Promise<ImportSummary['manifest']> {
+  try {
+    const text = await readFile(join(inputDir, 'airtable-export-manifest.json'), 'utf8');
+    const parsed = manifestSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) {
+      return {
+        present: true,
+        exportedAt: '',
+        errors: parsed.error.issues.map((issue) => `${issue.path.join('.')}:${issue.message}`),
+      };
+    }
+    const tableNames = new Set((parsed.data.tables || []).map((table) => table.name));
+    const missing = REQUIRED_TABLES.filter((table) => !tableNames.has(table));
+    return {
+      present: true,
+      exportedAt: parsed.data.exportedAt || '',
+      errors: missing.map((table) => `manifest_missing_table:${table}`),
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { present: false, exportedAt: '', errors: ['manifest_missing'] };
+    }
+    return { present: true, exportedAt: '', errors: [`manifest_invalid:${error instanceof Error ? error.message : String(error)}`] };
+  }
+}
+
 async function loadTable(inputDir: string, tableName: string): Promise<TableLoad> {
   const files = await readdir(inputDir);
   const wanted = normalizeTableName(tableName);
@@ -175,16 +225,27 @@ async function loadTable(inputDir: string, tableName: string): Promise<TableLoad
     if (!['.json', '.csv'].includes(extension)) return false;
     return normalizeTableName(candidate.slice(0, -extension.length)) === wanted;
   });
-  if (!file) return { tableName, records: [], valid: [], rejected: [] };
+  if (!file) return { tableName, records: [], valid: [], rejected: [], loadErrors: [] };
 
   const fullPath = join(inputDir, file);
-  const text = await readFile(fullPath, 'utf8');
-  const rawRows = extname(file).toLocaleLowerCase() === '.csv'
-    ? parseCsv(text)
-    : coerceJsonRecords(JSON.parse(text), tableName);
+  let rawRows: AirtableFields[];
+  try {
+    const text = await readFile(fullPath, 'utf8');
+    rawRows = extname(file).toLocaleLowerCase() === '.csv'
+      ? parseCsv(text)
+      : coerceJsonRecords(JSON.parse(text), tableName);
+  } catch (error) {
+    return {
+      tableName,
+      records: [],
+      valid: [],
+      rejected: [],
+      loadErrors: [`load_failed:${error instanceof Error ? error.message : String(error)}`],
+    };
+  }
 
   const records = rawRows.map((fields, index) => {
-    const recordId = stringField(fields, 'id') || stringField(fields, 'Record ID') || `${tableName}:${contentHash(fields).slice(0, 16)}:${index}`;
+    const recordId = stringField(fields, 'id') || stringField(fields, 'Record ID');
     const normalizedFields = { ...fields };
     delete normalizedFields.id;
     return {
@@ -196,23 +257,48 @@ async function loadTable(inputDir: string, tableName: string): Promise<TableLoad
 
   const required = REQUIRED_FIELDS[tableName] || [];
   const rejected: TableLoad['rejected'] = [];
+  const duplicateIds = records.reduce<Record<string, number>>((acc, record) => {
+    if (record.id) acc[record.id] = (acc[record.id] || 0) + 1;
+    return acc;
+  }, {});
   const valid = records.filter((record) => {
+    if (!record.id) {
+      rejected.push({ record, reason: 'missing_airtable_record_id' });
+      return false;
+    }
+    if ((duplicateIds[record.id] || 0) > 1) {
+      rejected.push({ record, reason: 'duplicate_airtable_record_id' });
+      return false;
+    }
     const missing = required.filter((field) => stringField(record.fields, field) === '');
     if (missing.length > 0) {
       rejected.push({ record, reason: `missing_required_fields:${missing.join(',')}` });
       return false;
     }
+    if (['Leads', 'Salespeople'].includes(tableName)) {
+      const phone = tableName === 'Leads'
+        ? stringField(record.fields, 'Phone Raw') || stringField(record.fields, 'Phone Normalized')
+        : stringField(record.fields, 'Phone');
+      if (!phoneLooksUsable(phone)) {
+        rejected.push({ record, reason: 'invalid_phone' });
+        return false;
+      }
+    }
     return true;
   });
 
-  return { tableName, records, valid, rejected };
+  return { tableName, records, valid, rejected, loadErrors: [] };
 }
 
 export async function loadAirtableExport(inputDir: string): Promise<{ loads: TableLoad[]; summary: ImportSummary }> {
-  const loads = await Promise.all(REQUIRED_TABLES.map((table) => loadTable(inputDir, table)));
+  const [manifest, loads] = await Promise.all([
+    loadManifest(inputDir),
+    Promise.all(REQUIRED_TABLES.map((table) => loadTable(inputDir, table))),
+  ]);
   const summary: ImportSummary = {
     inputDir,
     dryRun: true,
+    manifest,
     tables: {},
     totalRecords: 0,
     validRecords: 0,
@@ -228,6 +314,11 @@ export async function loadAirtableExport(inputDir: string): Promise<{ loads: Tab
       valid: load.valid.length,
       rejected: load.rejected.length,
       missing,
+      loadErrors: load.loadErrors,
+      rejectedReasons: load.rejected.reduce<Record<string, number>>((acc, rejected) => {
+        acc[rejected.reason] = (acc[rejected.reason] || 0) + 1;
+        return acc;
+      }, {}),
     };
     summary.totalRecords += load.records.length;
     summary.validRecords += load.valid.length;
@@ -350,6 +441,15 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
     for (const record of projects) {
       const clientRecordId = linkedRecord(record.fields, 'Client') || linkedRecord(record.fields, 'Clients');
       const clientId = clientRecordId ? await mappedId(client, 'Clients', clientRecordId, 'app.clients') : null;
+      if (clientRecordId && !clientId) {
+        await client.query(
+          `INSERT INTO migration.rejected_records
+            (import_run_id, table_name, record_id, content_hash, reason, fields_json)
+           VALUES ($1, 'Projects', $2, $3, 'missing_mapped_client', $4::jsonb)`,
+          [importRunId, record.id, record.contentHash, JSON.stringify(record.fields)],
+        );
+        continue;
+      }
       const result = await client.query<{ project_id: string }>(
         `INSERT INTO app.projects
           (legacy_airtable_id, client_id, project_name, active, starting_price, max_price, unit_types, location, maps_url)
@@ -485,6 +585,15 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
       });
 
       const projectId = projectRecordId ? await mappedId(client, 'Projects', projectRecordId, 'app.projects') : null;
+      if (projectRecordId && !projectId) {
+        await client.query(
+          `INSERT INTO migration.rejected_records
+            (import_run_id, table_name, record_id, content_hash, reason, fields_json)
+           VALUES ($1, 'Leads', $2, $3, 'missing_mapped_project', $4::jsonb)`,
+          [importRunId, record.id, record.contentHash, JSON.stringify(record.fields)],
+        );
+        continue;
+      }
       const lead = await client.query<{ lead_id: string }>(
         `INSERT INTO app.leads
           (client_id, contact_id, project_id, legacy_airtable_id, provider, provider_external_id,

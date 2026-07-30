@@ -1,0 +1,19 @@
+[
+  {
+    "fields": {
+      "Company Name": "Missing ID Realty"
+    }
+  },
+  {
+    "id": "recCLIENTDUP",
+    "fields": {
+      "Company Name": "Duplicate One"
+    }
+  },
+  {
+    "id": "recCLIENTDUP",
+    "fields": {
+      "Company Name": "Duplicate Two"
+    }
+  }
+]

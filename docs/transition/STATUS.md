@@ -6,7 +6,7 @@ Last updated: 2026-07-30
 |---|---|---|---|
 | MP-01 Baseline, security, source cleanup | locally_verified | local file inspection and source tests | Clean repo created from canonical source. Secret-bearing archive artifacts excluded. Current behavior fixtures added. |
 | MP-02 Build, deployment, migrations, recovery | locally_verified | local npm, PostgreSQL, backup/restore tests | Lockfile, fixed scripts, single migrator, checksums, advisory lock, heartbeat, readiness, backup/restore verified locally. Docker daemon unavailable for image run. |
-| MP-03 PostgreSQL core and Airtable migration | implementing | local PostgreSQL integration tested for schema and initial importer | Target schemas/tables added. Importer supports JSON/CSV dry-run and apply for raw records, rejects, clients, projects, salespeople, contacts, and leads. Complete Airtable export still pending. |
+| MP-03 PostgreSQL core and Airtable migration | implementing | local PostgreSQL integration tested for schema and importer hardening | Target schemas/tables added. Importer supports JSON/CSV dry-run, manifest awareness, stable ID enforcement, duplicate/reject reporting, relationship rejection, raw records, clients, projects, salespeople, contacts, and leads. Complete Airtable export still pending. |
 | MP-04 Durable inbox, outbox, jobs, audit | not_started | none | Current edge has partial outbox only. |
 | MP-05 WhatsApp messaging platform | not_started | none | Current direct Meta send remains in active turn service. |
 | MP-06 Versioned configuration | not_started | none | Current config is Airtable-shaped snapshot. |

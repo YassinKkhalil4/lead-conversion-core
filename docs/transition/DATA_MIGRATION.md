@@ -32,7 +32,12 @@ Implemented locally:
 - Importer command: `npm run import:airtable -- --input=<dir>` for dry-run
 - Apply command: `npm run import:airtable -- --input=<dir> --apply`
 - Supported file formats: per-table JSON and CSV
+- Optional manifest: `airtable-export-manifest.json`
+- Stable Airtable record IDs are required; missing or duplicate IDs are rejected.
+- Invalid lead/salesperson phone values are rejected.
+- Missing mapped client/project relationships are rejected rather than invented.
 - Initial apply mappings: Clients, Projects, Salespeople, Contacts derived from Leads, Leads
+- Provisional field map: `docs/transition/AIRTABLE_FIELD_MAP.md`
 
 Pending:
 

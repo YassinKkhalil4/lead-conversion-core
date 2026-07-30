@@ -135,3 +135,43 @@ Command: disposable local PostgreSQL cluster; `npm run migrate`; `npm run import
 Result: reconciliation passed and recorded 7 checks in `migration.reconciliation_results`: rejected records, mapped clients, mapped projects, mapped salespeople, mapped leads, contact phone uniqueness, and lead-contact links.
 
 Verification level: local PostgreSQL integration tested.
+
+## 2026-07-30 Codex Conversion And Audit Gate
+
+Command: `git status --short`
+
+Result: clean before Codex conversion; generated `dist/` and `node_modules/` were ignored.
+
+Command: `git log --oneline --decorate -10`
+
+Result: confirmed current branch head was `d0e751a` on `transition/edge-postgres-core`.
+
+Command: `git show --stat 7ba47c2`, `git show --stat df90f61`, `git show --stat d0e751a`
+
+Result: verified the three recorded commits and file surfaces.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` found 0 vulnerabilities; TypeScript lint passed; 4 Vitest suites and 20 tests passed; build passed; audit found 0 vulnerabilities; smoke test reported 9 questions, 22 options, and 7 messages.
+
+Verification level: implemented and locally verified.
+
+## 2026-07-30 Audit Fixes
+
+Finding: `/ready` reported only the latest migration row and did not prove all required migration files were applied.
+
+Resolution: `/ready` now compares migration files on disk with applied migration rows and reports missing migrations. It also includes worker-heartbeat readiness.
+
+Finding: backup restore verification only checked that queries could run and did not report important counts.
+
+Resolution: `scripts/backup/verify-restore.sh` now enforces a minimum migration count, verifies `runtime.worker_heartbeats`, and reports migration/config/new-schema table counts.
+
+Finding: Airtable importer synthesized missing record IDs from content and row index.
+
+Resolution: missing/duplicate Airtable record IDs are now rejected with actionable reasons.
+
+Finding: relationship and phone failures needed explicit verification.
+
+Resolution: added tests and fixtures for invalid phones, duplicate IDs, missing relationships, idempotent reruns, and rollback after mid-transaction failure.
+
+Verification level: unit tested and local PostgreSQL integration tested.

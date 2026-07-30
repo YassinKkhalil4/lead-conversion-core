@@ -1,0 +1,10 @@
+[
+  {
+    "id": "recPROJECTSQLBAD",
+    "fields": {
+      "Project Name": "Bad Price Project",
+      "Starting Price": "not-a-number",
+      "Client": ["recCLIENT001"]
+    }
+  }
+]

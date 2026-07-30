@@ -39,3 +39,27 @@ Decision: Upgrade Vitest to the latest resolved major version in the lockfile.
 Reason: The initial lockfile generation exposed critical/high audit findings in the older Vitest/Vite dev-tool chain. The upgrade produced zero `npm audit` findings and tests remained green.
 
 Date: 2026-07-30
+
+## DEC-006: Codex Repository Instructions
+
+Decision: Replace Claude-specific repository instruction files with root `AGENTS.md`.
+
+Reason: The repository is now operated with Codex. Durable instructions must be discoverable by Codex without relying on Claude Code conventions.
+
+Date: 2026-07-30
+
+## DEC-007: Importer Requires Stable Source IDs
+
+Decision: Reject Airtable rows that do not include a stable record ID instead of synthesizing one from content and row position.
+
+Reason: Synthetic IDs are not stable across exports and would corrupt idempotency/entity mapping guarantees.
+
+Date: 2026-07-30
+
+## DEC-008: Readiness Requires Migration Completeness
+
+Decision: `/ready` compares applied migration rows against migration files on disk and fails if any migration is missing.
+
+Reason: A database connection plus latest-row display does not prove the required schema is present.
+
+Date: 2026-07-30
