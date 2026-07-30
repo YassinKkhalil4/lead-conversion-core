@@ -431,3 +431,27 @@ Command: `npm run test:smoke`
 Result: passed. Smoke returned `ok=true`, config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested with sanitized Meta fixtures. No live Meta, Typebot, n8n, or Airtable call was made.
+
+## 2026-07-30 MP-08 Durable Opt-Out And Takeover Handling
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed. Runtime integration ran 30 PostgreSQL/API tests, including explicit STOP opt-out processing that updates `edge_conversations`, `edge_lead_controls`, `app.leads`, and `app.contacts`; suppresses `app.messages` and `runtime.outbox_commands`; records a suppressed active turn; and writes `conversation.reply_suppressed` audit metadata. It also covered human-takeover suppression preserving the current question state, recording the control snapshot, and avoiding outbound side effects.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: failed on first run. `npm ci` and lint passed, but `npm test` failed because `tests/config-versioning.test.ts` exceeded Vitest's 5 second timeout while spawning `npm run config` inside the full suite. Resolution: replaced the slow npm wrapper with direct `process.execPath --import tsx scripts/config.ts validate --airtable-export=<dir>` execution, preserving the same CLI script validation.
+
+Command: `npx vitest run tests/config-versioning.test.ts`
+
+Result: passed after the timeout fix. Focused config tests ran 4 tests in 743ms.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed after the timeout fix. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 65 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized Meta fixtures. No live Meta, Typebot, n8n, or Airtable call was made.

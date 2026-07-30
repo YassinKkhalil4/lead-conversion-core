@@ -103,3 +103,11 @@ Decision: Durable Meta inbound message processing only mutates conversations who
 Reason: The migration must preserve rollback/fallback paths until explicit cutover evidence exists. Processing legacy-owned turns in Edge would create duplicate authorities for conversation state and outbound replies.
 
 Date: 2026-07-30
+
+## DEC-014: Durable Opt-Out Suppresses Outbound Replies
+
+Decision: Durable inbound processing records explicit WhatsApp opt-outs as a no-reply state transition, updates Edge/app control state, and does not enqueue an outbound confirmation message.
+
+Reason: Once a lead has explicitly opted out, the safest durable behavior is to stop all outbound side effects immediately. Any future opt-out confirmation policy must be explicitly configured and verified against provider/legal requirements before sending.
+
+Date: 2026-07-30

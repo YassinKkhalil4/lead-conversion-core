@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-08 Conversation and qualification
 
-Exact next implementation task: Continue MP-08 by adding explicit opt-out and human-takeover handling for durable inbound WhatsApp messages, including persisted conversation/lead control state, audit records, suppressed outbound side effects, and PostgreSQL integration tests for opt-out words, takeover state, and resumed edge-owned turns.
+Exact next implementation task: Continue MP-08 by adding qualification completion and handoff persistence for durable inbound WhatsApp turns, including multi-turn English and Arabic fixtures, completed `app.qualification_sessions`, final answer coverage, no duplicate handoff/outbox effects on replay, and PostgreSQL integration tests for resumed edge-owned conversations.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: c104fd2
+Last verified implementation commit: b33a2ec
 
 Git worktree clean when recorded: yes

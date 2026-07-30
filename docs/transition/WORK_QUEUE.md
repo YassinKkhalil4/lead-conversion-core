@@ -96,9 +96,9 @@ Dependencies: staged Meta webhook for live turns.
 
 Verification gates: internal turns, Arabic/English fixtures, no external HTTP in transaction.
 
-Completed locally: durable Meta message receipt for signed webhook payloads, combined Meta inbox processor for status and inbound message events, edge-only ownership gate, legacy-owned Typebot fallback ignore path, qualification answer persistence, audit event recording, and transactional outbound WhatsApp outbox enqueue without live Meta calls.
+Completed locally: durable Meta message receipt for signed webhook payloads, combined Meta inbox processor for status and inbound message events, edge-only ownership gate, legacy-owned Typebot fallback ignore path, qualification answer persistence, audit event recording, transactional outbound WhatsApp outbox enqueue without live Meta calls, explicit opt-out persistence to Edge/app lead/contact/control state, and human-takeover suppression without outbound side effects.
 
-Remaining: explicit opt-out command handling, human-takeover transitions, qualification completion/handoff persistence coverage, Arabic/English multi-turn fixtures, n8n-compatible inbound message path if needed for fallback, source-to-app conversation projection hardening, live staged Meta turn verification pending owner setup.
+Remaining: qualification completion/handoff persistence coverage, Arabic/English multi-turn fixtures, n8n-compatible inbound message path if needed for fallback, source-to-app conversation projection hardening, live staged Meta turn verification pending owner setup.
 
 ## MP-09 Scoring, Routing, Commands, Alerts
 
