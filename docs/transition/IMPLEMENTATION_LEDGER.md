@@ -44,3 +44,4 @@
 - Implementation slice: Removed redundant deprecated Fastify `disableRequestLogging=false` option; default request logging behavior is unchanged and verification output no longer includes the deprecation warning.
 - Verification: `npm run lint && npm test` passed with 7 Vitest files and 45 tests after template/window policy implementation.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
+- Commit `58c6e33`: Enforced WhatsApp approved-template and session-window policy before message request enqueue.
