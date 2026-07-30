@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-08 Conversation and qualification
 
-Exact next implementation task: Continue MP-08 by adding qualification completion and handoff persistence for durable inbound WhatsApp turns, including multi-turn English and Arabic fixtures, completed `app.qualification_sessions`, final answer coverage, no duplicate handoff/outbox effects on replay, and PostgreSQL integration tests for resumed edge-owned conversations.
+Exact next implementation task: Continue MP-08 by hardening source-to-app conversation projection for durable inbound turns: ensure inbound/outbound message rows and qualification state can be traced from legacy `edge_conversations` to `app.conversations` where an app conversation exists or should be created, preserve idempotency on replay, and add PostgreSQL integration coverage without changing live provider behavior.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: b33a2ec
+Last verified implementation commit: 564c8d3
 
 Git worktree clean when recorded: yes
