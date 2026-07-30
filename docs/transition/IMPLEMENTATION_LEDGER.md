@@ -215,3 +215,9 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed; focused app-injection tests ran 2 tests proving disabled direct routes and separately enabled n8n compatibility.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 11 files and 106 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Commit `8738391`: Gated direct ingress routes for cutover.
+- Implementation slice: Continued MP-12 with `CutoverReadinessService` and `npm run cutover:readiness`. The report reads current direct-ingress flags, n8n fallback flag, pending/oldest inbox and outbox work, delivery-unknown counts, unreplayed dead letters, and latest runtime worker heartbeat age.
+- Decision: Cutover readiness reporting is strictly read-only and does not claim, retry, replay, dead-letter, or mutate durable runtime rows.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed; focused PostgreSQL tests ran 2 tests covering clean readiness and stale queue/dead-letter failure checks.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 11 files and 108 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Commit `16c0ac5`: Added cutover readiness report.

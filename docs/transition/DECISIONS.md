@@ -207,3 +207,11 @@ Decision: Direct Meta webhook receipt and direct website/Facebook lead ingress a
 Reason: MP-12 must preserve fallback infrastructure during cutover and avoid accidental direct-provider activation from merely deploying the edge app with secrets present. Direct ingress should become reachable only through an explicit environment and routing change.
 
 Date: 2026-07-30
+
+## DEC-018: Cutover Readiness Is Read-Only
+
+Decision: The MP-12 cutover readiness command reports direct-route flags, fallback compatibility, queue backlog, delivery-unknowns, dead letters, and runtime heartbeat age without claiming, retrying, replaying, cancelling, or mutating any durable runtime row.
+
+Reason: Cutover checks must be safe to run repeatedly in staging and production. Operational repair actions belong to explicit reconciliation/replay commands with separate operator intent.
+
+Date: 2026-07-30
