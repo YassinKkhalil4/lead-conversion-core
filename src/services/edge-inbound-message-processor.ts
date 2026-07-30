@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConversationRepository } from '../repositories/conversation-repository.js';
 import { evaluateConversation } from '../domain/engine.js';
-import type { ReplyDecision } from '../domain/types.js';
+import type { ConversationState, ReplyDecision } from '../domain/types.js';
 import { pool } from '../db/pool.js';
 import {
   AuditRepository,
@@ -55,6 +55,35 @@ function toMessagingPayload(decision: ReplyDecision): MessagingPayload {
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+const OPT_OUT_WORDS = ['stop', 'unsubscribe', 'الغاء', 'إلغاء', 'وقف', 'بلوك', 'مش مهتم', 'مش عايز'];
+
+function isOptOut(text: string): boolean {
+  const value = text.toLocaleLowerCase().trim();
+  return OPT_OUT_WORDS.some((word) => value.includes(word.toLocaleLowerCase()));
+}
+
+function optOutDecision(state: ConversationState): ReplyDecision {
+  const nextState: ConversationState = {
+    ...state,
+    status: 'not_interested',
+    currentStage: 'stopped',
+    currentQuestionKey: '',
+    stopFollowUp: true,
+    stateVersion: state.stateVersion + 1,
+  };
+  return {
+    action: 'no_reply',
+    replyKey: 'opt_out_recorded',
+    text: '',
+    messageKind: 'text',
+    stageBefore: state.currentStage,
+    stageAfter: 'stopped',
+    suppressionReason: 'lead_opted_out',
+    outboxEvents: [{ eventType: 'lead_opted_out', payload: { reason: 'lead_opted_out' } }],
+    nextState,
+  };
 }
 
 export class EdgeInboundMessageProcessor {
@@ -124,12 +153,14 @@ export class EdgeInboundMessageProcessor {
       state.leadName = state.leadName || input.profileName || '';
 
       const config = await this.configs.getByVersion(state.configVersion, client);
-      const decision = evaluateConversation({
-        state,
-        config,
-        ...(input.messageText ? { messageText: input.messageText } : {}),
-        ...(input.messageOptionId ? { messageOptionId: input.messageOptionId } : {}),
-      });
+      const decision = isOptOut(input.messageText)
+        ? optOutDecision(state)
+        : evaluateConversation({
+            state,
+            config,
+            ...(input.messageText ? { messageText: input.messageText } : {}),
+            ...(input.messageOptionId ? { messageOptionId: input.messageOptionId } : {}),
+          });
 
       if (decision.action === 'fallback') {
         await client.query(
@@ -165,6 +196,12 @@ export class EdgeInboundMessageProcessor {
       );
 
       await this.persistQualificationEvents(client, state.leadId, decision);
+      if (decision.outboxEvents.some((outboxEvent) => outboxEvent.eventType === 'lead_opted_out')) {
+        await this.persistOptOut(client, decision.nextState, input.from);
+      }
+      if (decision.suppressionReason === 'human_takeover') {
+        await this.persistControlSnapshot(client, decision.nextState, event.inboxEventId);
+      }
 
       let messageId = '';
       let outboxCommandId = '';
@@ -240,6 +277,32 @@ export class EdgeInboundMessageProcessor {
           currentQuestionKey: decision.nextState.currentQuestionKey,
         },
       });
+      if (decision.suppressionReason) {
+        await this.audit.record(client, {
+          eventType: 'conversation.reply_suppressed',
+          actorType: decision.suppressionReason === 'lead_opted_out' ? 'external_user' : 'system',
+          actorId: decision.suppressionReason === 'lead_opted_out' ? input.from : 'edge-inbound-message-processor',
+          aggregateType: 'lead',
+          ...(isUuid(state.leadId) ? { aggregateId: state.leadId } : {}),
+          correlationId: event.dedupeKey,
+          causationId: event.inboxEventId,
+          payload: {
+            provider: event.provider,
+            reason: decision.suppressionReason,
+            replyQueued: false,
+          },
+          before: {
+            currentStage: decision.stageBefore,
+            stopFollowUp: state.stopFollowUp,
+            humanTakeover: state.humanTakeover,
+          },
+          after: {
+            currentStage: decision.nextState.currentStage,
+            stopFollowUp: decision.nextState.stopFollowUp,
+            humanTakeover: decision.nextState.humanTakeover,
+          },
+        });
+      }
 
       await client.query(
         `UPDATE edge_active_turns
@@ -341,5 +404,77 @@ export class EdgeInboundMessageProcessor {
         [sessionId],
       );
     }
+  }
+
+  private async persistOptOut(
+    client: typeof pool | import('pg').PoolClient,
+    state: ConversationState,
+    phoneNormalized: string,
+  ): Promise<void> {
+    await this.persistControlSnapshot(client, state, 'lead_opted_out');
+    if (!isUuid(state.leadId)) return;
+    await client.query(
+      `UPDATE app.leads
+       SET status='not_interested',
+           current_stage='stopped',
+           stop_follow_up=true,
+           stop_reason='lead_opted_out',
+           updated_at=now()
+       WHERE lead_id=$1`,
+      [state.leadId],
+    );
+    await client.query(
+      `UPDATE app.contacts c
+       SET opted_out=true,
+           opt_out_reason='lead_opted_out',
+           updated_at=now()
+       FROM app.leads l
+       WHERE l.contact_id=c.contact_id
+         AND l.lead_id=$1
+         AND c.phone_e164=$2`,
+      [state.leadId, phoneNormalized],
+    );
+  }
+
+  private async persistControlSnapshot(
+    client: typeof pool | import('pg').PoolClient,
+    state: ConversationState,
+    sourceEventId: string,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO edge_lead_controls (
+        client_record_id, phone_normalized, lead_record_id, status, current_stage,
+        human_takeover, stop_follow_up, closed_status, appointment_status,
+        assigned_salesperson_record_id, assigned_salesperson_phone, source, source_event_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'edge_inbound_message',$12)
+      ON CONFLICT (client_record_id, phone_normalized) DO UPDATE SET
+        lead_record_id=COALESCE(NULLIF(EXCLUDED.lead_record_id,''), edge_lead_controls.lead_record_id),
+        status=COALESCE(NULLIF(EXCLUDED.status,''), edge_lead_controls.status),
+        current_stage=COALESCE(NULLIF(EXCLUDED.current_stage,''), edge_lead_controls.current_stage),
+        human_takeover=EXCLUDED.human_takeover,
+        stop_follow_up=EXCLUDED.stop_follow_up,
+        closed_status=COALESCE(NULLIF(EXCLUDED.closed_status,''), edge_lead_controls.closed_status),
+        appointment_status=COALESCE(NULLIF(EXCLUDED.appointment_status,''), edge_lead_controls.appointment_status),
+        assigned_salesperson_record_id=COALESCE(NULLIF(EXCLUDED.assigned_salesperson_record_id,''), edge_lead_controls.assigned_salesperson_record_id),
+        assigned_salesperson_phone=COALESCE(NULLIF(EXCLUDED.assigned_salesperson_phone,''), edge_lead_controls.assigned_salesperson_phone),
+        source='edge_inbound_message',
+        source_event_id=EXCLUDED.source_event_id,
+        control_version=edge_lead_controls.control_version + 1,
+        updated_at=now()`,
+      [
+        state.clientRecordId,
+        state.phoneNormalized,
+        state.leadRecordId,
+        state.status,
+        state.currentStage,
+        state.humanTakeover,
+        state.stopFollowUp,
+        state.closedStatus,
+        state.appointmentStatus,
+        state.assignedSalespersonRecordId,
+        state.assignedSalespersonPhone,
+        sourceEventId,
+      ],
+    );
   }
 }

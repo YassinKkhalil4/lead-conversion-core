@@ -132,7 +132,7 @@ describe('versioned configuration validation', () => {
         missingTables: [],
       });
 
-      const output = execFileSync('npm', ['run', '--silent', 'config', '--', 'validate', `--airtable-export=${dir}`], {
+      const output = execFileSync(process.execPath, ['--import', 'tsx', 'scripts/config.ts', 'validate', `--airtable-export=${dir}`], {
         env: process.env,
         encoding: 'utf8',
       });

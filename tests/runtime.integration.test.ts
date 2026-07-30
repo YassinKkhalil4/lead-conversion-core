@@ -217,6 +217,94 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     };
   }
 
+  async function seedMp08Conversation(input: {
+    suffix: string;
+    phone: string;
+    phoneNumberId: string;
+    humanTakeover?: boolean;
+  }): Promise<{ clientId: string; contactId: string; leadId: string; versionKey: string; configurationVersionId: string }> {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    const service = new versionedConfig.VersionedConfigService();
+    const clientRecordId = `recMP08${input.suffix}`;
+    const published = await service.publish({
+      sourcePath: join(process.cwd(), 'config/seed-real-estate.json'),
+      clientRecordId,
+      publishedBy: 'test-operator',
+    });
+    const client = await db.pool.query<{ client_id: string }>(
+      `INSERT INTO app.clients (client_key, legacy_airtable_id, company_name)
+       VALUES ($1, $2, $3)
+       RETURNING client_id`,
+      [`client-mp08-${input.suffix.toLocaleLowerCase()}`, clientRecordId, `MP08 ${input.suffix} Client`],
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    const contact = await db.pool.query<{ contact_id: string }>(
+      `INSERT INTO app.contacts (client_id, legacy_airtable_id, name, phone_raw, phone_e164, consent_status)
+       VALUES ($1, $2, 'MP08 Lead', $3, $3, 'opted_in')
+       RETURNING contact_id`,
+      [clientId, `recMP08${input.suffix}CONTACT`, input.phone],
+    );
+    const contactId = contact.rows[0]?.contact_id;
+    if (!contactId) throw new Error('contact_not_created');
+    const project = await db.pool.query<{ project_id: string }>(
+      `INSERT INTO app.projects (client_id, legacy_airtable_id, project_name)
+       VALUES ($1, $2, $3)
+       RETURNING project_id`,
+      [clientId, `recMP08${input.suffix}PROJECT`, `MP08 ${input.suffix} Project`],
+    );
+    const projectId = project.rows[0]?.project_id;
+    if (!projectId) throw new Error('project_not_created');
+    const lead = await db.pool.query<{ lead_id: string }>(
+      `INSERT INTO app.leads
+        (client_id, contact_id, project_id, legacy_airtable_id, provider, provider_external_id, source, source_payload_hash, current_stage)
+       VALUES ($1, $2, $3, $4, 'airtable', $4, 'airtable_import', $5, 'asking_location')
+       RETURNING lead_id`,
+      [clientId, contactId, projectId, `recMP08${input.suffix}LEAD`, `fixture-hash-${input.suffix}`],
+    );
+    const leadId = lead.rows[0]?.lead_id;
+    if (!leadId) throw new Error('lead_not_created');
+    await db.pool.query(
+      `INSERT INTO edge_client_channels
+        (phone_number_id, client_record_id, client_id, company_name, active, config_version, direct_send_enabled, graph_phone_number_id)
+       VALUES ($1, $2, $3, $4, true, $5, true, $1)`,
+      [input.phoneNumberId, clientRecordId, clientId, `MP08 ${input.suffix} Client`, published.versionKey],
+    );
+    await db.pool.query(
+      `INSERT INTO edge_conversations
+        (client_record_id, client_id, phone_normalized, lead_record_id, lead_id, lead_name,
+         company_name, project_name, project_record_id, preferred_language, current_stage,
+         current_question_key, answers_json, status, human_takeover, conversation_engine,
+         state_authority, config_version, configuration_version_id)
+       VALUES (
+         $1, $2, $3, $4, $5, 'MP08 Lead',
+         $6, $7, $8, 'English', 'asking_location',
+         'q_location', '{}'::jsonb, 'in_qualification', $9, 'edge',
+         'edge', $10, $11
+       )`,
+      [
+        clientRecordId,
+        clientId,
+        input.phone,
+        `recMP08${input.suffix}LEAD`,
+        leadId,
+        `MP08 ${input.suffix} Client`,
+        `MP08 ${input.suffix} Project`,
+        `recMP08${input.suffix}PROJECT`,
+        input.humanTakeover ?? false,
+        published.versionKey,
+        published.configurationVersionId,
+      ],
+    );
+    return {
+      clientId,
+      contactId,
+      leadId,
+      versionKey: published.versionKey,
+      configurationVersionId: published.configurationVersionId,
+    };
+  }
+
   it('deduplicates inbound events before business processing creates side effects', async () => {
     const inbox = new runtime.InboxRepository();
     const outbox = new runtime.RuntimeOutboxRepository();
@@ -987,6 +1075,145 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message' AND state='pending'")).rows[0]?.count).toBe('1');
       expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.inbound.1'")).rows[0]?.status).toBe('queued');
       expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='conversation.inbound_processed'")).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('records explicit opt-outs from durable inbound messages without enqueueing another WhatsApp send', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'OPTOUT',
+      phone: '+201099999997',
+      phoneNumberId: 'phone-number-id-mp08-optout',
+    });
+    const app = await appModule.buildApp();
+    try {
+      const payload = metaInboundPayload({
+        providerMessageId: 'wamid.mp08.optout.inbound.1',
+        from: '+201099999997',
+        phoneNumberId: 'phone-number-id-mp08-optout',
+        text: 'STOP',
+      });
+      const signed = signedMetaWebhook(payload);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(response.statusCode).toBe(200);
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(1);
+
+      expect((await db.pool.query(
+        `SELECT status, current_stage, current_question_key, stop_follow_up
+         FROM edge_conversations
+         WHERE lead_id=$1`,
+        [seeded.leadId],
+      )).rows[0]).toEqual({
+        status: 'not_interested',
+        current_stage: 'stopped',
+        current_question_key: '',
+        stop_follow_up: true,
+      });
+      expect((await db.pool.query(
+        'SELECT status, current_stage, stop_follow_up, stop_reason FROM app.leads WHERE lead_id=$1',
+        [seeded.leadId],
+      )).rows[0]).toEqual({
+        status: 'not_interested',
+        current_stage: 'stopped',
+        stop_follow_up: true,
+        stop_reason: 'lead_opted_out',
+      });
+      expect((await db.pool.query('SELECT opted_out, opt_out_reason FROM app.contacts WHERE contact_id=$1', [seeded.contactId])).rows[0]).toEqual({
+        opted_out: true,
+        opt_out_reason: 'lead_opted_out',
+      });
+      expect((await db.pool.query(
+        `SELECT status, current_stage, stop_follow_up, source
+         FROM edge_lead_controls
+         WHERE client_record_id='recMP08OPTOUT' AND phone_normalized='+201099999997'`,
+      )).rows[0]).toEqual({
+        status: 'not_interested',
+        current_stage: 'stopped',
+        stop_follow_up: true,
+        source: 'edge_inbound_message',
+      });
+      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.optout.inbound.1'")).rows[0]?.status).toBe('suppressed');
+      expect((await db.pool.query("SELECT payload_json->>'reason' AS reason FROM audit.events WHERE event_type='conversation.reply_suppressed'")).rows[0]?.reason).toBe('lead_opted_out');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('suppresses durable inbound replies while human takeover is active and records control state', async () => {
+    await seedMp08Conversation({
+      suffix: 'TAKEOVER',
+      phone: '+201099999998',
+      phoneNumberId: 'phone-number-id-mp08-takeover',
+      humanTakeover: true,
+    });
+    const app = await appModule.buildApp();
+    try {
+      const payload = metaInboundPayload({
+        providerMessageId: 'wamid.mp08.takeover.inbound.1',
+        from: '+201099999998',
+        phoneNumberId: 'phone-number-id-mp08-takeover',
+        text: 'New Cairo',
+      });
+      const signed = signedMetaWebhook(payload);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(response.statusCode).toBe(200);
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(1);
+
+      expect((await db.pool.query(
+        `SELECT current_stage, current_question_key, human_takeover, answers_json
+         FROM edge_conversations
+         WHERE client_record_id='recMP08TAKEOVER' AND phone_normalized='+201099999998'`,
+      )).rows[0]).toEqual({
+        current_stage: 'asking_location',
+        current_question_key: 'q_location',
+        human_takeover: true,
+        answers_json: {},
+      });
+      expect((await db.pool.query(
+        `SELECT current_stage, human_takeover, stop_follow_up, source
+         FROM edge_lead_controls
+         WHERE client_record_id='recMP08TAKEOVER' AND phone_normalized='+201099999998'`,
+      )).rows[0]).toEqual({
+        current_stage: 'asking_location',
+        human_takeover: true,
+        stop_follow_up: false,
+        source: 'edge_inbound_message',
+      });
+      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.takeover.inbound.1'")).rows[0]?.status).toBe('suppressed');
+      expect((await db.pool.query("SELECT payload_json->>'reason' AS reason FROM audit.events WHERE event_type='conversation.reply_suppressed'")).rows[0]?.reason).toBe('human_takeover');
     } finally {
       await app.close();
     }
