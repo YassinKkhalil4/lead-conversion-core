@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-10 Follow-ups, SLA, reporting
 
-Exact next implementation task: Continue MP-10 by adding due follow-up job execution. Process claimed `followup.send` scheduled jobs without in-process timers, validate the lead still allows follow-up, insert outbound `app.messages` and `runtime.outbox_commands` atomically, mark `app.followups` sent/cancelled as appropriate, complete/retry/dead-letter job attempts through `RuntimeWorker`, and add PostgreSQL integration tests for duplicate execution prevention, cancellation before send, retryable send enqueue failure, and expired job lease recovery.
+Exact next implementation task: Continue MP-10 by adding SLA reminder and escalation scheduling. Persist semantic SLA jobs for unacknowledged assignments and stale qualified leads, cancel them on acknowledgement/close/takeover/opt-out, execute due SLA jobs into durable operator/salesperson outbox commands without provider calls inside transactions, and add PostgreSQL integration tests for duplicate prevention, cancellation, expired leases, and escalation command idempotency.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: 0adcb5b
+Last verified implementation commit: daa9945
 
 Git worktree clean when recorded: yes

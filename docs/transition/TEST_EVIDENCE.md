@@ -568,6 +568,22 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; Typ
 
 Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or report-recipient provider call was made.
 
+## 2026-07-30 MP-10 Follow-Up Job Execution
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed. Runtime integration ran 43 PostgreSQL/API tests, including due `followup.send` job execution through `RuntimeWorker`, one outbound app message and one runtime outbox command per follow-up, duplicate execution prevention after job completion, cancelled scheduled job non-execution, and expired scheduled-job lease recovery before follow-up send.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 82 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or report-recipient provider call was made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`

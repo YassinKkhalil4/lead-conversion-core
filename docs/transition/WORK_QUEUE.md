@@ -124,9 +124,9 @@ Dependencies: client report recipients/templates for live sends.
 
 Verification gates: durable job restart, cancellation, SQL reconciliation.
 
-Completed locally: semantic follow-up identity on `app.followups`; durable `runtime.scheduled_jobs` scheduling with explicit client timezone; duplicate schedule requests return the existing follow-up/job without duplicate rows or audit; cancellation of scheduled follow-ups/jobs on assignment, qualification completion, opt-out, takeover, close-lost, and stop-follow-up paths; PostgreSQL integration tests for duplicate prevention, timezone storage, assignment cancellation, and salesperson close-lost cancellation.
+Completed locally: semantic follow-up identity on `app.followups`; durable `runtime.scheduled_jobs` scheduling with explicit client timezone; duplicate schedule requests return the existing follow-up/job without duplicate rows or audit; cancellation of scheduled follow-ups/jobs on assignment, qualification completion, opt-out, takeover, close-lost, and stop-follow-up paths; due `followup.send` job execution through `RuntimeWorker`; follow-up send revalidation before outbound effects; atomic outbound `app.messages` plus `runtime.outbox_commands` enqueue; expired job lease recovery before follow-up send; PostgreSQL integration tests for duplicate prevention, timezone storage, assignment cancellation, salesperson close-lost cancellation, single execution, pre-send cancellation, and expired lease recovery.
 
-Remaining: due follow-up job execution into `runtime.outbox_commands`; SLA reminder/escalation scheduling and cancellation; reporting jobs and SQL report generation; live report recipient/template verification when owner inputs are available.
+Remaining: SLA reminder/escalation scheduling and cancellation; reporting jobs and SQL report generation; live report recipient/template verification when owner inputs are available.
 
 ## MP-11 Appointments And Calendar
 
