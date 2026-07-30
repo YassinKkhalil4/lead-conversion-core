@@ -301,6 +301,9 @@ export class InboxRepository {
 
 export interface ClaimedOutboxCommand {
   outboxCommandId: string;
+  commandType: string;
+  destination: string;
+  idempotencyKey: string;
   attemptCount: number;
   payload: Record<string, unknown>;
 }
@@ -340,6 +343,9 @@ export class RuntimeOutboxRepository {
       await client.query('BEGIN');
       const result = await client.query<{
         outbox_command_id: string;
+        command_type: string;
+        destination: string;
+        idempotency_key: string;
         attempt_count: number;
         payload_json: Record<string, unknown>;
       }>(
@@ -360,7 +366,7 @@ export class RuntimeOutboxRepository {
             attempt_count=attempt_count+1
         FROM candidates
         WHERE o.outbox_command_id=candidates.outbox_command_id
-        RETURNING o.outbox_command_id, o.attempt_count, o.payload_json`,
+        RETURNING o.outbox_command_id, o.command_type, o.destination, o.idempotency_key, o.attempt_count, o.payload_json`,
         [limit, workerId, leaseSeconds],
       );
       for (const row of result.rows) {
@@ -374,6 +380,9 @@ export class RuntimeOutboxRepository {
       await client.query('COMMIT');
       return result.rows.map((row) => ({
         outboxCommandId: row.outbox_command_id,
+        commandType: row.command_type,
+        destination: row.destination,
+        idempotencyKey: row.idempotency_key,
         attemptCount: row.attempt_count,
         payload: row.payload_json,
       }));

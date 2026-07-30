@@ -1,11 +1,21 @@
 import { getEnv } from './config/env.js';
 import { logger } from './config/logger.js';
 import { closePool } from './db/pool.js';
+import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adapter.js';
+import { MessagingOutboxDispatcher } from './worker/messaging-outbox-dispatcher.js';
 import { OutboxWorker } from './worker/outbox-worker.js';
 import { RuntimeWorker } from './worker/runtime-worker.js';
 
 const env = getEnv();
-const worker = env.WORKER_KIND === 'runtime' ? new RuntimeWorker() : new OutboxWorker();
+const messagingDispatcher = env.DIRECT_META_SEND_ENABLED
+  ? new MessagingOutboxDispatcher({ meta: MetaWhatsAppAdapter.fromEnv() })
+  : undefined;
+const runtimeHandlers = messagingDispatcher
+  ? { dispatchOutbox: (command: Parameters<MessagingOutboxDispatcher['dispatch']>[0]) => messagingDispatcher.dispatch(command) }
+  : {};
+const worker = env.WORKER_KIND === 'runtime'
+  ? new RuntimeWorker(runtimeHandlers)
+  : new OutboxWorker();
 
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'Stopping outbox worker');

@@ -31,3 +31,7 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.
 - Deferred external verification: live Meta send/status verification remains pending rotated credentials, approved templates, and staging webhook access.
 - Commit `b0fbd16`: Added provider-neutral messaging contract, disabled Meta WhatsApp adapter, sanitized provider fixtures, and adapter classification tests.
+- Implementation slice: Added `MessagingOutboxDispatcher` for `whatsapp.send_message` runtime outbox commands, mapping Meta accepted/retryable/permanent/unknown outcomes onto runtime worker dispatch outcomes without database transactions around provider calls.
+- Implementation slice: Wired `WORKER_KIND=runtime` to use the messaging dispatcher only when `DIRECT_META_SEND_ENABLED=true`; when disabled, the runtime worker does not claim message side-effect rows.
+- Verification: `npm run lint && npm test` passed with 7 Vitest files and 41 tests after durable outbox dispatcher wiring.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; audit found 0 vulnerabilities and smoke returned `ok=true`.

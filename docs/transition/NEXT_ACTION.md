@@ -4,7 +4,7 @@ Last updated: 2026-07-30
 
 Current mini-project: MP-05 WhatsApp messaging platform
 
-Exact next implementation task: Continue MP-05 by wiring a durable outbox dispatcher for `whatsapp.send_message` commands that maps Meta adapter outcomes onto runtime outbox states without holding database transactions during provider HTTP calls.
+Exact next implementation task: Continue MP-05 by adding an internal message request API/service that validates WhatsApp send requests, enforces deterministic idempotency keys, inserts `app.messages`, and enqueues `runtime.outbox_commands` transactionally without calling Meta inside the database transaction.
 
 Files expected to change:
 
@@ -40,6 +40,6 @@ Known blockers:
 - Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 
-Last verified implementation commit: b0fbd16
+Last verified implementation commit: b0fbd16 plus uncommitted MP-05 outbox dispatcher slice verified by the full npm/lint/test/build/audit/smoke gate
 
-Git worktree clean when recorded: yes
+Git worktree clean when recorded: no

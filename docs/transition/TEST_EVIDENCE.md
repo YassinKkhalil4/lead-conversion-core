@@ -211,3 +211,15 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 6 files and 37 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local contract-fixture tested. Live Meta verification remains pending owner action for rotated credentials, template approvals, and staging webhook access.
+
+## 2026-07-30 MP-05 Messaging Outbox Dispatcher
+
+Command: `npm run lint && npm test`
+
+Result: passed. Vitest ran 7 test files and 41 tests, including dispatcher coverage for mapping accepted provider sends to delivered runtime outcomes, preserving retry hints, rejecting unsupported outbox command types without provider calls, and rejecting malformed WhatsApp send payloads without provider calls.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 7 files and 41 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local unit and contract-fixture tested. No live provider call was made.
