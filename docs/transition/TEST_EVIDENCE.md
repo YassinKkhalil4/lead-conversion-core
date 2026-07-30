@@ -379,3 +379,19 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 61 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live website, Facebook Graph, Airtable, or Meta provider call was made.
+
+## 2026-07-30 MP-07 Airtable Projection Outbox Hook
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed. Runtime integration ran 26 PostgreSQL/API tests, including deterministic `airtable.project_lead_visibility` outbox command creation for new lead intake, duplicate intake preserving the same projection command ID, opted-out lead intake still creating only the projection command, and permanent projection command failure preserving the authoritative `app.leads` row.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 8 files and 61 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL/API integration tested. No live Airtable call was made.

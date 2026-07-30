@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-30
 
-Current mini-project: MP-07 Lead intake and CRM
+Current mini-project: MP-08 Conversation and qualification
 
-Exact next implementation task: Continue MP-07 by adding the Airtable read-only visibility projection hook for newly accepted leads, keeping projection side effects in the durable outbox and proving projection failures do not roll back authoritative PostgreSQL intake state.
+Exact next implementation task: Begin MP-08 by adding the edge-owned inbound message processing bridge from durable Meta inbox events to conversation state, qualification answers, and outbound reply outbox commands, preserving Typebot fallback for unsupported/legacy conversations.
 
 Files expected to change:
 
@@ -42,6 +42,6 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 
-Last verified implementation commit: 0923e79
+Last verified implementation commit: b865b26
 
 Git worktree clean when recorded: yes

@@ -76,7 +76,7 @@ Remaining: final real-export config-source reconciliation is blocked until the o
 
 ## MP-07 Lead Intake And CRM
 
-Status: implementing
+Status: staging_blocked
 
 Deliverables: authenticated lead intake, contact/lead upsert policy, project matching, first-contact enqueue, Airtable projection-only hook.
 
@@ -84,7 +84,7 @@ Dependencies: real website/Facebook configuration for live verification.
 
 Verification gates: idempotent intake, opted-out suppression, projection failure isolation.
 
-Remaining: Airtable projection-only hook, projection failure isolation tests, and live intake verification pending owner source configuration.
+Remaining: live website/Facebook intake verification and live Airtable projection verification pending owner source/Airtable configuration.
 
 ## MP-08 Conversation And Qualification
 

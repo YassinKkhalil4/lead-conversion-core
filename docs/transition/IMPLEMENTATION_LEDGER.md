@@ -92,3 +92,8 @@
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 61 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: live website/Facebook webhook verification remains pending owner source configuration and callback setup.
 - Commit `0923e79`: Added durable website/Facebook lead source ingress adapters.
+- Implementation slice: Added durable Airtable read-only lead visibility projection hook as `runtime.outbox_commands` command type `airtable.project_lead_visibility`, with deterministic idempotency and ID-only payload. Projection failure is isolated to the outbox/dead-letter path and does not roll back authoritative lead/contact/intake state.
+- Verification: `npm run lint` and `npx vitest run tests/runtime.integration.test.ts` passed; runtime integration ran 26 PostgreSQL/API tests including projection outbox creation and permanent projection failure preserving the lead row.
+- Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 8 files and 61 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: live Airtable projection remains pending owner Airtable export/access and projection target confirmation.
+- Commit `b865b26`: Added Airtable lead projection outbox hook.
