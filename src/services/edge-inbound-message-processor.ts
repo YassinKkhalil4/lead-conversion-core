@@ -28,6 +28,8 @@ const inboundMessageSchema = z.object({
   rawMessage: z.record(z.unknown()).optional().default({}),
 });
 
+type InboundMessagePayload = z.infer<typeof inboundMessageSchema>;
+
 function toMessagingPayload(decision: ReplyDecision): MessagingPayload {
   if (decision.messageKind === 'buttons') {
     return {
@@ -195,7 +197,20 @@ export class EdgeInboundMessageProcessor {
         ],
       );
 
-      await this.persistQualificationEvents(client, state.leadId, decision);
+      const target = await this.resolveAppLead(client, state.leadId);
+      const appConversationId = target
+        ? await this.upsertAppConversation(client, decision.nextState, target)
+        : '';
+      if (target && appConversationId) {
+        await this.persistInboundAppMessage(client, {
+          appConversationId,
+          target,
+          input,
+          event,
+        });
+      }
+
+      await this.persistQualificationEvents(client, state.leadId, decision, appConversationId);
       if (decision.outboxEvents.some((outboxEvent) => outboxEvent.eventType === 'lead_opted_out')) {
         await this.persistOptOut(client, decision.nextState, input.from);
       }
@@ -206,7 +221,6 @@ export class EdgeInboundMessageProcessor {
       let messageId = '';
       let outboxCommandId = '';
       if (decision.action !== 'no_reply' && decision.text) {
-        const target = await this.resolveAppLead(client, state.leadId);
         if (!target) {
           await client.query('ROLLBACK');
           return { outcome: 'ignored', reason: 'app_lead_not_found_for_edge_conversation' };
@@ -215,13 +229,14 @@ export class EdgeInboundMessageProcessor {
         const idempotencyKey = `whatsapp.send:${target.clientId}:inbox:${event.inboxEventId}:${sha256Hex(stableJson(payload)).slice(0, 24)}`;
         const message = await client.query<{ message_id: string }>(
           `INSERT INTO app.messages
-            (lead_id, client_id, contact_id, direction, channel, to_address,
+            (conversation_id, lead_id, client_id, contact_id, direction, channel, to_address,
              message_text, message_type, state, raw_payload, idempotency_key)
-           VALUES ($1, $2, $3, 'outbound', 'whatsapp', $4, $5, $6, 'queued', $7::jsonb, $8)
+           VALUES ($1, $2, $3, $4, 'outbound', 'whatsapp', $5, $6, $7, 'queued', $8::jsonb, $9)
            ON CONFLICT (client_id, idempotency_key) WHERE idempotency_key <> ''
            DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key
            RETURNING message_id`,
           [
+            appConversationId || null,
             target.leadId,
             target.clientId,
             target.contactId,
@@ -341,10 +356,108 @@ export class EdgeInboundMessageProcessor {
     return row ? { leadId: row.lead_id, clientId: row.client_id, contactId: row.contact_id } : null;
   }
 
+  private async upsertAppConversation(
+    client: typeof pool | import('pg').PoolClient,
+    state: ConversationState,
+    target: { leadId: string; clientId: string; contactId: string },
+  ): Promise<string> {
+    const result = await client.query<{ conversation_id: string }>(
+      `INSERT INTO app.conversations
+        (client_id, contact_id, lead_id, configuration_version_id, status,
+         current_stage, current_question_key, preferred_language, human_takeover,
+         state_json, state_version, last_inbound_at, conversation_window_expires_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,NULLIF($12,'')::timestamptz,NULLIF($13,'')::timestamptz)
+       ON CONFLICT (lead_id) WHERE lead_id IS NOT NULL DO UPDATE SET
+         client_id=EXCLUDED.client_id,
+         contact_id=EXCLUDED.contact_id,
+         configuration_version_id=EXCLUDED.configuration_version_id,
+         status=EXCLUDED.status,
+         current_stage=EXCLUDED.current_stage,
+         current_question_key=EXCLUDED.current_question_key,
+         preferred_language=EXCLUDED.preferred_language,
+         human_takeover=EXCLUDED.human_takeover,
+         state_json=EXCLUDED.state_json,
+         state_version=EXCLUDED.state_version,
+         last_inbound_at=EXCLUDED.last_inbound_at,
+         conversation_window_expires_at=EXCLUDED.conversation_window_expires_at,
+         closed_at=CASE
+           WHEN EXCLUDED.status IN ('qualified','not_interested','stopped') THEN COALESCE(app.conversations.closed_at, now())
+           ELSE app.conversations.closed_at
+         END,
+         updated_at=now()
+       RETURNING conversation_id`,
+      [
+        target.clientId,
+        target.contactId,
+        target.leadId,
+        state.configurationVersionId ?? null,
+        state.status || 'open',
+        state.currentStage,
+        state.currentQuestionKey,
+        state.preferredLanguage,
+        state.humanTakeover,
+        JSON.stringify({
+          source: 'edge_conversations',
+          edgeConversationId: state.conversationId,
+          clientRecordId: state.clientRecordId,
+          leadRecordId: state.leadRecordId,
+          answers: state.answers,
+          stopFollowUp: state.stopFollowUp,
+          stateAuthority: state.stateAuthority,
+          conversationEngine: state.conversationEngine,
+        }),
+        state.stateVersion,
+        state.lastInboundAt,
+        state.conversationWindowExpiresAt,
+      ],
+    );
+    const appConversationId = result.rows[0]?.conversation_id;
+    if (!appConversationId) throw new Error('app_conversation_projection_not_created');
+    return appConversationId;
+  }
+
+  private async persistInboundAppMessage(
+    client: typeof pool | import('pg').PoolClient,
+    input: {
+      appConversationId: string;
+      target: { leadId: string; clientId: string; contactId: string };
+      input: InboundMessagePayload;
+      event: ClaimedInboxEvent;
+    },
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO app.messages
+        (conversation_id, lead_id, client_id, contact_id, direction, channel,
+         from_address, message_text, message_type, provider_message_id, state, raw_payload)
+       VALUES ($1,$2,$3,$4,'inbound','whatsapp',$5,$6,$7,$8,'delivered',$9::jsonb)
+       ON CONFLICT (client_id, provider_message_id) WHERE provider_message_id <> ''
+       DO UPDATE SET conversation_id=EXCLUDED.conversation_id
+       RETURNING message_id`,
+      [
+        input.appConversationId,
+        input.target.leadId,
+        input.target.clientId,
+        input.target.contactId,
+        input.input.from,
+        input.input.messageText,
+        input.input.messageType,
+        input.input.metaMessageId,
+        JSON.stringify({
+          provider: input.event.provider,
+          inboxEventId: input.event.inboxEventId,
+          phoneNumberId: input.input.phoneNumberId,
+          messageOptionId: input.input.messageOptionId,
+          rawMessage: input.input.rawMessage,
+        }),
+      ],
+    );
+  }
+
   private async persistQualificationEvents(
     client: typeof pool | import('pg').PoolClient,
     leadId: string,
     decision: ReplyDecision,
+    appConversationId: string,
   ): Promise<void> {
     if (!isUuid(leadId)) return;
     const answerEvents = decision.outboxEvents.filter((event) => event.eventType === 'qualification_answer_saved');
@@ -357,8 +470,8 @@ export class EdgeInboundMessageProcessor {
         ORDER BY started_at DESC
         LIMIT 1
       ), inserted AS (
-        INSERT INTO app.qualification_sessions (lead_id, status, configuration_version_id)
-        SELECT $1, 'in_progress', $2
+        INSERT INTO app.qualification_sessions (conversation_id, lead_id, status, configuration_version_id)
+        SELECT NULLIF($3, '')::uuid, $1, 'in_progress', $2
         WHERE NOT EXISTS (SELECT 1 FROM existing)
         RETURNING qualification_session_id
       )
@@ -366,7 +479,7 @@ export class EdgeInboundMessageProcessor {
       UNION ALL
       SELECT qualification_session_id FROM existing
       LIMIT 1`,
-      [leadId, decision.nextState.configurationVersionId ?? null],
+      [leadId, decision.nextState.configurationVersionId ?? null, appConversationId],
     );
     const sessionId = session.rows[0]?.qualification_session_id;
     if (!sessionId) throw new Error('qualification_session_not_created');
@@ -401,9 +514,10 @@ export class EdgeInboundMessageProcessor {
         `UPDATE app.qualification_sessions
          SET status='completed',
              completed_at=now(),
+             conversation_id=COALESCE(conversation_id, NULLIF($3, '')::uuid),
              configuration_version_id=COALESCE(configuration_version_id, $2)
          WHERE qualification_session_id=$1`,
-        [sessionId, decision.nextState.configurationVersionId ?? null],
+        [sessionId, decision.nextState.configurationVersionId ?? null, appConversationId],
       );
       await client.query(
         `UPDATE app.leads

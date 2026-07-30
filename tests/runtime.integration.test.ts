@@ -1118,6 +1118,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       });
       expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE event_type='whatsapp.message_received'")).rows[0]?.status).toBe('processed');
       expect((await db.pool.query("SELECT normalized_value FROM app.qualification_answers WHERE question_key='q_location'")).rows[0]?.normalized_value).toBe('New Cairo');
+      expect((await db.pool.query("SELECT count(*) FROM app.conversations WHERE lead_id=$1 AND current_stage='asking_unit_type'", [leadId])).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='inbound' AND provider_message_id='wamid.mp08.inbound.1'")).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM app.messages WHERE direction=$1 AND state=$2', ['outbound', 'queued'])).rows[0]?.count).toBe('1');
       expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message' AND state='pending'")).rows[0]?.count).toBe('1');
       expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.inbound.1'")).rows[0]?.status).toBe('queued');
@@ -1194,7 +1196,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         stop_follow_up: true,
         source: 'edge_inbound_message',
       });
-      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query("SELECT count(*) FROM app.conversations WHERE lead_id=$1 AND current_stage='stopped'", [seeded.leadId])).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='inbound' AND provider_message_id='wamid.mp08.optout.inbound.1'")).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
       expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.optout.inbound.1'")).rows[0]?.status).toBe('suppressed');
       expect((await db.pool.query("SELECT payload_json->>'reason' AS reason FROM audit.events WHERE event_type='conversation.reply_suppressed'")).rows[0]?.reason).toBe('lead_opted_out');
@@ -1257,7 +1260,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         stop_follow_up: false,
         source: 'edge_inbound_message',
       });
-      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query("SELECT count(*) FROM app.conversations WHERE client_id IS NOT NULL AND current_stage='asking_location' AND human_takeover=true")).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='inbound' AND provider_message_id='wamid.mp08.takeover.inbound.1'")).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
       expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.takeover.inbound.1'")).rows[0]?.status).toBe('suppressed');
       expect((await db.pool.query("SELECT payload_json->>'reason' AS reason FROM audit.events WHERE event_type='conversation.reply_suppressed'")).rows[0]?.reason).toBe('human_takeover');
@@ -1318,7 +1322,15 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       configuration_version_id: seeded.configurationVersionId,
       normalized_value: 'Yes',
     });
-    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+    const projectedConversation = await db.pool.query<{ conversation_id: string }>(
+      'SELECT conversation_id FROM app.conversations WHERE lead_id=$1 AND status=$2',
+      [seeded.leadId, 'qualified'],
+    );
+    const appConversationId = projectedConversation.rows[0]?.conversation_id;
+    expect(appConversationId).toBeTruthy();
+    expect((await db.pool.query('SELECT conversation_id FROM app.qualification_sessions WHERE lead_id=$1', [seeded.leadId])).rows[0]?.conversation_id).toBe(appConversationId);
+    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('2');
+    expect((await db.pool.query('SELECT count(*) FROM app.messages WHERE conversation_id=$1', [appConversationId])).rows[0]?.count).toBe('2');
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
 
     await receiveAndProcessMetaInbound({
@@ -1328,7 +1340,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       text: 'Yes, please',
       expectedDuplicates: 1,
     });
-    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('2');
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='conversation.inbound_processed'")).rows[0]?.count).toBe('1');
   });
