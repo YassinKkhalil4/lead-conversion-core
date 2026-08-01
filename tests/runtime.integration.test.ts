@@ -1778,6 +1778,48 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('does not allow Typebot decommission when active configuration points to a draft version', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('decommission-draft-config-client', 'Draft Config Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('decommission_draft_config_client_not_created');
+    const config = await db.pool.query<{ configuration_version_id: string }>(
+      `INSERT INTO configuration.versions
+        (client_id, version_key, status, config_json, checksum_sha256, created_by)
+       VALUES ($1, 'decommission-draft-config', 'draft', '{}'::jsonb, 'decommission-draft-config-checksum', 'test')
+       RETURNING configuration_version_id`,
+      [clientId],
+    );
+    const configurationVersionId = config.rows[0]?.configuration_version_id;
+    if (!configurationVersionId) throw new Error('decommission_draft_config_not_created');
+    await db.pool.query(
+      `INSERT INTO configuration.active_versions (scope_key, client_id, configuration_version_id, activated_by)
+       VALUES ('client:decommission-draft-config-client', $1, $2, 'test')`,
+      [clientId, configurationVersionId],
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => ({
+      ...configEnv.getEnv(),
+      N8N_COMPAT_ROUTES_ENABLED: false,
+    })).report({
+      ownerApprovedTypebot: true,
+      appointmentMediaMigrated: true,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.summary.typebotReady).toBe(false);
+    expect(report.metrics.activeConfigurationCount).toBe(0);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      versioned_config_active: 'fail',
+      active_legacy_config_snapshots_migrated: 'pass',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'versioned_config_active')?.details).toEqual({
+      publishedActiveCount: 0,
+    });
+  });
+
   it('does not count imported or unlinked completed qualifications as Typebot decommission volume', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     const client = await db.pool.query<{ client_id: string }>(

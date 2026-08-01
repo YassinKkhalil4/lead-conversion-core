@@ -663,3 +663,11 @@ Decision: `npm run decommission:readiness` requires aged processed stability evi
 Reason: The direct lead ingress flag exposes both website and Facebook lead routes. Fallback removal must not treat one stable source as proof that both externally reachable lead-ingress paths have replaced n8n/Airtable fallback handling.
 
 Date: 2026-08-01
+
+## DEC-075: Typebot Removal Requires Published Active Configuration
+
+Decision: `npm run decommission:readiness` counts only active configuration pointers that join to `configuration.versions.status='published'` for the Typebot `versioned_config_active` gate.
+
+Reason: Draft configuration can be edited and has not become immutable runtime authority. Typebot removal must prove live conversation content is backed by a published immutable version, not merely that an active pointer row exists.
+
+Date: 2026-08-01

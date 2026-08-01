@@ -54,6 +54,7 @@ Production cutover approval does not authorize fallback removal. Before removing
 - Confirm direct lead stability evidence includes both website and Facebook lead-ingress sources when direct lead ingress is enabled.
 - Confirm there has been no legacy-owned conversation activity inside the stability window, including old terminal conversations updated recently.
 - Confirm every active legacy config snapshot has a matching published immutable configuration version.
+- Confirm the active versioned configuration pointer references a published immutable configuration version, not a draft.
 - Confirm Typebot qualification-volume evidence counts only completed Edge-owned conversations, not imported historical sessions.
 - Provide final legacy export evidence.
 - Provide final Airtable export evidence.

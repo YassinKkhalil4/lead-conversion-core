@@ -213,7 +213,12 @@ export class DecommissionReadinessService {
            AND status IN ('pending','processing','retryable','dead_lettered')`,
         [directIngressBusinessEventTypes],
       ),
-      scalar('SELECT count(*)::int AS count FROM configuration.active_versions'),
+      scalar(
+        `SELECT count(*)::int AS count
+         FROM configuration.active_versions a
+         JOIN configuration.versions v USING (configuration_version_id)
+         WHERE v.status = 'published'`,
+      ),
       scalar(
         `SELECT count(*)::int AS count
          FROM edge_config_snapshots s
@@ -429,7 +434,7 @@ export class DecommissionReadinessService {
         area: 'typebot',
         checkKey: 'versioned_config_active',
         status: passFail(activeConfigurationCount > 0),
-        details: { count: activeConfigurationCount },
+        details: { publishedActiveCount: activeConfigurationCount },
       },
       {
         area: 'typebot',
