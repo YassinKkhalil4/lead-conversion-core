@@ -468,3 +468,11 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "n8n-compatible"` passed with 4 PostgreSQL/API tests and 69 skipped by filter, covering n8n send/status/inbound compatibility and unknown-client status/inbound/command durable receipts with worker-owned retry/ignore/rejected outcomes.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 153 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `146ebf6`: Receipt n8n callbacks before relationship resolution.
+
+## 2026-08-01 Readiness CLI Fail-Closed Argument Parsing
+
+- Implementation slice: Hardened `npm run cutover:readiness` and `npm run decommission:readiness` wrappers so unknown arguments and malformed numeric thresholds fail before any PostgreSQL readiness query runs.
+- Decision: Added DEC-047. Readiness command arguments fail closed because operator typo handling is part of promotion and decommission evidence integrity.
+- Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 focused CLI tests and 8 skipped by filter, covering unknown cutover/decommission flags and malformed numeric thresholds without touching PostgreSQL.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 155 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `25dc613`: Fail closed on readiness CLI arguments.

@@ -1453,3 +1453,13 @@ Result: passed. Focused PostgreSQL/API run executed 4 tests and skipped 69 by fi
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 153 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Readiness CLI Fail-Closed Argument Parsing
+
+Command: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"`
+
+Result: passed. Focused shell-script run executed 2 tests and skipped 8 by filter, covering unknown cutover/decommission readiness arguments and malformed numeric thresholds. The checks use dummy local environment values and prove the CLI exits before querying PostgreSQL.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 155 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
