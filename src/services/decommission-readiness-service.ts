@@ -1,4 +1,5 @@
 import { getEnv } from '../config/env.js';
+import type { Env } from '../config/env.js';
 import { pool } from '../db/pool.js';
 
 export interface DecommissionCheck {
@@ -66,10 +67,14 @@ async function scalar(sql: string, values: unknown[] = []): Promise<number> {
 }
 
 export class DecommissionReadinessService {
+  constructor(private readonly envProvider: () => Env = getEnv) {}
+
   async report(options: DecommissionReadinessOptions = {}): Promise<DecommissionReadinessReport> {
     const directStabilityDays = options.directStabilityDays ?? 14;
     const minCompletedEdgeQualifications = options.minCompletedEdgeQualifications ?? 100;
-    const env = getEnv();
+    const env = this.envProvider();
+    const directIngressCurrentlyEnabled = env.RUNTIME_WORKER_ENABLED
+      && (env.DIRECT_META_WEBHOOK_ENABLED || env.DIRECT_LEAD_INGRESS_ENABLED);
 
     const [
       legacyEdgeOutboxOpenCount,
@@ -196,6 +201,16 @@ export class DecommissionReadinessService {
         checkKey: 'direct_ingress_stable',
         status: passFail(directIngressStableEventCount > 0 && directIngressUnresolvedCount === 0),
         details: { stableEventCount: directIngressStableEventCount, unresolvedCount: directIngressUnresolvedCount, requiredDays: directStabilityDays },
+      },
+      {
+        area: 'n8n',
+        checkKey: 'direct_ingress_currently_enabled',
+        status: passFail(directIngressCurrentlyEnabled),
+        details: {
+          directMetaWebhookEnabled: env.DIRECT_META_WEBHOOK_ENABLED,
+          directLeadIngressEnabled: env.DIRECT_LEAD_INGRESS_ENABLED,
+          runtimeWorkerEnabled: env.RUNTIME_WORKER_ENABLED,
+        },
       },
       {
         area: 'n8n',

@@ -447,3 +447,11 @@ Decision: Cutover and decommission readiness CLI wrappers reject unknown argumen
 Reason: Operator readiness commands are promotion and decommission evidence. Silently ignoring a typoed threshold or owner-evidence flag can make an execution record look stricter than the command actually was.
 
 Date: 2026-08-01
+
+## DEC-048: Decommission Requires Current Direct-Ingress Authority
+
+Decision: `npm run decommission:readiness` requires direct ingress to be currently enabled with the runtime worker enabled before n8n fallback removal can pass, in addition to aged processed direct business-ingress evidence.
+
+Reason: Historical processed direct-ingress rows prove past behavior only. Fallback removal must not pass when the current environment is no longer routing business ingress through Edge-owned durable processing.
+
+Date: 2026-08-01

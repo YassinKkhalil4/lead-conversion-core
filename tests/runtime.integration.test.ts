@@ -55,6 +55,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let calendarReconciliation: typeof import('../src/worker/calendar-reconciliation.js');
   let cutoverReadiness: typeof import('../src/services/cutover-readiness-service.js');
   let decommissionReadiness: typeof import('../src/services/decommission-readiness-service.js');
+  let configEnv: typeof import('../src/config/env.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -94,6 +95,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     calendarReconciliation = await import('../src/worker/calendar-reconciliation.js');
     cutoverReadiness = await import('../src/services/cutover-readiness-service.js');
     decommissionReadiness = await import('../src/services/decommission-readiness-service.js');
+    configEnv = await import('../src/config/env.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -1113,6 +1115,38 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('does not allow decommission readiness when direct ingress is currently disabled', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('meta', 'whatsapp.message_received', 'decommission-direct-disabled-stable', '+201022222223', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => ({
+      ...configEnv.getEnv(),
+      DIRECT_META_WEBHOOK_ENABLED: false,
+      DIRECT_LEAD_INGRESS_ENABLED: false,
+      RUNTIME_WORKER_ENABLED: false,
+    })).report({
+      ownerApprovedN8n: true,
+      finalLegacyExportComplete: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.summary.n8nReady).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_stable: 'pass',
+      direct_ingress_currently_enabled: 'fail',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'direct_ingress_currently_enabled')?.details).toMatchObject({
+      directMetaWebhookEnabled: false,
+      directLeadIngressEnabled: false,
+      runtimeWorkerEnabled: false,
+    });
+  });
+
   it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query(
@@ -1183,6 +1217,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
       direct_ingress_stable: 'pass',
+      direct_ingress_currently_enabled: 'pass',
       versioned_config_active: 'pass',
       edge_qualification_volume: 'pass',
       airtable_reconciliation_stable: 'pass',
