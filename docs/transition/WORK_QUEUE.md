@@ -42,7 +42,7 @@ Remaining: broader real-export reconciliation checks and full reconciliation blo
 
 Status: locally_verified
 
-Deliverables: inbox receipt/claim/retry/dead-letter/replay, outbox commands/attempt history/provider failure classification, scheduled jobs, audit service.
+Deliverables: inbox receipt/claim/retry/dead-letter/replay, outbox commands/attempt history/provider failure classification, scheduled jobs, audit service, bounded legacy outbox compatibility retries.
 
 Dependencies: none for internal implementation.
 

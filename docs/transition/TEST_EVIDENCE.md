@@ -959,3 +959,23 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 13 files and 113 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 Verification level: local env-contract, Fastify route gating, full npm gate, and smoke scripts. No live provider, DNS, Caddy, n8n, Typebot, Airtable, or production route change was made.
+
+## 2026-08-01 Legacy Edge Outbox Bounded Retry
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "outbox"`
+
+Result: passed before final commit. Focused PostgreSQL tests ran 6 tests covering runtime outbox retry/dead-letter behavior and legacy `edge_outbox` terminal failure behavior.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "legacy edge outbox"`
+
+Result: passed after the test cleanup. Focused PostgreSQL test ran 1 test proving migration-backed `dead_lettered` status, no further legacy outbox claim after terminal failure, and preserved last error/completion evidence.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed after commit `4b04128`. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 13 files and 114 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Verification level: local migration-backed PostgreSQL integration, full npm gate, and smoke scripts. No live provider, n8n, Typebot, Airtable, DNS, Caddy, or production route change was made.

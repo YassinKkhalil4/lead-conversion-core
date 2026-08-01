@@ -262,3 +262,10 @@
 - Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts` passed; focused tests ran 4 tests covering env-template/schema alignment, direct ingress gates, n8n compatibility separation, deployment-script disabled route probes, and disabled `/v1/turn` behavior.
 - Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 13 files and 113 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `de1d36b`: Gated legacy active turn compatibility.
+- Implementation slice: Added migration `021_legacy_edge_outbox_dead_letter.sql` and bounded the legacy `edge_outbox` compatibility worker to mark rows `dead_lettered` after five attempts instead of retrying forever. Decommission readiness now treats `dead_lettered` legacy outbox rows as unresolved compatibility work.
+- Decision: Legacy `edge_outbox` remains a rollback/compatibility path, but it must still have a terminal failure state so failed compatibility delivery cannot run indefinitely.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "legacy edge outbox"` passed; focused PostgreSQL test ran 1 test proving migration-backed `dead_lettered` status, no further claim after terminal failure, and preserved last error/completion evidence.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "outbox"` passed before final commit; focused PostgreSQL tests ran 6 tests covering runtime outbox and legacy outbox behavior.
+- Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed after commit `4b04128`; Vitest ran 13 files and 114 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `4b04128`: Bounded legacy edge outbox retries.
