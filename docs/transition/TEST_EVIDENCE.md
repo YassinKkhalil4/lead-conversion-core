@@ -1681,3 +1681,41 @@ Result: passed after the parser test harness fix. Focused PostgreSQL decommissio
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 170 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Airtable Reconciliation Readiness Hardening
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts`
+
+Result: passed. Focused importer coverage ran 6 tests, including source phone/email collision reporting, rejected missing relationships, accepted-row reconciliation counts of `0:0` for correctly rejected Projects/Leads/Events rows, idempotent sample import, event audit redaction, and rollback after mid-transaction failure.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL decommission run executed 13 tests and skipped 70 by filter, including non-pass Airtable reconciliation evidence failing `airtable_reconciliation_stable`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the importer summary shape, accepted-row reconciliation details, decommission readiness non-pass query, and test updates.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed after the reconciliation changes.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: failed on the first run. `npm ci`, artifact scan, and lint passed, but `npm test` timed out in `tests/runtime.integration.test.ts` during `executes due follow-up jobs once through the runtime worker`; the following test cleanup then deadlocked. Resolution: removed migration tables from the global runtime `beforeEach` truncation and moved reconciliation cleanup to the decommission tests that require it.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "follow-up jobs|cancelled follow-up"`
+
+Result: passed. The affected follow-up tests passed in isolation with 4 tests and 79 skipped by filter, confirming the first full-gate failure was cleanup/load behavior rather than a follow-up domain regression.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed after narrowing cleanup. Focused PostgreSQL decommission run executed 13 tests and skipped 70 by filter.
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts`
+
+Result: passed after narrowing cleanup. Focused importer coverage ran 6 tests.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 172 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

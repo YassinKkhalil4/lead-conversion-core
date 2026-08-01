@@ -631,3 +631,16 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts`, `npm run lint`, and `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed after the parser test harness fix.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 170 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `0072a47`: Require n8n compatibility routes off for decommission.
+
+## 2026-08-01 Airtable Reconciliation Readiness Hardening
+
+- Implementation slice: Added MP-03 dry-run phone/email collision reporting for Airtable Leads and Salespeople source rows using normalized values and stable source record IDs.
+- Implementation slice: Hardened `npm run reconcile:airtable` so rejected records fail reconciliation and accepted-row mapped checks record raw, rejected, and accepted counts instead of comparing mapped target rows to every raw source row.
+- Implementation slice: Hardened `npm run decommission:readiness` so Airtable reconciliation is unstable when any recorded reconciliation result is not `pass`, preventing warnings from satisfying the final decommission gate.
+- Decision: Added DEC-063. Final Airtable reconciliation blocks on rejected rows while accepted-row mapping checks avoid double-counting correctly rejected source rows as missing targets.
+- Verification: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts` passed with 6 importer/reconciliation tests.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 13 PostgreSQL decommission tests and 70 skipped by filter.
+- Verification failure: The first full gate failed during `npm test` because a broad global runtime-test truncation of migration tables increased PostgreSQL lock pressure; one follow-up test timed out and the next cleanup deadlocked. Resolution: removed migration tables from global runtime cleanup and truncated `migration.reconciliation_results` only inside the decommission tests that need reconciliation isolation.
+- Verification: `npm run lint` and `npm run build` passed before the first full gate; after the isolation fix, focused importer and decommission tests passed again.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 172 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `aa79503`: Harden Airtable reconciliation readiness.
