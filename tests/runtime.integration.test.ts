@@ -1505,7 +1505,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
        )`,
     );
 
-    const report = await new decommissionReadiness.DecommissionReadinessService().report({
+    const options = {
       ownerApprovedN8n: true,
       ownerApprovedTypebot: true,
       ownerApprovedAirtable: true,
@@ -1513,7 +1513,22 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       finalAirtableExportComplete: true,
       appointmentMediaMigrated: true,
       airtableProjectionOnlyVerified: true,
+    };
+
+    const enabledFallbackReport = await new decommissionReadiness.DecommissionReadinessService(() => configEnv.getEnv()).report(options);
+    expect(enabledFallbackReport.ok).toBe(false);
+    expect(enabledFallbackReport.summary.n8nReady).toBe(false);
+    expect(Object.fromEntries(enabledFallbackReport.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      n8n_compatibility_routes_disabled: 'fail',
+      direct_ingress_stable: 'pass',
+      direct_ingress_currently_enabled: 'pass',
+      direct_ingress_worker_operational: 'pass',
     });
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => ({
+      ...configEnv.getEnv(),
+      N8N_COMPAT_ROUTES_ENABLED: false,
+    })).report(options);
     expect(report.ok).toBe(true);
     expect(report.summary).toEqual({
       n8nReady: true,
@@ -1524,6 +1539,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       direct_ingress_stable: 'pass',
       direct_ingress_currently_enabled: 'pass',
       direct_ingress_worker_operational: 'pass',
+      n8n_compatibility_routes_disabled: 'pass',
       versioned_config_active: 'pass',
       edge_qualification_volume: 'pass',
       airtable_reconciliation_stable: 'pass',

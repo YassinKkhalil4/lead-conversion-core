@@ -16,7 +16,7 @@ function parseNumberArg(name: string, value: string): number {
   return parsed;
 }
 
-function parseArgs(argv: string[]): CutoverReadinessOptions {
+export function parseArgs(argv: string[]): CutoverReadinessOptions {
   const options: CutoverReadinessOptions = {};
   for (const arg of argv) {
     const separator = arg.indexOf('=');

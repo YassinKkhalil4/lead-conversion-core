@@ -559,3 +559,11 @@ Decision: `scripts/verify-deployment.sh --check-n8n-compat` verifies the expecte
 Reason: MP-12 staging evidence must prove fallback routes remain available during direct-ingress cutover, or are intentionally unavailable after approval, without relying on live customer traffic. The n8n compatibility routes are internal routes, so the verifier must prove their behavior with `EDGE_INTERNAL_SECRET` while keeping that secret out of command-line arguments.
 
 Date: 2026-08-01
+
+## DEC-062: N8n Decommission Requires Compatibility Routes Disabled
+
+Decision: `npm run decommission:readiness` fails n8n readiness while `N8N_COMPAT_ROUTES_ENABLED=true`, even when no recent or unresolved n8n inbox rows remain and direct ingress has stable processed evidence.
+
+Reason: An enabled compatibility route is still fallback ingress authority. n8n removal readiness must prove that Edge is no longer intentionally accepting n8n-compatible callbacks before fallback infrastructure can be considered removable.
+
+Date: 2026-08-01

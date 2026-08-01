@@ -277,6 +277,12 @@ export class DecommissionReadinessService {
       },
       {
         area: 'n8n',
+        checkKey: 'n8n_compatibility_routes_disabled',
+        status: passFail(!env.N8N_COMPAT_ROUTES_ENABLED),
+        details: { enabled: env.N8N_COMPAT_ROUTES_ENABLED },
+      },
+      {
+        area: 'n8n',
         checkKey: 'direct_ingress_stable',
         status: passFail(directIngressStable),
         details: {

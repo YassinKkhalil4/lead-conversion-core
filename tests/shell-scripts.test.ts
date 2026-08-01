@@ -131,25 +131,25 @@ describe('shell scripts', () => {
     expect(buildConfig).toContain('"exclude": ["node_modules", "dist", "tests"]');
   });
 
-  it('fails readiness CLI commands on unknown operator arguments before querying PostgreSQL', () => {
-    expect(() => execFileSync('npx', ['tsx', 'scripts/cutover-readiness.ts', '--max-pending-inbox-typo=0'], {
-      env: cliEnv,
-      stdio: 'pipe',
-    })).toThrow(/Unknown cutover readiness argument/);
-    expect(() => execFileSync('npx', ['tsx', 'scripts/decommission-readiness.ts', '--owner-approved-n8n-typo'], {
-      env: cliEnv,
-      stdio: 'pipe',
-    })).toThrow(/Unknown decommission readiness argument/);
+  it('fails readiness CLI commands on unknown operator arguments before querying PostgreSQL', async () => {
+    Object.assign(process.env, cliEnv);
+    const [{ parseArgs: parseCutoverReadinessArgs }, { parseArgs: parseDecommissionReadinessArgs }] = await Promise.all([
+      import('../scripts/cutover-readiness.js'),
+      import('../scripts/decommission-readiness.js'),
+    ]);
+
+    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox-typo=0'])).toThrow(/Unknown cutover readiness argument/);
+    expect(() => parseDecommissionReadinessArgs(['--owner-approved-n8n-typo'])).toThrow(/Unknown decommission readiness argument/);
   });
 
-  it('fails readiness CLI commands on malformed numeric operator arguments before querying PostgreSQL', () => {
-    expect(() => execFileSync('npx', ['tsx', 'scripts/cutover-readiness.ts', '--max-pending-inbox'], {
-      env: cliEnv,
-      stdio: 'pipe',
-    })).toThrow(/Invalid numeric argument/);
-    expect(() => execFileSync('npx', ['tsx', 'scripts/decommission-readiness.ts', '--direct-stability-days='], {
-      env: cliEnv,
-      stdio: 'pipe',
-    })).toThrow(/Invalid numeric argument/);
+  it('fails readiness CLI commands on malformed numeric operator arguments before querying PostgreSQL', async () => {
+    Object.assign(process.env, cliEnv);
+    const [{ parseArgs: parseCutoverReadinessArgs }, { parseArgs: parseDecommissionReadinessArgs }] = await Promise.all([
+      import('../scripts/cutover-readiness.js'),
+      import('../scripts/decommission-readiness.js'),
+    ]);
+
+    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox'])).toThrow(/Invalid numeric argument/);
+    expect(() => parseDecommissionReadinessArgs(['--direct-stability-days='])).toThrow(/Invalid numeric argument/);
   });
 });

@@ -24,7 +24,7 @@ function parseNumberArg(name: string, value: string): number {
   return parsed;
 }
 
-function parseArgs(argv: string[]): DecommissionReadinessOptions {
+export function parseArgs(argv: string[]): DecommissionReadinessOptions {
   const options: DecommissionReadinessOptions = {};
   for (const arg of argv) {
     const separator = arg.indexOf('=');

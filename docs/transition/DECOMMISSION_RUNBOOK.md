@@ -27,7 +27,7 @@ The command is read-only. A passing report is a decommission precondition, not a
 
 ## Exit Criteria
 
-N8n removal requires no open, parked, or dead-lettered edge outbox target to n8n, no n8n scheduled authority, no unresolved or dead-lettered n8n inbox callbacks, no rejected n8n salesperson commands, no new Typebot conversation, no active legacy conversation for 14 days, direct ingress stable for 14 days, final workflow/DB export, and explicit owner approval.
+N8n removal requires `N8N_COMPAT_ROUTES_ENABLED=false`, no open, parked, or dead-lettered edge outbox target to n8n, no n8n scheduled authority, no unresolved or dead-lettered n8n inbox callbacks, no rejected n8n salesperson commands, no new Typebot conversation, no active legacy conversation for 14 days, direct ingress stable for 14 days, final workflow/DB export, and explicit owner approval.
 
 Direct-ingress stability requires the current environment to have direct ingress enabled with a fresh operational runtime worker heartbeat whose metadata includes the enabled direct-ingress providers and event types. Old processed direct-ingress rows are not sufficient when the current route or worker state no longer proves Edge-owned durable processing.
 
@@ -36,6 +36,8 @@ Stability evidence must match the currently enabled direct-ingress route family.
 Processed n8n delivery-status callbacks older than the stability window remain delivery/reporting evidence. They do not extend the n8n decommission window unless their durable inbox row is unresolved, dead-lettered, or recent enough to fail `no_recent_n8n_compat_usage`.
 
 `ACTIVE_TURN_COMPAT_ENABLED` must be false before decommission. The readiness report exposes this as `active_turn_compat_disabled`; do not treat n8n/Typebot fallback as removable while the legacy synchronous active-turn path is still enabled.
+
+`N8N_COMPAT_ROUTES_ENABLED` must be false before n8n decommission. The readiness report exposes this as `n8n_compatibility_routes_disabled`; do not treat n8n fallback as removable while Edge still accepts n8n-compatible callbacks.
 
 Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval.
 
