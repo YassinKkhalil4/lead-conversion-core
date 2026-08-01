@@ -891,3 +891,55 @@ Command: `npm run test:smoke`
 Result: passed. Smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL importer/reconciliation integration plus full npm gate. No real Airtable export, external account, provider, or production data was accessed.
+
+## 2026-08-01 Deployment Environment And Worker Readiness
+
+Command: `npm run lint`
+
+Result: failed on the first focused run because `tests/health-readiness.integration.test.ts` assigned the unresolved `buildApp()` promise to `app`. Resolution: await `buildApp()` in the test setup.
+
+Command: `npx vitest run tests/env-contract.test.ts tests/health-readiness.integration.test.ts`
+
+Result: passed after the test setup fix. Focused tests ran 2 tests covering `.env.example` alignment with validated runtime variables, generator replacement placeholders, and `/ready` failing when `RUNTIME_WORKER_ENABLED=true` lacks a runtime heartbeat, then passing after a fresh runtime heartbeat is present.
+
+Command: `EDGE_POSTGRES_PASSWORD=dummy LEAD_CORE_ENV_FILE=/dev/null docker compose -f docker-compose.yml config`
+
+Result: failed because this environment does not provide the `docker compose` subcommand.
+
+Command: `EDGE_POSTGRES_PASSWORD=dummy LEAD_CORE_ENV_FILE=/dev/null docker-compose -f docker-compose.yml config`
+
+Result: passed. Static Compose output includes `lead-core-runtime-worker` with `WORKER_KIND=runtime` and `lead-core-worker` with `WORKER_KIND=outbox`.
+
+Command: `bash -n scripts/generate-env.sh && bash -n scripts/verify-deployment.sh && bash -n scripts/backup/backup-postgres.sh && bash -n scripts/backup/restore-postgres.sh && bash -n scripts/backup/verify-restore.sh`
+
+Result: passed.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages and found 0 vulnerabilities.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 13 files and 113 tests.
+
+Command: `npm run build`
+
+Result: passed.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, checked 12 stop conditions, raw fallback notes, structural parity, and the same config version.
+
+Verification level: local env-contract, static Compose config, PostgreSQL readiness integration, full npm gate, and smoke scripts. No Docker image was built because the Docker daemon remains unavailable.
