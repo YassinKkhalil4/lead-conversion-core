@@ -1625,3 +1625,17 @@ Result: passed. Focused run executed 12 tests and skipped 71 by filter, proving 
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 166 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 N8n Compatibility Runtime Readiness Enforcement
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the n8n runtime-worker startup validation, cutover readiness check, and focused test updates.
+
+Command: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/runtime-worker-wiring.test.ts tests/runtime.integration.test.ts -t "environment contract|direct ingress|runtime worker wiring|cutover readiness|n8n-compatible"`
+
+Result: passed. Focused run executed 27 tests and skipped 71 by filter, covering startup rejection for n8n compatibility without `RUNTIME_WORKER_ENABLED`, direct-ingress gating with n8n fallback still enabled, runtime worker wiring, n8n-compatible callback processing, and cutover readiness failure when enabled n8n compatibility lacks its inbox processor metadata.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 168 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

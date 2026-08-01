@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, and n8n fallback inbox worker wiring independent of direct Meta enablement.
+Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, n8n fallback inbox worker wiring independent of direct Meta enablement, and n8n compatibility runtime readiness enforcement.
 
 Files expected to change:
 
@@ -16,6 +16,10 @@ Files expected to change:
 - `src/worker-runner.ts`
 - `src/worker/runtime-worker-wiring.ts`
 - `tests/runtime-worker-wiring.test.ts`
+- `src/config/env.ts`
+- `src/services/cutover-readiness-service.ts`
+- `tests/env-contract.test.ts`
+- `tests/ingress-gating.test.ts`
 - `tests/runtime.integration.test.ts`
 
 Required verification:
@@ -46,6 +50,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `838971b` (`Wire n8n fallback inbox processing independently`), with focused runtime worker wiring tests, focused n8n compatibility/runtime readiness tests, and the full local gate passing before persistent state docs were updated.
+Last verified commit: `06c8c7f` (`Require runtime readiness for n8n compatibility`), with focused env/ingress/wiring/cutover readiness tests and the full local gate passing before persistent state docs were updated.
 
 Git worktree clean when recorded: yes

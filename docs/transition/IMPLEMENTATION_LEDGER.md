@@ -599,3 +599,13 @@
 - Verification: `npx vitest run tests/runtime-worker-wiring.test.ts tests/runtime.integration.test.ts -t "runtime worker wiring|n8n-compatible|configured inbox event types|cutover readiness"` passed with 12 tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 166 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `838971b`: Wire n8n fallback inbox processing independently.
+
+## 2026-08-01 N8n Compatibility Runtime Readiness Enforcement
+
+- Implementation slice: Hardened startup validation so `N8N_COMPAT_ROUTES_ENABLED=true` requires `RUNTIME_WORKER_ENABLED=true`, matching the durable callback receipt architecture.
+- Implementation slice: Hardened `npm run cutover:readiness` with `n8n_compatibility_inbox_processor`, which fails when enabled n8n compatibility lacks runtime heartbeat metadata for provider `n8n` and event types `whatsapp.message_status`, `whatsapp.message_received`, and `salesperson.command_received`.
+- Decision: Added DEC-060. n8n compatibility routes are fallback infrastructure, but their callback routes are durable external event ingress and must not be accepted without a worker able to process their inbox rows.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/runtime-worker-wiring.test.ts tests/runtime.integration.test.ts -t "environment contract|direct ingress|runtime worker wiring|cutover readiness|n8n-compatible"` passed with 27 tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 168 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `06c8c7f`: Require runtime readiness for n8n compatibility.
