@@ -1463,3 +1463,13 @@ Result: passed. Focused shell-script run executed 2 tests and skipped 8 by filte
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 155 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Decommission Current Direct-Ingress Authority
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL run executed 5 tests and skipped 69 by filter, including a regression case proving decommission readiness fails when historical direct-ingress events exist but the current environment has direct Meta and direct lead ingress disabled with the runtime worker disabled.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 156 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

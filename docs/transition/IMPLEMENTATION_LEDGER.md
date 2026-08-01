@@ -476,3 +476,11 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 focused CLI tests and 8 skipped by filter, covering unknown cutover/decommission flags and malformed numeric thresholds without touching PostgreSQL.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 155 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `25dc613`: Fail closed on readiness CLI arguments.
+
+## 2026-08-01 Decommission Current Direct-Ingress Authority
+
+- Implementation slice: Hardened `npm run decommission:readiness` so n8n fallback-removal readiness requires current direct-ingress authority: `RUNTIME_WORKER_ENABLED=true` plus at least one direct business ingress flag enabled. Historical processed direct-ingress events remain necessary but are no longer sufficient.
+- Decision: Added DEC-048. Decommission readiness requires current direct-ingress authority because old durable rows prove past routing only.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 5 PostgreSQL tests and 69 skipped by filter, including the new disabled-current-direct-ingress regression case.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 156 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3c81394`: Require current direct ingress for decommission readiness.
