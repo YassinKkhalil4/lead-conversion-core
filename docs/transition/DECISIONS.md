@@ -290,8 +290,8 @@ Date: 2026-08-01
 
 ## DEC-028: Deployment Verifier Keeps Secrets Out Of Process Arguments
 
-Decision: `scripts/verify-deployment.sh` writes shared-secret HTTP headers to private temporary files and passes them to curl with `--header @file` instead of putting secret values directly in curl arguments.
+Decision: `scripts/verify-deployment.sh` keeps sourced environment values shell-local, writes shared-secret HTTP headers to private temporary files, and passes the Meta challenge URL through a private curl config file instead of putting secret values directly in curl arguments or child-process environments.
 
-Reason: Staging verification can run on shared hosts or under process monitors. Secrets in command-line arguments are observable via process listings, while temporary header files scoped to the verifier process reduce exposure and are deleted by the script cleanup trap.
+Reason: Staging verification can run on shared hosts or under process monitors. Secrets in command-line arguments or exported child-process environments are observable via process tooling, while temporary files scoped to the verifier process reduce exposure and are deleted by the script cleanup trap.
 
 Date: 2026-08-01

@@ -48,9 +48,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-set -a
 source "$ENV_FILE"
-set +a
 
 BASE="${BASE:-http://127.0.0.1:${EDGE_PORT:-8080}}"
 EXPECT_DIRECT_META="${EXPECT_DIRECT_META:-$([[ ${DIRECT_META_WEBHOOK_ENABLED:-false} == "true" ]] && echo enabled || echo disabled)}"
@@ -67,14 +65,28 @@ fi
 
 tmp_body="$(mktemp)"
 tmp_edge_header="$(mktemp)"
+tmp_meta_curl_config="$(mktemp)"
 cleanup() {
-  rm -f "$tmp_body" "$tmp_edge_header"
+  rm -f "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config"
 }
 trap cleanup EXIT
-chmod 600 "$tmp_body" "$tmp_edge_header"
+chmod 600 "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config"
 
 status_request() {
   curl -sS -o "$tmp_body" -w "%{http_code}" "$@"
+}
+
+curl_config_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '%s' "$value"
+}
+
+write_url_config() {
+  local file="$1"
+  local url="$2"
+  printf 'url = "%s"\n' "$(curl_config_escape "$url")" > "$file"
 }
 
 assert_status() {
@@ -105,7 +117,8 @@ if [[ "$CHECK_DIRECT_META" == "true" ]]; then
   fi
   echo "Direct Meta challenge ($EXPECT_DIRECT_META):"
   challenge="verify-deployment-$(date +%s)"
-  status="$(status_request "$BASE/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=$META_WEBHOOK_VERIFY_TOKEN&hub.challenge=$challenge")"
+  write_url_config "$tmp_meta_curl_config" "$BASE/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=$META_WEBHOOK_VERIFY_TOKEN&hub.challenge=$challenge"
+  status="$(status_request --config "$tmp_meta_curl_config")"
   if [[ "$EXPECT_DIRECT_META" == "enabled" ]]; then
     assert_status "$status" "200" "Direct Meta challenge"
     if [[ "$(cat "$tmp_body")" != "$challenge" ]]; then

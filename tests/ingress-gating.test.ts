@@ -227,5 +227,9 @@ describe('direct ingress route gates', () => {
     expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
     expect(script).not.toContain("-H 'X-Edge-Secret: $EDGE_SHARED_SECRET'");
     expect(script).toContain('-H "@$tmp_edge_header"');
+    expect(script).not.toContain('set -a');
+    expect(script).not.toContain('set +a');
+    expect(script).not.toContain('status_request "$BASE/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=$META_WEBHOOK_VERIFY_TOKEN');
+    expect(script).toContain('status_request --config "$tmp_meta_curl_config"');
   });
 });

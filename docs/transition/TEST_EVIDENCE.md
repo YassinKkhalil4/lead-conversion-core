@@ -356,7 +356,7 @@ Result: passed.
 
 Command: `npx vitest run tests/ingress-gating.test.ts`
 
-Result: passed. Focused ingress/deployment-script tests ran 5 tests, including static coverage that `scripts/verify-deployment.sh` no longer embeds `EDGE_SHARED_SECRET` directly in curl `-H` arguments and uses a temporary header file instead.
+Result: passed. Focused ingress/deployment-script tests ran 5 tests, including static coverage that `scripts/verify-deployment.sh` no longer exports sourced env values, no longer embeds `EDGE_SHARED_SECRET` directly in curl `-H` arguments, and no longer sends the Meta verify token through the curl URL command argument.
 
 Command: `npm run lint`
 
@@ -364,7 +364,7 @@ Result: passed.
 
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
-Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 14 files and 116 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 121 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 ## 2026-08-01 Request Log Secret Redaction
 
