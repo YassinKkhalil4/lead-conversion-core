@@ -311,3 +311,11 @@ Decision: Google Calendar free/busy network failures are classified as retryable
 Reason: Free/busy checks happen before attempting an external calendar mutation and can be retried safely. A network failure during event creation may have occurred after Google accepted the request, so the durable outbox must preserve ambiguity for operator reconciliation instead of blindly creating a second event. Provider retry hints should be respected without allowing an unbounded provider value to hide stuck work indefinitely.
 
 Date: 2026-08-01
+
+## DEC-031: Generated Env Secrets Stay Out Of Process Arguments
+
+Decision: `scripts/generate-env.sh` writes generated local database and service secrets to private temporary files, unsets the shell variables, and passes only temporary file paths to Python when rendering `.env`.
+
+Reason: Even locally generated secrets are reusable credentials once written to `.env`. Passing them through child-process arguments exposes them to process-listing and command-capture tooling, while private temporary files preserve the one-command developer setup path without printing or exporting secret values.
+
+Date: 2026-08-01

@@ -331,3 +331,8 @@
 - Verification: `npx vitest run tests/calendar-outbox-dispatcher.test.ts` passed with 10 tests covering dispatcher mapping, network-error classification, and bounded numeric/date Google retry hints; `npm run lint` passed.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 15 files and 128 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3cba1c3`: Bounded Google Calendar retry hints.
+- Implementation slice: Hardened `scripts/generate-env.sh` so generated local database and service secrets are written to private temporary files, unset from shell variables, and read by Python from file paths instead of secret-bearing process arguments.
+- Decision: Generated `.env` credentials are treated as reusable secrets and must not be passed through child-process arguments during local setup.
+- Verification: `bash -n scripts/generate-env.sh` passed.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 6 tests covering script syntax, shadow secret handling, generated-env secret handling, generated `.env` rendering, libpq service-file generation, and PostgreSQL tool argument hygiene.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 15 files and 130 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.

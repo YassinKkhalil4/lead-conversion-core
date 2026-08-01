@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -32,6 +32,34 @@ describe('shell scripts', () => {
     expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
     expect(script).not.toContain("-H 'X-Edge-Secret: $EDGE_SHARED_SECRET'");
     expect(script).toContain('-H "@$tmp_edge_header"');
+  });
+
+  it('keeps generated env secrets out of Python process arguments', () => {
+    const script = readFileSync('scripts/generate-env.sh', 'utf8');
+    expect(script).not.toContain('python3 - "$DB_PASSWORD" "$EDGE_SECRET" "$INTERNAL_SECRET"');
+    expect(script).toContain('python3 - "$db_password_file" "$edge_secret_file" "$internal_secret_file"');
+    expect(script).toContain('unset DB_PASSWORD EDGE_SECRET INTERNAL_SECRET');
+  });
+
+  it('generates a local env file from private temporary secret files', () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-generate-env.'));
+    try {
+      mkdirSync(join(root, 'scripts'));
+      copyFileSync('scripts/generate-env.sh', join(root, 'scripts/generate-env.sh'));
+      copyFileSync('.env.example', join(root, '.env.example'));
+
+      execFileSync('bash', ['scripts/generate-env.sh'], { cwd: root, stdio: 'pipe' });
+
+      const generated = readFileSync(join(root, '.env'), 'utf8');
+      expect(generated).toContain('EDGE_POSTGRES_PASSWORD=');
+      expect(generated).toContain('DATABASE_URL=postgresql://lead_os_edge_app:');
+      expect(generated).toContain('EDGE_SHARED_SECRET=');
+      expect(generated).toContain('EDGE_INTERNAL_SECRET=');
+      expect(generated).not.toContain('replace-with-secret');
+      expect(generated).not.toContain('replace-with-at-least-16-chars');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('writes libpq service files from database URLs without using URL arguments', () => {

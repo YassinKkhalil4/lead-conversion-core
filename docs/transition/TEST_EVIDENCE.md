@@ -1227,3 +1227,21 @@ Resolution: added an explicit captured-body presence check before JSON parsing.
 Command: `npm run lint`
 
 Result: passed.
+
+## 2026-08-01 Generated Env Secret Handling
+
+Command: `bash -n scripts/generate-env.sh`
+
+Result: passed.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed. Focused shell tests ran 6 tests covering script syntax, shadow sequence curl header secret handling, generated-env secret handling, generated `.env` rendering from private temporary secret files, libpq service-file generation from a PostgreSQL URL, and absence of raw database URL arguments in backup/restore PostgreSQL tool invocations.
+
+Command: `rg -n 'python3 - "\$DB_PASSWORD"|python3 - "\$EDGE_SECRET"|python3 - "\$INTERNAL_SECRET"|set -a|-H "X-Edge-Secret: \$EDGE_SHARED_SECRET"|pg_dump .*DATABASE_URL|psql .*RESTORE_TARGET_DATABASE_URL|pg_restore .*RESTORE_TARGET_DATABASE_URL' scripts tests docs/transition`
+
+Result: passed for production/operator code review purposes. Remaining hits were negative test assertions and prior evidence text, not live script invocations.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 130 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
