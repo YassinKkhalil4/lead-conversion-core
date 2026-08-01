@@ -655,3 +655,11 @@ Decision: `npm run decommission:readiness` treats pending, processing, or retrya
 Reason: Durable jobs use semantic identities and aggregate keys to prevent duplicate schedules. Fallback removal must not miss n8n-owned scheduled work merely because the executable job type is a generic follow-up, report, or compatibility handler.
 
 Date: 2026-08-01
+
+## DEC-074: Direct Lead Stability Requires Website And Facebook Evidence
+
+Decision: `npm run decommission:readiness` requires aged processed stability evidence for both `website` `lead.created` and `facebook` `leadgen.created` events whenever `DIRECT_LEAD_INGRESS_ENABLED=true`.
+
+Reason: The direct lead ingress flag exposes both website and Facebook lead routes. Fallback removal must not treat one stable source as proof that both externally reachable lead-ingress paths have replaced n8n/Airtable fallback handling.
+
+Date: 2026-08-01

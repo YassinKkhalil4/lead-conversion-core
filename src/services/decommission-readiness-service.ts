@@ -51,6 +51,8 @@ export interface DecommissionReadinessReport {
     directIngressStableEventCount: number;
     directMetaStableEventCount: number;
     directLeadStableEventCount: number;
+    directWebsiteLeadStableEventCount: number;
+    directFacebookLeadStableEventCount: number;
     directIngressUnresolvedCount: number;
     activeConfigurationCount: number;
     unmigratedActiveLegacyConfigSnapshotCount: number;
@@ -105,6 +107,8 @@ export class DecommissionReadinessService {
       directIngressStableEventCount,
       directMetaStableEventCount,
       directLeadStableEventCount,
+      directWebsiteLeadStableEventCount,
+      directFacebookLeadStableEventCount,
       directIngressUnresolvedCount,
       activeConfigurationCount,
       unmigratedActiveLegacyConfigSnapshotCount,
@@ -179,6 +183,24 @@ export class DecommissionReadinessService {
          FROM runtime.inbox_events
          WHERE provider IN ('website','facebook')
            AND event_type IN ('lead.created','leadgen.created')
+           AND status='processed'
+           AND completed_at <= now() - make_interval(days => $1)`,
+        [directStabilityDays],
+      ),
+      scalar(
+        `SELECT count(*)::int AS count
+         FROM runtime.inbox_events
+         WHERE provider='website'
+           AND event_type='lead.created'
+           AND status='processed'
+           AND completed_at <= now() - make_interval(days => $1)`,
+        [directStabilityDays],
+      ),
+      scalar(
+        `SELECT count(*)::int AS count
+         FROM runtime.inbox_events
+         WHERE provider='facebook'
+           AND event_type='leadgen.created'
            AND status='processed'
            AND completed_at <= now() - make_interval(days => $1)`,
         [directStabilityDays],
@@ -264,7 +286,10 @@ export class DecommissionReadinessService {
       && (!env.DIRECT_LEAD_INGRESS_ENABLED || directLeadProcessorConfigured);
     const directIngressStable = directIngressUnresolvedCount === 0
       && (!env.DIRECT_META_WEBHOOK_ENABLED || directMetaStableEventCount > 0)
-      && (!env.DIRECT_LEAD_INGRESS_ENABLED || directLeadStableEventCount > 0);
+      && (!env.DIRECT_LEAD_INGRESS_ENABLED || (
+        directWebsiteLeadStableEventCount > 0
+        && directFacebookLeadStableEventCount > 0
+      ));
     const presentAirtableReconciliationKeys = new Set(airtableRequiredReconciliationKeys.rows.map((row) => row.check_key));
     const missingAirtableReconciliationKeys = REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS
       .filter((checkKey) => !presentAirtableReconciliationKeys.has(checkKey));
@@ -341,11 +366,14 @@ export class DecommissionReadinessService {
           stableEventCount: directIngressStableEventCount,
           directMetaStableEventCount,
           directLeadStableEventCount,
+          directWebsiteLeadStableEventCount,
+          directFacebookLeadStableEventCount,
           directMetaWebhookEnabled: env.DIRECT_META_WEBHOOK_ENABLED,
           directLeadIngressEnabled: env.DIRECT_LEAD_INGRESS_ENABLED,
           unresolvedCount: directIngressUnresolvedCount,
           requiredDays: directStabilityDays,
           measuredAt: 'completed_at',
+          requiredLeadSourcesWhenEnabled: ['website', 'facebook'],
         },
       },
       {
@@ -492,6 +520,8 @@ export class DecommissionReadinessService {
         directIngressStableEventCount,
         directMetaStableEventCount,
         directLeadStableEventCount,
+        directWebsiteLeadStableEventCount,
+        directFacebookLeadStableEventCount,
         directIngressUnresolvedCount,
         activeConfigurationCount,
         unmigratedActiveLegacyConfigSnapshotCount,
