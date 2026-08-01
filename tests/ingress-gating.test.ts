@@ -139,7 +139,7 @@ describe('direct ingress route gates', () => {
     }
   });
 
-  it('verifies enabled direct lead ingress with a validation probe instead of creating a lead', async () => {
+  it('verifies enabled direct lead ingress with durable-receipt probes instead of creating leads', async () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-direct-lead.'));
     const seenBodies = new Map<string, string>();
     const server = createServer((request, response) => {
@@ -155,8 +155,8 @@ describe('direct ingress route gates', () => {
         });
         request.on('end', () => {
           seenBodies.set('website', body);
-          response.writeHead(400, { 'content-type': 'application/json' });
-          response.end('{"ok":false,"error":"invalid_lead_payload"}');
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end('{"ok":true,"received":1,"duplicate":false}');
         });
         return;
       }
@@ -167,8 +167,8 @@ describe('direct ingress route gates', () => {
         });
         request.on('end', () => {
           seenBodies.set('facebook', body);
-          response.writeHead(400, { 'content-type': 'application/json' });
-          response.end('{"ok":false,"error":"invalid_lead_payload"}');
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end('{"ok":true,"received":1,"duplicate":false}');
         });
         return;
       }

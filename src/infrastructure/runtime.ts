@@ -120,10 +120,17 @@ export class InboxRepository {
     }
   }
 
-  async claim(workerId: string, limit = 1, leaseSeconds = 60): Promise<ClaimedInboxEvent[]> {
+  async claim(
+    workerId: string,
+    limit = 1,
+    leaseSeconds = 60,
+    filter: { eventTypes?: string[]; providers?: string[] } = {},
+  ): Promise<ClaimedInboxEvent[]> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      const eventTypes = filter.eventTypes?.filter(Boolean) || [];
+      const providers = filter.providers?.filter(Boolean) || [];
       const result = await client.query<{
         inbox_event_id: string;
         provider: string;
@@ -135,8 +142,12 @@ export class InboxRepository {
         `WITH candidates AS (
           SELECT inbox_event_id
           FROM runtime.inbox_events
-          WHERE (status IN ('pending','retryable') AND available_at <= now())
-             OR (status='processing' AND lock_expires_at <= now())
+          WHERE (
+              (status IN ('pending','retryable') AND available_at <= now())
+              OR (status='processing' AND lock_expires_at <= now())
+            )
+            AND (cardinality($4::text[]) = 0 OR event_type = ANY($4::text[]))
+            AND (cardinality($5::text[]) = 0 OR provider = ANY($5::text[]))
           ORDER BY available_at, created_at, inbox_event_id
           FOR UPDATE SKIP LOCKED
           LIMIT $1
@@ -150,7 +161,7 @@ export class InboxRepository {
         FROM candidates
         WHERE i.inbox_event_id=candidates.inbox_event_id
         RETURNING i.inbox_event_id, i.provider, i.event_type, i.dedupe_key, i.attempt_count, i.payload_json`,
-        [limit, workerId, leaseSeconds],
+        [limit, workerId, leaseSeconds, eventTypes, providers],
       );
       for (const row of result.rows) {
         await client.query(

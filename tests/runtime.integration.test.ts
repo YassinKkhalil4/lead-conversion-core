@@ -43,6 +43,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let messageRequests: typeof import('../src/services/message-request-service.js');
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
   let metaInbox: typeof import('../src/services/meta-inbox-processor.js');
+  let leadIngressProcessor: typeof import('../src/services/lead-ingress-inbox-processor.js');
   let leadScoring: typeof import('../src/services/lead-scoring-service.js');
   let leadRouting: typeof import('../src/services/lead-routing-service.js');
   let followupScheduler: typeof import('../src/services/followup-scheduler-service.js');
@@ -80,6 +81,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     messageRequests = await import('../src/services/message-request-service.js');
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
     metaInbox = await import('../src/services/meta-inbox-processor.js');
+    leadIngressProcessor = await import('../src/services/lead-ingress-inbox-processor.js');
     leadScoring = await import('../src/services/lead-scoring-service.js');
     leadRouting = await import('../src/services/lead-routing-service.js');
     followupScheduler = await import('../src/services/followup-scheduler-service.js');
@@ -550,6 +552,40 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM runtime.webhook_receipts')).rows[0]?.count).toBe('1');
   });
 
+  it('claims only configured inbox event types for specialized runtime processors', async () => {
+    const inbox = new runtime.InboxRepository();
+    await receiveInbox('evt-filter-meta');
+    const leadReceipt = await inbox.receive({
+      provider: 'website',
+      eventType: 'lead.created',
+      externalEventId: 'evt-filter-website-lead',
+      rawBody: Buffer.from('{"eventId":"evt-filter-website-lead"}'),
+      headers: {},
+      payload: { eventId: 'evt-filter-website-lead' },
+      signatureValid: true,
+      aggregateKey: 'evt-filter-website-lead',
+    });
+    await inbox.receive({
+      provider: 'partner-crm',
+      eventType: 'lead.created',
+      externalEventId: 'evt-filter-partner-lead',
+      rawBody: Buffer.from('{"eventId":"evt-filter-partner-lead"}'),
+      headers: {},
+      payload: { eventId: 'evt-filter-partner-lead' },
+      signatureValid: true,
+      aggregateKey: 'evt-filter-partner-lead',
+    });
+
+    const claimed = await inbox.claim('lead-worker', 10, 60, {
+      eventTypes: ['lead.created', 'leadgen.created'],
+      providers: ['website', 'facebook'],
+    });
+    expect(claimed.map((event) => event.inboxEventId)).toEqual([leadReceipt.inboxEventId]);
+    expect(claimed[0]?.eventType).toBe('lead.created');
+    expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE external_event_id='evt-filter-meta'")).rows[0]?.status).toBe('pending');
+    expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE external_event_id='evt-filter-partner-lead'")).rows[0]?.status).toBe('pending');
+  });
+
   it('prevents concurrent inbox claims and recovers expired leases', async () => {
     const inbox = new runtime.InboxRepository();
     const eventId = await receiveInbox('evt-lease');
@@ -793,7 +829,14 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     await db.pool.query(
       `INSERT INTO runtime.worker_heartbeats
         (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
-       VALUES ('cutover-readiness-test', 'runtime', 1, now(), now(), '{"enabled":true,"jobProcessorConfigured":true}'::jsonb)`,
+       VALUES (
+        'cutover-readiness-test',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","salesperson.command_received","lead.created","leadgen.created"],"inboxProviders":["meta","n8n","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
     );
     const report = await new cutoverReadiness.CutoverReadinessService().report();
     expect(report.ok).toBe(true);
@@ -812,7 +855,9 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
       direct_meta_webhook_flag: 'pass',
+      direct_meta_inbox_processor: 'pass',
       direct_lead_ingress_flag: 'pass',
+      direct_lead_inbox_processor: 'pass',
       n8n_compatibility_flag: 'pass',
       active_turn_compatibility_disabled: 'pass',
       inbox_backlog: 'pass',
@@ -844,6 +889,34 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       latestWorkerName: 'cutover-disabled-runtime',
       operational: false,
       metadata: { enabled: false, jobProcessorConfigured: true },
+    });
+  });
+
+  it('fails cutover readiness when direct lead ingress is enabled without its worker processor', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'cutover-missing-lead-processor',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received"],"inboxProviders":["meta"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new cutoverReadiness.CutoverReadinessService().report();
+    expect(report.ok).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_meta_inbox_processor: 'pass',
+      direct_lead_inbox_processor: 'fail',
+      runtime_worker_heartbeat: 'pass',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'direct_lead_inbox_processor')?.details).toMatchObject({
+      configured: false,
+      inboxEventTypes: ['whatsapp.message_status', 'whatsapp.message_received'],
+      inboxProviders: ['meta'],
     });
   });
 
@@ -1262,7 +1335,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     }
   });
 
-  it('receives website lead webhooks through durable inbox before intake processing', async () => {
+  it('receives website lead webhooks through durable inbox and processes intake through the worker', async () => {
     const client = await db.pool.query<{ client_id: string }>(
       "INSERT INTO app.clients (client_key, company_name) VALUES ('client-website-ingress', 'Website Ingress Client') RETURNING client_id",
     );
@@ -1293,10 +1366,25 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         },
       });
       expect(response.statusCode).toBe(200);
-      const body = response.json() as { ok: boolean; inboxEventId: string; intake: { leadId: string; firstContact: { outboxCommandId: string } } };
+      const body = response.json() as { ok: boolean; inboxEventId: string; duplicate: boolean };
       expect(body.ok).toBe(true);
       expect(body.inboxEventId).toBeTruthy();
-      expect(body.intake.firstContact.outboxCommandId).toBeTruthy();
+      expect(body.duplicate).toBe(false);
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-001'")).rows[0]?.status).toBe('pending');
+      expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('0');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
+
+      const processor = new leadIngressProcessor.LeadIngressInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        {
+          enabled: true,
+          batchSize: 10,
+          inboxEventTypes: leadIngressProcessor.leadIngressInboxEventTypes,
+          inboxProviders: leadIngressProcessor.leadIngressInboxProviders,
+        },
+      );
+      expect(await worker.tick()).toBe(1);
       expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-001'")).rows[0]?.status).toBe('processed');
       expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
       expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('2');
@@ -1305,7 +1393,64 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     }
   });
 
-  it('receives sanitized Facebook lead payloads without live Graph API calls', async () => {
+  it('deduplicates direct website lead receipts before worker-created business effects', async () => {
+    await db.pool.query(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-website-duplicate', 'Website Duplicate Client')",
+    );
+    const app = await appModule.buildApp();
+    const payload = {
+      eventId: 'website-lead-duplicate-001',
+      clientKey: 'client-website-duplicate',
+      name: 'Duplicate Website Lead',
+      phone: '01099999995',
+      email: 'duplicate@example.test',
+      campaign: 'landing_page',
+      firstContact: {
+        requestKey: 'website-lead-duplicate-001:first-contact',
+        payload: { kind: 'template', templateName: 'lead_welcome', languageCode: 'en_US', components: [] },
+      },
+    };
+    try {
+      const first = await app.inject({
+        method: 'POST',
+        url: '/webhooks/leads/website',
+        headers: { 'x-edge-secret': env.EDGE_SHARED_SECRET },
+        payload,
+      });
+      const duplicate = await app.inject({
+        method: 'POST',
+        url: '/webhooks/leads/website',
+        headers: { 'x-edge-secret': env.EDGE_SHARED_SECRET },
+        payload,
+      });
+      expect(first.statusCode).toBe(200);
+      expect(duplicate.statusCode).toBe(200);
+      expect(first.json()).toMatchObject({ ok: true, received: 1, duplicate: false });
+      expect(duplicate.json()).toMatchObject({ ok: true, received: 1, duplicate: true });
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-duplicate-001'")).rows[0]?.count).toBe('1');
+
+      const processor = new leadIngressProcessor.LeadIngressInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        {
+          enabled: true,
+          batchSize: 10,
+          inboxEventTypes: leadIngressProcessor.leadIngressInboxEventTypes,
+          inboxProviders: leadIngressProcessor.leadIngressInboxProviders,
+        },
+      );
+      expect(await worker.tick()).toBe(1);
+      expect(await worker.tick()).toBe(0);
+      expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.lead_intake_events')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.messages')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('2');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('receives sanitized Facebook lead payloads and processes them without live Graph API calls', async () => {
     await db.pool.query("INSERT INTO app.clients (client_key, company_name) VALUES ('client-facebook-ingress', 'Facebook Ingress Client')");
     const app = await appModule.buildApp();
     try {
@@ -1328,10 +1473,23 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         },
       });
       expect(response.statusCode).toBe(200);
-      const body = response.json() as { ok: boolean; intake: { firstContact: null; duplicate: boolean } };
+      const body = response.json() as { ok: boolean; duplicate: boolean };
       expect(body.ok).toBe(true);
-      expect(body.intake.firstContact).toBeNull();
-      expect(body.intake.duplicate).toBe(false);
+      expect(body.duplicate).toBe(false);
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='facebook' AND external_event_id='fb-lead-graphless-001'")).rows[0]?.status).toBe('pending');
+      expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('0');
+
+      const processor = new leadIngressProcessor.LeadIngressInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        {
+          enabled: true,
+          batchSize: 10,
+          inboxEventTypes: leadIngressProcessor.leadIngressInboxEventTypes,
+          inboxProviders: leadIngressProcessor.leadIngressInboxProviders,
+        },
+      );
+      expect(await worker.tick()).toBe(1);
       expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='facebook' AND external_event_id='fb-lead-graphless-001'")).rows[0]?.status).toBe('processed');
       expect((await db.pool.query("SELECT provider, provider_external_id FROM app.leads WHERE provider='facebook'")).rows[0]).toEqual({
         provider: 'facebook',
@@ -1343,7 +1501,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     }
   });
 
-  it('durably records and ignores invalid website lead webhook payloads', async () => {
+  it('durably records invalid website lead webhook payloads before the worker ignores them', async () => {
     const app = await appModule.buildApp();
     try {
       const response = await app.inject({
@@ -1356,7 +1514,21 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
           name: 'Invalid Website Lead',
         },
       });
-      expect(response.statusCode).toBe(400);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ ok: true, received: 1, duplicate: false });
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-invalid-001'")).rows[0]?.status).toBe('pending');
+
+      const processor = new leadIngressProcessor.LeadIngressInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        {
+          enabled: true,
+          batchSize: 10,
+          inboxEventTypes: leadIngressProcessor.leadIngressInboxEventTypes,
+          inboxProviders: leadIngressProcessor.leadIngressInboxProviders,
+        },
+      );
+      expect(await worker.tick()).toBe(1);
       expect((await db.pool.query("SELECT status, ignored_reason FROM runtime.inbox_events WHERE provider='website' AND external_event_id='website-lead-invalid-001'")).rows[0]).toMatchObject({
         status: 'ignored',
       });

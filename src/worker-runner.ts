@@ -4,6 +4,7 @@ import { closePool } from './db/pool.js';
 import type { ClaimedJob } from './infrastructure/runtime.js';
 import { GoogleCalendarAdapter } from './integrations/calendar/google-calendar-adapter.js';
 import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adapter.js';
+import { LeadIngressInboxProcessor, leadIngressInboxEventTypes, leadIngressInboxProviders } from './services/lead-ingress-inbox-processor.js';
 import { MetaInboxProcessor } from './services/meta-inbox-processor.js';
 import { FollowupJobProcessor } from './services/followup-job-processor.js';
 import { ReportingService } from './services/reporting-service.js';
@@ -21,6 +22,15 @@ const calendarDispatcher = env.GOOGLE_CALENDAR_ENABLED
   ? new CalendarOutboxDispatcher({ calendar: GoogleCalendarAdapter.fromEnv() })
   : undefined;
 const metaInboxProcessor = env.META_STATUS_PROCESSOR_ENABLED ? new MetaInboxProcessor() : undefined;
+const leadIngressInboxProcessor = env.DIRECT_LEAD_INGRESS_ENABLED ? new LeadIngressInboxProcessor() : undefined;
+const inboxEventTypes = [
+  ...(metaInboxProcessor ? ['whatsapp.message_status', 'whatsapp.message_received', 'salesperson.command_received'] : []),
+  ...(leadIngressInboxProcessor ? leadIngressInboxEventTypes : []),
+];
+const inboxProviders = [
+  ...(metaInboxProcessor ? ['meta', 'n8n'] : []),
+  ...(leadIngressInboxProcessor ? leadIngressInboxProviders : []),
+];
 const followupJobProcessor = new FollowupJobProcessor();
 const slaService = new SlaService();
 const reportingService = new ReportingService();
@@ -44,11 +54,22 @@ const dispatchRuntimeOutbox = messagingDispatcher || calendarDispatcher
   : undefined;
 const runtimeHandlers = {
   ...(dispatchRuntimeOutbox ? { dispatchOutbox: dispatchRuntimeOutbox } : {}),
-  ...(metaInboxProcessor ? { processInbox: (event: Parameters<MetaInboxProcessor['process']>[0]) => metaInboxProcessor.process(event) } : {}),
+  ...(inboxEventTypes.length > 0
+    ? {
+        processInbox: (event: Parameters<MetaInboxProcessor['process']>[0]) => {
+          if (leadIngressInboxProcessor && leadIngressInboxEventTypes.includes(event.eventType)) {
+            return leadIngressInboxProcessor.process(event);
+          }
+          return metaInboxProcessor
+            ? metaInboxProcessor.process(event)
+            : Promise.resolve({ outcome: 'retryable' as const, error: `inbox_processor_disabled:${event.provider}:${event.eventType}` });
+        },
+      }
+    : {}),
   processJob: processRuntimeJob,
 };
 const worker = env.WORKER_KIND === 'runtime'
-  ? new RuntimeWorker(runtimeHandlers)
+  ? new RuntimeWorker(runtimeHandlers, { inboxEventTypes, inboxProviders })
   : new OutboxWorker();
 
 async function shutdown(signal: string): Promise<void> {

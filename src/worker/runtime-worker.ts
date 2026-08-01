@@ -40,6 +40,8 @@ export interface RuntimeWorkerOptions {
   leaseSeconds?: number;
   idleSleepMs?: number;
   enabled?: boolean;
+  inboxEventTypes?: string[];
+  inboxProviders?: string[];
 }
 
 export class RuntimeWorker {
@@ -51,6 +53,8 @@ export class RuntimeWorker {
   private readonly leaseSeconds: number;
   private readonly idleSleepMs: number;
   private readonly enabled: boolean;
+  private readonly inboxEventTypes: string[];
+  private readonly inboxProviders: string[];
   private lastHeartbeatAt = 0;
 
   constructor(
@@ -64,6 +68,8 @@ export class RuntimeWorker {
     this.leaseSeconds = options.leaseSeconds || 60;
     this.idleSleepMs = options.idleSleepMs || 1_000;
     this.enabled = options.enabled ?? this.env.RUNTIME_WORKER_ENABLED;
+    this.inboxEventTypes = options.inboxEventTypes || [];
+    this.inboxProviders = options.inboxProviders || [];
   }
 
   stop(): void {
@@ -110,6 +116,8 @@ export class RuntimeWorker {
         JSON.stringify({
           enabled: this.enabled,
           inboxProcessorConfigured: Boolean(this.handlers.processInbox),
+          inboxEventTypes: this.inboxEventTypes,
+          inboxProviders: this.inboxProviders,
           outboxDispatcherConfigured: Boolean(this.handlers.dispatchOutbox),
           jobProcessorConfigured: Boolean(this.handlers.processJob),
         }),
@@ -120,7 +128,10 @@ export class RuntimeWorker {
   private async processInboxBatch(): Promise<number> {
     const handler = this.handlers.processInbox;
     if (!handler) return 0;
-    const events = await this.inbox.claim(this.workerName, this.batchSize, this.leaseSeconds);
+    const events = await this.inbox.claim(this.workerName, this.batchSize, this.leaseSeconds, {
+      eventTypes: this.inboxEventTypes,
+      providers: this.inboxProviders,
+    });
     for (const event of events) {
       try {
         const result = await handler(event);

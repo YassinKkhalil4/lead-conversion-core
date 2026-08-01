@@ -274,9 +274,9 @@ Date: 2026-08-01
 
 ## DEC-026: Direct Lead Deployment Probes Avoid Business Lead Creation
 
-Decision: `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead=enabled` uses deliberately invalid website and Facebook lead payloads and expects `invalid_lead_payload` instead of posting complete synthetic leads.
+Decision: `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead=enabled` uses deliberately incomplete website and Facebook lead payloads and expects durable HTTP acknowledgement from the route instead of posting complete synthetic leads.
 
-Reason: MP-12 route-state verification should prove the direct lead routes are enabled and reach validation without creating authoritative `app.leads`, `app.contacts`, follow-up jobs, or outbound commands. Because direct lead ingress durably receipts before validation, any resulting ignored inbox rows are acceptable staging evidence and must not be treated as business leads.
+Reason: MP-12 route-state verification should prove the direct lead routes are enabled and can durably receipt webhook payloads without creating authoritative `app.leads`, `app.contacts`, follow-up jobs, or outbound commands inside the request. Payload validation and business processing belong to the runtime worker, so any resulting ignored inbox rows are acceptable staging evidence and must not be treated as business leads.
 
 Date: 2026-08-01
 
@@ -373,5 +373,13 @@ Date: 2026-08-01
 Decision: `/ready` and `npm run cutover:readiness` require fresh worker heartbeats to include metadata proving the required worker is operational. A runtime heartbeat must have `enabled=true` and at least one configured handler; a legacy outbox heartbeat must have both worker enablement and target configuration metadata before it satisfies required-worker readiness.
 
 Reason: A disabled worker process can still emit a fresh heartbeat while intentionally not claiming durable work. Treating that as ready would allow cutover with no active runtime processor even when `RUNTIME_WORKER_ENABLED=true`.
+
+Date: 2026-08-01
+
+## DEC-039: Direct Lead Webhooks Acknowledge Durable Receipt Only
+
+Decision: Direct website and Facebook lead webhook routes authenticate, gate, store the raw payload in `runtime.inbox_events`, deduplicate by provider identity or deterministic fallback hash, and return acknowledgement without running lead intake business logic. A runtime inbox processor claims only configured website/Facebook lead event providers and types, validates payloads, ignores permanent bad inputs, retries transient failures, and calls `LeadIntakeService` outside the HTTP request path.
+
+Reason: The target architecture separates durable receipt from business processing. Running lead intake in the webhook request could create customer state, outbox commands, and projection work before the external provider acknowledgement returned, and made deployment probes depend on synchronous validation instead of durable inbox evidence.
 
 Date: 2026-08-01

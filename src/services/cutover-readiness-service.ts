@@ -112,6 +112,19 @@ export class CutoverReadinessService {
     const runtimeOperationalState = heartbeatRow
       ? workerHeartbeatOperationalState('runtime', heartbeatRow.metadata_json)
       : { operational: false, metadata: {} };
+    const inboxEventTypes = Array.isArray(runtimeOperationalState.metadata.inboxEventTypes)
+      ? runtimeOperationalState.metadata.inboxEventTypes.filter((value): value is string => typeof value === 'string')
+      : [];
+    const inboxProviders = Array.isArray(runtimeOperationalState.metadata.inboxProviders)
+      ? runtimeOperationalState.metadata.inboxProviders.filter((value): value is string => typeof value === 'string')
+      : [];
+    const directMetaProcessorConfigured = inboxEventTypes.includes('whatsapp.message_status')
+      && inboxEventTypes.includes('whatsapp.message_received')
+      && inboxProviders.includes('meta');
+    const directLeadProcessorConfigured = inboxEventTypes.includes('lead.created')
+      && inboxEventTypes.includes('leadgen.created')
+      && inboxProviders.includes('website')
+      && inboxProviders.includes('facebook');
 
     const checks: ReadinessCheck[] = [
       {
@@ -120,9 +133,23 @@ export class CutoverReadinessService {
         details: { enabled: env.DIRECT_META_WEBHOOK_ENABLED },
       },
       {
+        checkKey: 'direct_meta_inbox_processor',
+        status: env.DIRECT_META_WEBHOOK_ENABLED
+          ? directMetaProcessorConfigured ? 'pass' : 'fail'
+          : 'warn',
+        details: { requiredWhenEnabled: true, configured: directMetaProcessorConfigured, inboxEventTypes, inboxProviders },
+      },
+      {
         checkKey: 'direct_lead_ingress_flag',
         status: env.DIRECT_LEAD_INGRESS_ENABLED ? 'pass' : 'warn',
         details: { enabled: env.DIRECT_LEAD_INGRESS_ENABLED },
+      },
+      {
+        checkKey: 'direct_lead_inbox_processor',
+        status: env.DIRECT_LEAD_INGRESS_ENABLED
+          ? directLeadProcessorConfigured ? 'pass' : 'fail'
+          : 'warn',
+        details: { requiredWhenEnabled: true, configured: directLeadProcessorConfigured, inboxEventTypes, inboxProviders },
       },
       {
         checkKey: 'n8n_compatibility_flag',
