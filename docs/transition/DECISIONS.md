@@ -367,3 +367,11 @@ Decision: `npm run cutover:readiness` treats due or processing `runtime.schedule
 Reason: Scheduled jobs are part of the durable PostgreSQL runtime authority. Route cutover should not proceed with abandoned due follow-up, SLA, report, or appointment work, but legitimate future schedules must not block direct-ingress readiness.
 
 Date: 2026-08-01
+
+## DEC-038: Worker Heartbeats Must Be Operational
+
+Decision: `/ready` and `npm run cutover:readiness` require fresh worker heartbeats to include metadata proving the required worker is operational. A runtime heartbeat must have `enabled=true` and at least one configured handler; a legacy outbox heartbeat must have both worker enablement and target configuration metadata before it satisfies required-worker readiness.
+
+Reason: A disabled worker process can still emit a fresh heartbeat while intentionally not claiming durable work. Treating that as ready would allow cutover with no active runtime processor even when `RUNTIME_WORKER_ENABLED=true`.
+
+Date: 2026-08-01

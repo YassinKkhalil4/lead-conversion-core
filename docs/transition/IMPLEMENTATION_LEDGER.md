@@ -384,3 +384,13 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed with 2 PostgreSQL cutover-readiness tests and 62 skipped by filter, including due scheduled-job backlog failure while a future scheduled job was ignored.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 141 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `d931368`: Included scheduled jobs in cutover readiness.
+
+## 2026-08-01 Operational Worker Heartbeat Readiness
+
+- Implementation slice: Hardened `/ready` and MP-12 cutover readiness to require operational heartbeat metadata for required workers. Runtime worker readiness now requires a fresh heartbeat with `enabled=true` and at least one configured handler; legacy outbox readiness requires the heartbeat metadata to show the worker enabled and target configured.
+- Decision: Added DEC-038. Fresh heartbeat timestamps alone are insufficient because disabled worker processes can intentionally heartbeat without claiming durable work.
+- Verification: `npm run lint` passed.
+- Verification failure: First focused readiness run failed because the runtime integration test imported readiness modules with `RUNTIME_WORKER_ENABLED=false`, making the disabled heartbeat a warning by design. Resolution: set `RUNTIME_WORKER_ENABLED=true` in the runtime integration environment before import.
+- Verification: `npx vitest run tests/health-readiness.integration.test.ts tests/runtime.integration.test.ts -t "readiness"` passed with 5 PostgreSQL readiness tests and 61 skipped by filter, covering `/ready` and cutover readiness disabled-heartbeat rejection.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 142 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `25c0dfc`: Required operational worker heartbeats for readiness.

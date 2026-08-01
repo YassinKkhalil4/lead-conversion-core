@@ -1339,3 +1339,21 @@ Result: passed. Focused PostgreSQL run executed 2 cutover-readiness tests and sk
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 141 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Operational Worker Heartbeat Readiness
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/health-readiness.integration.test.ts tests/runtime.integration.test.ts -t "readiness"`
+
+Result: failed on the first focused run because the runtime integration test suite imported `getEnv()` with `RUNTIME_WORKER_ENABLED=false`, so a disabled heartbeat correctly produced a warning instead of a failure. Resolution: set `RUNTIME_WORKER_ENABLED=true` in the runtime integration environment before importing readiness modules.
+
+Command: `npx vitest run tests/health-readiness.integration.test.ts tests/runtime.integration.test.ts -t "readiness"`
+
+Result: passed. Focused PostgreSQL run executed 5 readiness tests and skipped 61 by filter, including `/ready` rejecting a disabled runtime worker heartbeat and cutover readiness failing when the latest runtime heartbeat is fresh but disabled.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 142 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
