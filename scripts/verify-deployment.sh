@@ -21,7 +21,7 @@ Options:
   --base-url=URL                  Edge base URL. Defaults to http://127.0.0.1:$EDGE_PORT.
   --skip-ready                    Skip /ready check.
   --skip-shadow                   Skip /v1/shadow/evaluate check.
-  --check-direct-meta             Verify direct Meta challenge behavior and, when enabled, signed non-customer webhook receipt.
+  --check-direct-meta             Verify direct Meta challenge and POST behavior for the expected route state.
   --check-direct-lead             Verify direct website and Facebook lead route behavior with non-business durable-receipt probes.
   --expect-direct-meta=MODE       MODE is enabled or disabled. Defaults from DIRECT_META_WEBHOOK_ENABLED.
   --expect-direct-lead=MODE       MODE is enabled or disabled. Defaults from DIRECT_LEAD_INGRESS_ENABLED.
