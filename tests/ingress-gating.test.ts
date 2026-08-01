@@ -1,4 +1,11 @@
+import { execFile } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const execFileAsync = promisify(execFile);
 
 const baseEnv = {
   NODE_ENV: 'test',
@@ -72,6 +79,48 @@ describe('direct ingress route gates', () => {
       expect(response.body).toBe('challenge-ok');
     } finally {
       await app.close();
+    }
+  });
+
+  it('verifies disabled direct ingress routes through the deployment verification script', async () => {
+    const app = await buildAppWithEnv({
+      DIRECT_META_WEBHOOK_ENABLED: 'false',
+      DIRECT_LEAD_INGRESS_ENABLED: 'false',
+      N8N_COMPAT_ROUTES_ENABLED: 'true',
+    });
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-deployment.'));
+    try {
+      await app.listen({ host: '127.0.0.1', port: 0 });
+      const address = app.server.address();
+      if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
+      const envFile = join(root, 'verify.env');
+      writeFileSync(envFile, [
+        'EDGE_SHARED_SECRET=test_shared_secret_123456',
+        'EDGE_INTERNAL_SECRET=test_internal_secret_123456',
+        'META_WEBHOOK_VERIFY_TOKEN=test_meta_verify_token_123456',
+        'DIRECT_META_WEBHOOK_ENABLED=false',
+        'DIRECT_LEAD_INGRESS_ENABLED=false',
+        'N8N_COMPAT_ROUTES_ENABLED=true',
+      ].join('\n'));
+      const { stdout } = await execFileAsync('bash', [
+        'scripts/verify-deployment.sh',
+        `--env-file=${envFile}`,
+        `--base-url=http://127.0.0.1:${address.port}`,
+        '--skip-ready',
+        '--skip-shadow',
+        '--check-direct-meta',
+        '--check-direct-lead',
+        '--expect-direct-meta=disabled',
+        '--expect-direct-lead=disabled',
+      ], {
+        cwd: process.cwd(),
+        timeout: 10_000,
+      });
+      expect(stdout).toContain('Direct Meta challenge (disabled):');
+      expect(stdout).toContain('Direct website lead ingress (disabled):');
+    } finally {
+      await app.close();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });
