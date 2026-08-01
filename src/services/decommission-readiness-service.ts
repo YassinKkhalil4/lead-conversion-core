@@ -185,7 +185,7 @@ export class DecommissionReadinessService {
            AND state IN ('pending','processing','retryable','delivery_unknown','permanently_failed','cancelled','dead_lettered')`,
       ),
       scalar('SELECT count(*)::int AS count FROM migration.reconciliation_results'),
-      scalar("SELECT count(*)::int AS count FROM migration.reconciliation_results WHERE status='fail'"),
+      scalar("SELECT count(*)::int AS count FROM migration.reconciliation_results WHERE status <> 'pass'"),
       pool.query<{ worker_name: string; heartbeat_age_seconds: number | null; metadata_json: Record<string, unknown> }>(
         `SELECT
            worker_name,
@@ -378,7 +378,7 @@ export class DecommissionReadinessService {
         area: 'airtable',
         checkKey: 'airtable_reconciliation_stable',
         status: passFail(airtableReconciliationResultCount > 0 && airtableReconciliationFailureCount === 0),
-        details: { resultCount: airtableReconciliationResultCount, failureCount: airtableReconciliationFailureCount },
+        details: { resultCount: airtableReconciliationResultCount, nonPassCount: airtableReconciliationFailureCount },
       },
       {
         area: 'airtable',

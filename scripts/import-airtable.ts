@@ -41,6 +41,13 @@ interface ImportSummary {
   validRecords: number;
   rejectedRecords: number;
   missingTables: string[];
+  collisions: Array<{
+    tableName: string;
+    field: 'phone' | 'email';
+    normalizedValue: string;
+    recordIds: string[];
+    count: number;
+  }>;
 }
 
 const manifestSchema = z.object({
@@ -182,9 +189,65 @@ function normalizePhone(raw: string): string {
   return raw.trim();
 }
 
+function normalizeEmail(raw: string): string {
+  return raw.trim().toLocaleLowerCase();
+}
+
 function phoneLooksUsable(raw: string): boolean {
   const normalized = normalizePhone(raw);
   return /^\+20\d{10}$/.test(normalized) || /^\+\d{8,15}$/.test(normalized);
+}
+
+function collisionSources(record: AirtableRecord, tableName: string): Array<{ field: 'phone' | 'email'; normalizedValue: string }> {
+  const sources: Array<{ field: 'phone' | 'email'; normalizedValue: string }> = [];
+  if (tableName === 'Leads') {
+    const phone = stringField(record.fields, 'Phone Raw') || stringField(record.fields, 'Phone Normalized');
+    const email = stringField(record.fields, 'Email');
+    if (phone) sources.push({ field: 'phone', normalizedValue: normalizePhone(phone) });
+    if (email) sources.push({ field: 'email', normalizedValue: normalizeEmail(email) });
+  }
+  if (tableName === 'Salespeople') {
+    const phone = stringField(record.fields, 'Phone');
+    const email = stringField(record.fields, 'Email');
+    if (phone) sources.push({ field: 'phone', normalizedValue: normalizePhone(phone) });
+    if (email) sources.push({ field: 'email', normalizedValue: normalizeEmail(email) });
+  }
+  return sources.filter((source) => source.normalizedValue !== '');
+}
+
+function analyzeCollisions(loads: TableLoad[]): ImportSummary['collisions'] {
+  const groups = new Map<string, {
+    tableName: string;
+    field: 'phone' | 'email';
+    normalizedValue: string;
+    recordIds: Set<string>;
+  }>();
+  for (const load of loads) {
+    for (const record of load.records) {
+      if (!record.id) continue;
+      for (const source of collisionSources(record, load.tableName)) {
+        const key = `${load.tableName}:${source.field}:${source.normalizedValue}`;
+        const group = groups.get(key) || {
+          tableName: load.tableName,
+          field: source.field,
+          normalizedValue: source.normalizedValue,
+          recordIds: new Set<string>(),
+        };
+        group.recordIds.add(record.id);
+        groups.set(key, group);
+      }
+    }
+  }
+  return Array.from(groups.values())
+    .map((group) => ({
+      tableName: group.tableName,
+      field: group.field,
+      normalizedValue: group.normalizedValue,
+      recordIds: Array.from(group.recordIds).sort(),
+      count: group.recordIds.size,
+    }))
+    .filter((group) => group.count > 1)
+    .sort((a, b) => `${a.tableName}:${a.field}:${a.normalizedValue}`.localeCompare(`${b.tableName}:${b.field}:${b.normalizedValue}`));
 }
 
 function parseCsv(text: string): AirtableFields[] {
@@ -362,6 +425,7 @@ export async function loadAirtableExport(inputDir: string): Promise<{ loads: Tab
     validRecords: 0,
     rejectedRecords: 0,
     missingTables: [],
+    collisions: analyzeCollisions(loads),
   };
 
   for (const load of loads) {

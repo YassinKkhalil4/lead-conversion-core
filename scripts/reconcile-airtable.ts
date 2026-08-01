@@ -42,6 +42,31 @@ async function mappedCountForRun(client: PoolClient, importRunId: string, source
   );
 }
 
+async function rejectedCountForRun(client: PoolClient, importRunId: string, sourceTable: string): Promise<number> {
+  return scalar(
+    client,
+    `SELECT count(*)::text AS count
+     FROM migration.rejected_records
+     WHERE import_run_id=$1
+       AND table_name=$2`,
+    [importRunId, sourceTable],
+  );
+}
+
+async function acceptedRawCountForRun(client: PoolClient, importRunId: string, rawCounts: Record<string, number>, sourceTable: string): Promise<{
+  rawCount: number;
+  rejectedCount: number;
+  acceptedCount: number;
+}> {
+  const rawCount = Number(rawCounts[sourceTable] || 0);
+  const rejectedCount = await rejectedCountForRun(client, importRunId, sourceTable);
+  return {
+    rawCount,
+    rejectedCount,
+    acceptedCount: Math.max(rawCount - rejectedCount, 0),
+  };
+}
+
 export async function reconcileAirtableImport(input: {
   importRunId?: string;
   recordResults?: boolean;
@@ -68,50 +93,50 @@ export async function reconcileAirtableImport(input: {
     );
     checks.push({
       checkKey: 'rejected_records',
-      status: rejectedCount === 0 ? 'pass' : 'warn',
+      status: rejectedCount === 0 ? 'pass' : 'fail',
       expectedCount: 0,
       actualCount: rejectedCount,
       details: {},
     });
 
-    const expectedClients = Number(rawCounts.Clients || 0);
+    const clientsCounts = await acceptedRawCountForRun(client, importRunId, rawCounts, 'Clients');
     const mappedClients = await mappedCountForRun(client, importRunId, 'Clients', 'app.clients');
     checks.push({
       checkKey: 'clients_mapped',
-      status: mappedClients === expectedClients ? 'pass' : 'fail',
-      expectedCount: expectedClients,
+      status: mappedClients === clientsCounts.acceptedCount ? 'pass' : 'fail',
+      expectedCount: clientsCounts.acceptedCount,
       actualCount: mappedClients,
-      details: {},
+      details: clientsCounts,
     });
 
-    const expectedProjects = Number(rawCounts.Projects || 0);
+    const projectsCounts = await acceptedRawCountForRun(client, importRunId, rawCounts, 'Projects');
     const mappedProjects = await mappedCountForRun(client, importRunId, 'Projects', 'app.projects');
     checks.push({
       checkKey: 'projects_mapped',
-      status: mappedProjects === expectedProjects ? 'pass' : 'fail',
-      expectedCount: expectedProjects,
+      status: mappedProjects === projectsCounts.acceptedCount ? 'pass' : 'fail',
+      expectedCount: projectsCounts.acceptedCount,
       actualCount: mappedProjects,
-      details: {},
+      details: projectsCounts,
     });
 
-    const expectedSalespeople = Number(rawCounts.Salespeople || 0);
+    const salespeopleCounts = await acceptedRawCountForRun(client, importRunId, rawCounts, 'Salespeople');
     const mappedSalespeople = await mappedCountForRun(client, importRunId, 'Salespeople', 'app.salespeople');
     checks.push({
       checkKey: 'salespeople_mapped',
-      status: mappedSalespeople === expectedSalespeople ? 'pass' : 'fail',
-      expectedCount: expectedSalespeople,
+      status: mappedSalespeople === salespeopleCounts.acceptedCount ? 'pass' : 'fail',
+      expectedCount: salespeopleCounts.acceptedCount,
       actualCount: mappedSalespeople,
-      details: {},
+      details: salespeopleCounts,
     });
 
-    const expectedLeads = Number(rawCounts.Leads || 0);
+    const leadsCounts = await acceptedRawCountForRun(client, importRunId, rawCounts, 'Leads');
     const mappedLeads = await mappedCountForRun(client, importRunId, 'Leads', 'app.leads');
     checks.push({
       checkKey: 'leads_mapped',
-      status: mappedLeads === expectedLeads ? 'pass' : 'fail',
-      expectedCount: expectedLeads,
+      status: mappedLeads === leadsCounts.acceptedCount ? 'pass' : 'fail',
+      expectedCount: leadsCounts.acceptedCount,
       actualCount: mappedLeads,
-      details: {},
+      details: leadsCounts,
     });
 
     for (const [sourceTable, targetTable, checkKey] of [
@@ -122,14 +147,14 @@ export async function reconcileAirtableImport(input: {
       ['Appointments', 'app.appointments', 'appointments_mapped'],
       ['Events', 'audit.events', 'events_mapped'],
     ] as const) {
-      const expected = Number(rawCounts[sourceTable] || 0);
+      const counts = await acceptedRawCountForRun(client, importRunId, rawCounts, sourceTable);
       const actual = await mappedCountForRun(client, importRunId, sourceTable, targetTable);
       checks.push({
         checkKey,
-        status: actual === expected ? 'pass' : 'fail',
-        expectedCount: expected,
+        status: actual === counts.acceptedCount ? 'pass' : 'fail',
+        expectedCount: counts.acceptedCount,
         actualCount: actual,
-        details: {},
+        details: counts,
       });
     }
 

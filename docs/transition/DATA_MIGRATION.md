@@ -35,6 +35,7 @@ Implemented locally:
 - Optional manifest: `airtable-export-manifest.json`
 - Stable Airtable record IDs are required; missing or duplicate IDs are rejected.
 - Invalid lead/salesperson phone values are rejected.
+- Dry-run reports duplicate phone/email collisions for source Leads and Salespeople rows using normalized values.
 - Missing mapped client/project relationships are rejected rather than invented.
 - Initial apply mappings: Clients, Projects, Salespeople, Contacts derived from Leads, Leads, Qualifications, Scores, Messages, FollowUps, Appointments, Events
 - Events import into `audit.events` as historical migration actor records, redact secret-like payload keys, preserve source record IDs in `migration.entity_map`, and reject unresolved client/lead links rather than inventing relationships.

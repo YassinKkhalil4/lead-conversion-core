@@ -80,6 +80,24 @@ describePg('airtable importer with real PostgreSQL', () => {
     expect(psqlScalar("SELECT count(*) FROM app.projects WHERE legacy_airtable_id='recPROJECTBAD'")).toBe('0');
     expect(psqlScalar("SELECT count(*) FROM app.leads WHERE legacy_airtable_id='recLEADBAD'")).toBe('0');
     expect(psqlScalar("SELECT count(*) FROM migration.entity_map WHERE source_table='Events' AND source_record_id='recEVENTBAD'")).toBe('0');
+    const child = spawn('npm', ['run', 'reconcile:airtable', '--', '--record-results'], {
+      env,
+      stdio: 'ignore',
+    });
+    return new Promise<void>((resolve, reject) => {
+      child.on('close', (code) => {
+        try {
+          expect(code).not.toBe(0);
+          expect(psqlScalar("SELECT status FROM migration.reconciliation_results WHERE check_key='rejected_records' ORDER BY created_at DESC LIMIT 1")).toBe('fail');
+          expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='projects_mapped' ORDER BY created_at DESC LIMIT 1")).toBe('0:0');
+          expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='leads_mapped' ORDER BY created_at DESC LIMIT 1")).toBe('0:0');
+          expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='events_mapped' ORDER BY created_at DESC LIMIT 1")).toBe('0:0');
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
   }, 30_000);
 
   it('rolls back raw records when apply fails mid-transaction', () => {

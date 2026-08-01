@@ -567,3 +567,11 @@ Decision: `npm run decommission:readiness` fails n8n readiness while `N8N_COMPAT
 Reason: An enabled compatibility route is still fallback ingress authority. n8n removal readiness must prove that Edge is no longer intentionally accepting n8n-compatible callbacks before fallback infrastructure can be considered removable.
 
 Date: 2026-08-01
+
+## DEC-063: Rejected Airtable Rows Block Final Reconciliation
+
+Decision: Airtable reconciliation treats rejected source rows as failed reconciliation evidence for final readiness, while mapped-count checks compare accepted source rows to target mappings and record raw, rejected, and accepted counts in check details.
+
+Reason: A rejected row is not proof of successful migration and must be resolved before Airtable can be retired. At the same time, correctly rejected rows should not distort per-entity mapping checks by appearing as missing target rows.
+
+Date: 2026-08-01

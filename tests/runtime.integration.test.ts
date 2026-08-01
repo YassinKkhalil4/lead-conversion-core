@@ -1438,8 +1438,31 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('treats non-pass Airtable reconciliation evidence as unstable for decommission', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query('TRUNCATE migration.reconciliation_results RESTART IDENTITY');
+    await db.pool.query(
+      `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
+       VALUES ('rejected_records', 'warn', 0, 1, '{"reason":"rejected Airtable rows require owner review"}'::jsonb)`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => ({
+      ...configEnv.getEnv(),
+      N8N_COMPAT_ROUTES_ENABLED: false,
+    })).report({
+      ownerApprovedAirtable: true,
+      finalAirtableExportComplete: true,
+      airtableProjectionOnlyVerified: true,
+      minCompletedEdgeQualifications: 0,
+    });
+    const reconciliationCheck = report.checks.find((check) => check.checkKey === 'airtable_reconciliation_stable');
+    expect(reconciliationCheck?.status).toBe('fail');
+    expect(reconciliationCheck?.details).toMatchObject({ resultCount: 1, nonPassCount: 1 });
+  });
+
   it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query('TRUNCATE migration.reconciliation_results RESTART IDENTITY');
     await db.pool.query(
       `INSERT INTO runtime.inbox_events
         (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
@@ -1550,6 +1573,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   });
 
   it('treats cancelled Airtable projection commands as incomplete decommission evidence', async () => {
+    await db.pool.query('TRUNCATE migration.reconciliation_results RESTART IDENTITY');
     await db.pool.query(
       `INSERT INTO runtime.outbox_commands
         (command_type, destination, idempotency_key, aggregate_key, payload_json, state)
