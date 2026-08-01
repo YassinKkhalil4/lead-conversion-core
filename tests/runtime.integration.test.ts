@@ -2464,6 +2464,66 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='report.daily_sent' AND aggregate_id=$1", [assigned.clientId])).rows[0]?.count).toBe('1');
   });
 
+  it('materializes the next daily report occurrence in the client timezone after send', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'REPORTRECUR',
+      phone: '+201099999969',
+      phoneNumberId: 'phone-number-id-mp10-report-recurring',
+    });
+    await db.pool.query("UPDATE app.clients SET timezone='Europe/Berlin', manager_phone_e164='+201099900007' WHERE client_id=$1", [seeded.clientId]);
+    const service = new reportingService.ReportingService();
+    const scheduled = await service.scheduleDailyReport(db.pool, {
+      clientId: seeded.clientId,
+      reportDate: '2026-03-28',
+      dueAt: '2026-03-28T08:15:00.000Z',
+      correlationId: 'report-recurring-test',
+    });
+
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => service.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+
+    const current = await db.pool.query<{ status: string }>(
+      'SELECT status FROM app.daily_reports WHERE daily_report_id=$1',
+      [scheduled.dailyReportId],
+    );
+    expect(current.rows[0]?.status).toBe('sent');
+
+    const next = await db.pool.query<{
+      report_date: string;
+      report_status: string;
+      job_status: string;
+      due_at_utc: string;
+      timezone: string;
+      recurrence_json: Record<string, unknown>;
+    }>(
+      `SELECT
+         dr.report_date::text AS report_date,
+         dr.status AS report_status,
+         j.status AS job_status,
+         to_char(j.due_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS due_at_utc,
+         j.timezone,
+         j.recurrence_json
+       FROM app.daily_reports dr
+       JOIN runtime.scheduled_jobs j ON j.scheduled_job_id=dr.scheduled_job_id
+       WHERE dr.semantic_key=$1`,
+      [`report:daily:${seeded.clientId}:2026-03-29`],
+    );
+    expect(next.rows[0]).toMatchObject({
+      report_date: '2026-03-29',
+      report_status: 'scheduled',
+      job_status: 'pending',
+      due_at_utc: '2026-03-29T07:15:00Z',
+      timezone: 'Europe/Berlin',
+      recurrence_json: { kind: 'daily', timezone: 'Europe/Berlin' },
+    });
+    expect((await db.pool.query("SELECT count(*) FROM app.daily_reports WHERE client_id=$1", [seeded.clientId])).rows[0]?.count).toBe('2');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.daily_report' AND aggregate_key=$1", [seeded.clientId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='report.daily_scheduled' AND aggregate_id=$1", [seeded.clientId])).rows[0]?.count).toBe('2');
+  });
+
   it('creates appointment offers and slots idempotently with semantic identities', async () => {
     const seeded = await seedMp08Conversation({
       suffix: 'APPOFFER',

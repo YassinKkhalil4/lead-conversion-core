@@ -31,6 +31,15 @@ interface DailyReportSummary {
   deadLetterCount: number;
 }
 
+interface ZonedParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
 function localDate(timezone: string, date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
@@ -38,6 +47,67 @@ function localDate(timezone: string, date = new Date()): string {
     month: '2-digit',
     day: '2-digit',
   }).format(date);
+}
+
+function calendarDatePlusDays(dateString: string, days: number): string {
+  const [year, month, day] = dateString.split('-').map((value) => Number(value));
+  const date = new Date(Date.UTC(year || 1970, (month || 1) - 1, (day || 1) + days));
+  return date.toISOString().slice(0, 10);
+}
+
+function zonedParts(date: Date, timezone: string): ZonedParts {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes): number => Number(parts.find((part) => part.type === type)?.value || '0');
+  return {
+    year: value('year'),
+    month: value('month'),
+    day: value('day'),
+    hour: value('hour'),
+    minute: value('minute'),
+    second: value('second'),
+  };
+}
+
+function partsAsUtcMs(parts: ZonedParts): number {
+  return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+}
+
+function zonedDateTimeToUtcIso(dateString: string, time: Pick<ZonedParts, 'hour' | 'minute' | 'second'>, timezone: string): string {
+  const [year, month, day] = dateString.split('-').map((value) => Number(value));
+  const targetParts = {
+    year: year || 1970,
+    month: month || 1,
+    day: day || 1,
+    hour: time.hour,
+    minute: time.minute,
+    second: time.second,
+  };
+  let candidateMs = partsAsUtcMs(targetParts);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const renderedParts = zonedParts(new Date(candidateMs), timezone);
+    const deltaMs = partsAsUtcMs(targetParts) - partsAsUtcMs(renderedParts);
+    if (deltaMs === 0) return new Date(candidateMs).toISOString();
+    candidateMs += deltaMs;
+  }
+  return new Date(candidateMs).toISOString();
+}
+
+function nextDailyOccurrence(input: { reportDate: string; dueAt: Date; timezone: string }): { reportDate: string; dueAt: string } {
+  const nextReportDate = calendarDatePlusDays(input.reportDate, 1);
+  const dueParts = zonedParts(input.dueAt, input.timezone);
+  return {
+    reportDate: nextReportDate,
+    dueAt: zonedDateTimeToUtcIso(nextReportDate, dueParts, input.timezone),
+  };
 }
 
 export class ReportingService {
@@ -202,14 +272,17 @@ export class ReportingService {
         timezone: string;
         recipient_phone_e164: string;
         status: string;
+        due_at: Date;
       }>(
         `SELECT
            dr.daily_report_id, dr.client_id, c.company_name,
            dr.report_date::text AS report_date, dr.timezone,
            COALESCE(NULLIF(dr.recipient_phone_e164, ''), c.manager_phone_e164) AS recipient_phone_e164,
-           dr.status
+           dr.status,
+           j.due_at
          FROM app.daily_reports dr
          JOIN app.clients c ON c.client_id=dr.client_id
+         JOIN runtime.scheduled_jobs j ON j.scheduled_job_id=dr.scheduled_job_id
          WHERE dr.scheduled_job_id=$1
          FOR UPDATE OF dr`,
         [job.scheduledJobId],
@@ -265,6 +338,18 @@ export class ReportingService {
           reportDate: row.report_date,
           outboxCommandId,
         },
+      });
+      const nextOccurrence = nextDailyOccurrence({
+        reportDate: row.report_date,
+        dueAt: row.due_at,
+        timezone: row.timezone,
+      });
+      await this.scheduleDailyReport(client, {
+        clientId: row.client_id,
+        reportDate: nextOccurrence.reportDate,
+        dueAt: nextOccurrence.dueAt,
+        actorId: 'reporting-service',
+        causationId: job.scheduledJobId,
       });
       await client.query('COMMIT');
       return { outcome: 'completed' };
