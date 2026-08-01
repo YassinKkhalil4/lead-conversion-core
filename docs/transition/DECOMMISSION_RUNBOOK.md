@@ -39,7 +39,7 @@ Processed n8n delivery-status callbacks older than the stability window remain d
 
 `N8N_COMPAT_ROUTES_ENABLED` must be false before n8n decommission. The readiness report exposes this as `n8n_compatibility_routes_disabled`; do not treat n8n fallback as removable while Edge still accepts n8n-compatible callbacks.
 
-Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval.
+Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval. All active `edge_config_snapshots` rows must have matching published immutable `configuration.versions` rows before Typebot removal can pass; compatibility snapshots may remain only when they mirror versioned configuration.
 
 Airtable removal requires projection-only operation for 30 days, no production reads, no pending, failed, cancelled, dead-lettered, or ambiguous projection commands, stable reconciliation, final export, operator tooling, and explicit owner approval. Stable reconciliation means the required Airtable reconciliation suite has recorded every required check key and every recorded reconciliation result is `pass`; a partial passing subset is not enough.
 

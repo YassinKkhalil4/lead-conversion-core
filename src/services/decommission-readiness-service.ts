@@ -53,6 +53,7 @@ export interface DecommissionReadinessReport {
     directLeadStableEventCount: number;
     directIngressUnresolvedCount: number;
     activeConfigurationCount: number;
+    unmigratedActiveLegacyConfigSnapshotCount: number;
     completedEdgeQualificationCount: number;
     airtableProjectionBlockedCount: number;
     airtableReconciliationResultCount: number;
@@ -106,6 +107,7 @@ export class DecommissionReadinessService {
       directLeadStableEventCount,
       directIngressUnresolvedCount,
       activeConfigurationCount,
+      unmigratedActiveLegacyConfigSnapshotCount,
       completedEdgeQualificationCount,
       airtableProjectionBlockedCount,
       airtableReconciliationResultCount,
@@ -185,6 +187,15 @@ export class DecommissionReadinessService {
         [directIngressBusinessEventTypes],
       ),
       scalar('SELECT count(*)::int AS count FROM configuration.active_versions'),
+      scalar(
+        `SELECT count(*)::int AS count
+         FROM edge_config_snapshots s
+         LEFT JOIN configuration.versions v
+           ON v.version_key = s.config_version
+          AND v.status = 'published'
+         WHERE s.active = true
+           AND v.configuration_version_id IS NULL`,
+      ),
       scalar(
         `SELECT count(*)::int AS count
          FROM app.qualification_sessions
@@ -384,6 +395,12 @@ export class DecommissionReadinessService {
       },
       {
         area: 'typebot',
+        checkKey: 'active_legacy_config_snapshots_migrated',
+        status: passFail(unmigratedActiveLegacyConfigSnapshotCount === 0),
+        details: { unmigratedActiveSnapshotCount: unmigratedActiveLegacyConfigSnapshotCount },
+      },
+      {
+        area: 'typebot',
         checkKey: 'edge_qualification_volume',
         status: passFail(completedEdgeQualificationCount >= minCompletedEdgeQualifications),
         details: { count: completedEdgeQualificationCount, required: minCompletedEdgeQualifications },
@@ -462,6 +479,7 @@ export class DecommissionReadinessService {
         directLeadStableEventCount,
         directIngressUnresolvedCount,
         activeConfigurationCount,
+        unmigratedActiveLegacyConfigSnapshotCount,
         completedEdgeQualificationCount,
         airtableProjectionBlockedCount,
         airtableReconciliationResultCount,

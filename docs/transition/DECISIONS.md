@@ -631,3 +631,11 @@ Decision: `npm run decommission:readiness` fails n8n and Typebot readiness when 
 Reason: A legacy conversation can be older than the window and no longer resumable while still having been handled recently by legacy/Typebot authority. Fallback removal should require a quiet legacy window, not only absence of newly created or currently active legacy conversations.
 
 Date: 2026-08-01
+
+## DEC-071: Active Legacy Config Snapshots Must Be Versioned Before Typebot Removal
+
+Decision: `npm run decommission:readiness` fails Typebot readiness when an active `edge_config_snapshots` row has no matching published `configuration.versions` row with the same version key.
+
+Reason: Typebot removal requires all live conversation content authority to be present in immutable versioned configuration. The legacy snapshot table remains as a rollback compatibility path, but an active snapshot without a published immutable version is still legacy-only content evidence.
+
+Date: 2026-08-01

@@ -52,6 +52,7 @@ Production cutover approval does not authorize fallback removal. Before removing
 - Confirm `N8N_COMPAT_ROUTES_ENABLED=false` before treating n8n fallback as removable.
 - Confirm direct-ingress stability evidence is aged from successful processing completion, not only old durable receipt timestamps.
 - Confirm there has been no legacy-owned conversation activity inside the stability window, including old terminal conversations updated recently.
+- Confirm every active legacy config snapshot has a matching published immutable configuration version.
 - Provide final legacy export evidence.
 - Provide final Airtable export evidence.
 - Confirm Airtable has been projection-only for the agreed window.
