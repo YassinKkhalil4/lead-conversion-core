@@ -1409,3 +1409,17 @@ Result: passed. Focused PostgreSQL run executed 4 decommission-readiness tests a
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 148 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 API Startup Configuration Authority
+
+Command: `npx vitest run tests/shell-scripts.test.ts -t "API container startup|shell scripts"`
+
+Result: passed. Focused deployment/shell run executed 7 tests, including a Compose regression check that `lead-core-api` starts with `npm start` and does not run `seed:prod`.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 149 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Command: `EDGE_POSTGRES_PASSWORD=dummy LEAD_CORE_ENV_FILE=/dev/null docker-compose -f docker-compose.yml config`
+
+Result: passed. The standalone `docker-compose` config render succeeded for the updated Compose file.

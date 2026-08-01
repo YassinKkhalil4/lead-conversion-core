@@ -432,3 +432,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 4 PostgreSQL decommission-readiness tests and 66 skipped by filter, including the status-callback regression case.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 148 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3b47a51`: Counted only business ingress for decommission stability.
+
+## 2026-08-01 API Startup Configuration Authority
+
+- Implementation slice: Removed `npm run seed:prod` from the production API container startup command. `lead-core-api` now starts with `npm start`; migrations, seeding, and configuration publication remain explicit operations outside normal API startup.
+- Decision: Added DEC-043. API startup must not mutate configuration authority or PostgreSQL state as a side effect.
+- Verification: `npx vitest run tests/shell-scripts.test.ts -t "API container startup|shell scripts"` passed with 7 tests, including the Compose command regression check.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 149 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Verification: `EDGE_POSTGRES_PASSWORD=dummy LEAD_CORE_ENV_FILE=/dev/null docker-compose -f docker-compose.yml config` passed.
+- Commit `73c61e3`: Removed API startup configuration seed.

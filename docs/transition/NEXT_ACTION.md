@@ -24,6 +24,8 @@ Files expected to change:
 - `src/services/meta-status-webhook-service.ts`
 - `src/services/meta-inbox-processor.ts`
 - `tests/runtime.integration.test.ts`
+- `docker-compose.yml`
+- `tests/shell-scripts.test.ts`
 
 Required verification:
 
@@ -53,6 +55,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `3b47a51` (`Count only business ingress for decommission stability`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `73c61e3` (`Remove API startup configuration seed`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes
