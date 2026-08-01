@@ -45,6 +45,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `b9927f3` (`Require credentials for enabled integrations`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `3bde28a` (`Dead-letter invalid scheduled jobs immediately`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes
