@@ -1049,3 +1049,27 @@ Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm ru
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 14 files and 115 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 Verification level: tracked-file artifact hygiene, local script syntax, full npm gate, and smoke scripts.
+
+## 2026-08-01 Final Local Handoff Gate
+
+Command: `git show --stat --oneline 7ba47c2`
+
+Result: passed; baseline commit history remained inspectable.
+
+Command: `git show --stat --oneline df90f61`
+
+Result: passed; MP-03 schema/import foundation commit history remained inspectable.
+
+Command: `git show --stat --oneline d0e751a`
+
+Result: passed; Airtable reconciliation commit history remained inspectable.
+
+Command: `rg -n "TODO|FIXME|stub|mock|fake|hardcoded success|not implemented|throw new Error\\(['\\\"]Not implemented" src tests scripts docs/transition docs/owner-actions package.json`
+
+Result: passed for production code review purposes; hits were documentation decisions about avoiding fake production implementations and a test-only `fetcher.mock` reference.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed from commit `9c67bea`. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 14 files and 115 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Verification level: final local repository handoff gate. Live provider, staging route, real Airtable export, Docker daemon, production cutover, and destructive decommission verification remain owner/external-action blocked.

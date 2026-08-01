@@ -287,3 +287,6 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts` passed; the parser test now includes the artifact scan script.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 14 files and 115 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3ea0f22`: Added tracked artifact scan.
+- Commit `9c67bea`: Recorded tracked artifact scan state.
+- Verification: Final local handoff gate from commit `9c67bea` passed: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration`. Vitest ran 14 files and 115 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Deferred external verification: Remaining work is blocked on owner/external inputs only: real Airtable export, Docker daemon for dump inspection/restore-smoke execution, rotated Meta/staging route access, website/Facebook source configuration, Google Calendar credentials/calendar IDs, production cutover approval, and destructive legacy retirement approval.
