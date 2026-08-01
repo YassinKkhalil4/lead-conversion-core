@@ -1,7 +1,10 @@
 import { getEnv } from '../config/env.js';
 import type { Env } from '../config/env.js';
 import { pool } from '../db/pool.js';
+import { REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS } from './airtable-reconciliation-checks.js';
 import { workerHeartbeatOperationalState } from './worker-heartbeat-readiness.js';
+
+export { REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS } from './airtable-reconciliation-checks.js';
 
 export interface DecommissionCheck {
   area: 'n8n' | 'typebot' | 'airtable';
@@ -71,29 +74,6 @@ function areaReady(checks: DecommissionCheck[], area: DecommissionCheck['area'])
 }
 
 const directIngressBusinessEventTypes = ['whatsapp.message_received', 'lead.created', 'leadgen.created'];
-
-export const REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS = [
-  'rejected_records',
-  'clients_mapped',
-  'projects_mapped',
-  'salespeople_mapped',
-  'leads_mapped',
-  'qualifications_mapped',
-  'scores_mapped',
-  'messages_mapped',
-  'followups_mapped',
-  'appointments_mapped',
-  'events_mapped',
-  'contact_phone_uniqueness',
-  'lead_contact_links',
-  'lead_status_distribution',
-  'active_leads_count',
-  'stop_follow_up_count',
-  'opt_out_count',
-  'pending_followups_count',
-  'open_booked_appointments_count',
-  'message_provider_id_uniqueness',
-] as const;
 
 async function scalar(sql: string, values: unknown[] = []): Promise<number> {
   const result = await pool.query<{ count: number }>(sql, values);

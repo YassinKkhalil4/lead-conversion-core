@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import type { PoolClient } from 'pg';
+import { REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS } from '../src/services/airtable-reconciliation-checks.js';
 
 interface ReconciliationCheck {
   checkKey: string;
@@ -92,6 +93,16 @@ function distributionCheck(checkKey: string, expected: Record<string, number>, a
     actualCount: countTotal(actual),
     details: { expected, actual },
   };
+}
+
+function assertRequiredCheckContract(checks: ReconciliationCheck[]): void {
+  const required = new Set<string>(REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS);
+  const emitted = new Set(checks.map((check) => check.checkKey));
+  const missing = [...required].filter((checkKey) => !emitted.has(checkKey));
+  const extra = [...emitted].filter((checkKey) => !required.has(checkKey));
+  if (missing.length > 0 || extra.length > 0) {
+    throw new Error(`Airtable reconciliation check contract mismatch: missing=${missing.join(',') || 'none'} extra=${extra.join(',') || 'none'}`);
+  }
 }
 
 export async function reconcileAirtableImport(input: {
@@ -459,6 +470,8 @@ export async function reconcileAirtableImport(input: {
       actualCount: duplicateProviderMessageIds,
       details: {},
     });
+
+    assertRequiredCheckContract(checks);
 
     if (input.recordResults) {
       for (const check of checks) {
