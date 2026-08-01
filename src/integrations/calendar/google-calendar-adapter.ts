@@ -32,21 +32,26 @@ export class GoogleCalendarAdapter implements CalendarProvider {
   }
 
   async checkAvailability(command: CreateCalendarEventCommand): Promise<CalendarAvailabilityResult> {
-    const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${this.options.accessToken}`,
-        'content-type': 'application/json',
-        'x-goog-request-reason': command.idempotencyKey,
-      },
-      body: JSON.stringify({
-        timeMin: command.startsAt,
-        timeMax: command.endsAt,
-        timeZone: command.timezone,
-        items: [{ id: command.calendarId }],
-      }),
-      signal: AbortSignal.timeout(15_000),
-    });
+    let response: Response;
+    try {
+      response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${this.options.accessToken}`,
+          'content-type': 'application/json',
+          'x-goog-request-reason': command.idempotencyKey,
+        },
+        body: JSON.stringify({
+          timeMin: command.startsAt,
+          timeMax: command.endsAt,
+          timeZone: command.timezone,
+          items: [{ id: command.calendarId }],
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (error) {
+      return { outcome: 'retryable', error: `google_calendar_freebusy_network:${String(error)}`, providerResponse: {} };
+    }
     const providerResponse = await parseResponse(response);
     if (response.ok) {
       const calendars = providerResponse.calendars as Record<string, { busy?: unknown[] }> | undefined;
@@ -65,32 +70,37 @@ export class GoogleCalendarAdapter implements CalendarProvider {
   }
 
   async createEvent(command: CreateCalendarEventCommand): Promise<CalendarProviderResult> {
-    const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(command.calendarId)}/events`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${this.options.accessToken}`,
-        'content-type': 'application/json',
-        'x-goog-request-reason': command.idempotencyKey,
-      },
-      body: JSON.stringify({
-        summary: command.summary,
-        description: command.description,
-        start: {
-          dateTime: command.startsAt,
-          timeZone: command.timezone,
+    let response: Response;
+    try {
+      response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(command.calendarId)}/events`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${this.options.accessToken}`,
+          'content-type': 'application/json',
+          'x-goog-request-reason': command.idempotencyKey,
         },
-        end: {
-          dateTime: command.endsAt,
-          timeZone: command.timezone,
-        },
-        extendedProperties: {
-          private: {
-            idempotencyKey: command.idempotencyKey,
+        body: JSON.stringify({
+          summary: command.summary,
+          description: command.description,
+          start: {
+            dateTime: command.startsAt,
+            timeZone: command.timezone,
           },
-        },
-      }),
-      signal: AbortSignal.timeout(15_000),
-    });
+          end: {
+            dateTime: command.endsAt,
+            timeZone: command.timezone,
+          },
+          extendedProperties: {
+            private: {
+              idempotencyKey: command.idempotencyKey,
+            },
+          },
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (error) {
+      return { outcome: 'delivery_unknown', error: `google_calendar_create_network:${String(error)}`, providerResponse: {} };
+    }
     const providerResponse = await parseResponse(response);
     if (response.ok) {
       const providerEventId = String(providerResponse.id || '');

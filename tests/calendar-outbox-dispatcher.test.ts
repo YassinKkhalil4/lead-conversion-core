@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CalendarOutboxDispatcher } from '../src/worker/calendar-outbox-dispatcher.js';
 import { GoogleCalendarAdapter } from '../src/integrations/calendar/google-calendar-adapter.js';
 import type { ClaimedOutboxCommand } from '../src/infrastructure/runtime.js';
@@ -27,6 +27,10 @@ function command(overrides: Partial<ClaimedOutboxCommand> = {}): ClaimedOutboxCo
 }
 
 describe('CalendarOutboxDispatcher', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('maps created provider events to delivered outbox outcomes', async () => {
     const provider: CalendarProvider = {
       checkAvailability: vi.fn(async () => ({
@@ -147,5 +151,47 @@ describe('CalendarOutboxDispatcher', () => {
 
   it('requires real Google credentials when constructing the adapter', () => {
     expect(() => new GoogleCalendarAdapter({ accessToken: '' })).toThrow('google_calendar_access_token_required');
+  });
+
+  it('classifies Google free/busy network failures as retryable before event creation', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('network unavailable');
+    }));
+    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+
+    await expect(adapter.checkAvailability({
+      calendarId: 'calendar-primary',
+      idempotencyKey: 'calendar.create_event:network-freebusy',
+      summary: 'Appointment with Lead',
+      description: '',
+      startsAt: '2026-07-31T09:00:00.000Z',
+      endsAt: '2026-07-31T09:45:00.000Z',
+      timezone: 'Africa/Cairo',
+    })).resolves.toEqual({
+      outcome: 'retryable',
+      error: 'google_calendar_freebusy_network:Error: network unavailable',
+      providerResponse: {},
+    });
+  });
+
+  it('classifies Google create-event network failures as delivery unknown', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('socket closed after write');
+    }));
+    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+
+    await expect(adapter.createEvent({
+      calendarId: 'calendar-primary',
+      idempotencyKey: 'calendar.create_event:network-create',
+      summary: 'Appointment with Lead',
+      description: '',
+      startsAt: '2026-07-31T09:00:00.000Z',
+      endsAt: '2026-07-31T09:45:00.000Z',
+      timezone: 'Africa/Cairo',
+    })).resolves.toEqual({
+      outcome: 'delivery_unknown',
+      error: 'google_calendar_create_network:Error: socket closed after write',
+      providerResponse: {},
+    });
   });
 });

@@ -338,6 +338,20 @@ Command: `npm run lint`
 
 Result: passed.
 
+## 2026-08-01 Google Calendar Network Classification
+
+Command: `docker info`
+
+Result: failed to connect to `unix:///var/run/docker.sock`; Docker-backed PostgreSQL dump inspection and restore-smoke execution remain blocked by local daemon availability.
+
+Command: `npx vitest run tests/calendar-outbox-dispatcher.test.ts`
+
+Result: passed. Focused calendar tests ran 8 tests covering dispatcher delivery/retry/busy/malformed-payload behavior, required Google credentials, retryable Google free/busy network failures, and `delivery_unknown` Google create-event network failures.
+
+Command: `npm run lint`
+
+Result: passed.
+
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed from commit `d57f153`. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 124 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

@@ -303,3 +303,11 @@ Decision: Shell operator scripts must not pass shared secrets or password-bearin
 Reason: Backup, restore, and shadow verification are likely to run on operator hosts where process listings may be available to monitoring tools or other users. Private temporary files with cleanup traps reduce exposure while preserving normal PostgreSQL and curl behavior.
 
 Date: 2026-08-01
+
+## DEC-030: Calendar Network Errors Preserve Replay Safety
+
+Decision: Google Calendar free/busy network failures are classified as retryable, while create-event network failures are classified as `delivery_unknown`.
+
+Reason: Free/busy checks happen before attempting an external calendar mutation and can be retried safely. A network failure during event creation may have occurred after Google accepted the request, so the durable outbox must preserve ambiguity for operator reconciliation instead of blindly creating a second event.
+
+Date: 2026-08-01
