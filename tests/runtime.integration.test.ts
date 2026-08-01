@@ -1163,6 +1163,24 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('treats n8n semantic scheduled job identities as scheduled authority', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.scheduled_jobs (job_key, job_type, aggregate_key, payload_json, status, due_at)
+       VALUES ('n8n:legacy:semantic-authority', 'followup.send', 'legacy:n8n:conversation', '{}'::jsonb, 'pending', now())`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService().report();
+    expect(report.ok).toBe(false);
+    expect(report.metrics.n8nScheduledAuthorityCount).toBe(1);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      no_n8n_scheduled_authority: 'fail',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'no_n8n_scheduled_authority')?.details).toMatchObject({
+      count: 1,
+      inspectedFields: ['job_key', 'job_type', 'aggregate_key', 'payload_json'],
+    });
+  });
+
   it('does not allow decommission readiness after recent activity on old terminal legacy conversations', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query(

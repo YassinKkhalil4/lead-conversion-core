@@ -120,7 +120,12 @@ export class DecommissionReadinessService {
         `SELECT count(*)::int AS count
          FROM runtime.scheduled_jobs
          WHERE status IN ('pending','processing','retryable')
-           AND (job_type ILIKE '%n8n%' OR payload_json::text ILIKE '%n8n%')`,
+           AND (
+             job_key ILIKE '%n8n%'
+             OR job_type ILIKE '%n8n%'
+             OR aggregate_key ILIKE '%n8n%'
+             OR payload_json::text ILIKE '%n8n%'
+           )`,
       ),
       scalar("SELECT count(*)::int AS count FROM runtime.inbox_events WHERE provider='n8n' AND status IN ('pending','processing','retryable','dead_lettered')"),
       scalar(
@@ -278,7 +283,7 @@ export class DecommissionReadinessService {
         area: 'n8n',
         checkKey: 'no_n8n_scheduled_authority',
         status: passFail(n8nScheduledAuthorityCount === 0),
-        details: { count: n8nScheduledAuthorityCount },
+        details: { count: n8nScheduledAuthorityCount, inspectedFields: ['job_key', 'job_type', 'aggregate_key', 'payload_json'] },
       },
       {
         area: 'n8n',

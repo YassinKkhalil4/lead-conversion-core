@@ -647,3 +647,11 @@ Decision: `npm run decommission:readiness` counts completed Edge qualification v
 Reason: Imported historical qualification sessions and detached synthetic rows can prove migration history, but they do not prove real Edge-owned conversation processing has replaced Typebot. Typebot removal readiness must measure successful Edge-owned qualifications, not all completed qualification rows.
 
 Date: 2026-08-01
+
+## DEC-073: N8n Scheduled Authority Includes Semantic Job Identity
+
+Decision: `npm run decommission:readiness` treats pending, processing, or retryable scheduled jobs as n8n authority when `job_key`, `job_type`, `aggregate_key`, or `payload_json` references n8n.
+
+Reason: Durable jobs use semantic identities and aggregate keys to prevent duplicate schedules. Fallback removal must not miss n8n-owned scheduled work merely because the executable job type is a generic follow-up, report, or compatibility handler.
+
+Date: 2026-08-01
