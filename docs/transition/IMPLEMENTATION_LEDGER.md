@@ -559,3 +559,12 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including the local verifier server observing both the signed accepted probe and unsigned rejected probe.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `985a49d`: Verify direct Meta unsigned rejection.
+
+## 2026-08-01 Disabled Direct Meta POST Verification
+
+- Implementation slice: Hardened `scripts/verify-deployment.sh --check-direct-meta --expect-direct-meta=disabled` so disabled direct Meta verification now checks both challenge and POST behavior.
+- Implementation slice: The disabled POST probe uses the same non-customer Meta body and expects HTTP 503 before signature validation or durable receipt.
+- Decision: Updated DEC-057. Direct Meta deployment verification now proves challenge and POST behavior for the expected route state, enabled or disabled.
+- Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including disabled direct Meta GET and POST returning unavailable plus deployment verifier output for the disabled POST check.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `9f05998`: Verify disabled direct Meta POST.
