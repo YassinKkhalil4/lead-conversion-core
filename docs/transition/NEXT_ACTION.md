@@ -23,6 +23,7 @@ Files expected to change:
 - `src/routes/n8n-compat.ts`
 - `src/services/meta-status-webhook-service.ts`
 - `src/services/meta-inbox-processor.ts`
+- `src/worker-runner.ts`
 - `tests/runtime.integration.test.ts`
 - `docker-compose.yml`
 - `tests/shell-scripts.test.ts`
@@ -58,6 +59,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `78e1370` (`Exclude tests from production build output`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `b1786da` (`Ignore unsupported Meta webhooks through runtime worker`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes

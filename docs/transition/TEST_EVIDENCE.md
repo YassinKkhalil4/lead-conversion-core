@@ -1433,3 +1433,13 @@ Result: passed. Focused deployment/shell run executed 8 tests, production build 
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 150 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Unsupported Meta Webhook Ignore Processing
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "unsupported signed Meta|Meta status|cutover readiness"`
+
+Result: passed. Focused PostgreSQL/API run executed 7 tests and skipped 65 by filter, including signed unsupported Meta webhook durable receipt, runtime worker ignored outcome for `whatsapp.webhook_ignored`, and cutover readiness failure when direct Meta worker metadata omits ignored-webhook processing.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 152 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

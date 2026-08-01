@@ -450,3 +450,12 @@
 - Verification: `npm run build && test ! -d dist/tests` passed, proving the build output no longer contains compiled tests.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 150 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `78e1370`: Excluded tests from production build output.
+
+## 2026-08-01 Unsupported Meta Webhook Ignore Processing
+
+- Implementation slice: Hardened direct Meta webhook receipt so signed payloads without supported message/status events no longer remain permanently pending. `MetaInboxProcessor` now claims `whatsapp.webhook_ignored` receipts and marks them ignored with an operator-visible reason, and `worker-runner` heartbeat/claim metadata includes that event type.
+- Implementation slice: Tightened MP-12 cutover readiness so direct Meta ingress requires worker metadata for `whatsapp.webhook_ignored` as well as message/status events.
+- Decision: Added DEC-045. Unsupported signed provider payloads are durable receipts with worker-owned ignored outcomes, not unclaimable inbox backlog.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "unsupported signed Meta|Meta status|cutover readiness"` passed with 7 PostgreSQL/API tests and 65 skipped by filter, covering signed unsupported Meta receipt, worker ignore processing, and cutover readiness failure when ignored-webhook metadata is missing.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 152 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `b1786da`: Ignored unsupported Meta webhooks through runtime worker.
