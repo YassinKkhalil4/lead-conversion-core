@@ -354,9 +354,9 @@ Date: 2026-08-01
 
 ## DEC-036: Decommission Stability Requires Processed Direct Ingress
 
-Decision: `npm run decommission:readiness` counts only aged direct `runtime.inbox_events` with `status='processed'` as direct-ingress stability evidence. Ignored direct-ingress validation probes remain useful route-check evidence, but they do not satisfy fallback-removal stability criteria.
+Decision: `npm run decommission:readiness` counts only aged direct `runtime.inbox_events` with `status='processed'` as direct-ingress stability evidence. Ignored direct-ingress deployment probes remain useful route-check evidence, but they do not satisfy fallback-removal stability criteria.
 
-Reason: Staging route validation intentionally uses invalid payloads that can produce ignored durable receipts without creating business state. Counting those receipts as stability evidence would allow synthetic probes to justify n8n/Typebot/Airtable decommission, contradicting the requirement not to claim production readiness from synthetic fixtures.
+Reason: Staging route checks intentionally use incomplete payloads that can produce ignored durable receipts after worker validation without creating business state. Counting those receipts as stability evidence would allow synthetic probes to justify n8n/Typebot/Airtable decommission, contradicting the requirement not to claim production readiness from synthetic fixtures.
 
 Date: 2026-08-01
 

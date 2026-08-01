@@ -1216,7 +1216,7 @@ Result: passed.
 
 Command: `npx vitest run tests/ingress-gating.test.ts`
 
-Result: passed. Focused app/deployment-script tests ran 4 tests, including enabled direct-lead deployment probes that send only `eventId`/`clientKey` for website and `leadgen_id`/`clientKey` for Facebook, expect `invalid_lead_payload` responses, and verify no phone/name/field-data business lead payload is sent by the verifier.
+Result: passed. Focused app/deployment-script tests ran 4 tests, including enabled direct-lead deployment probes that sent only `eventId`/`clientKey` for website and `leadgen_id`/`clientKey` for Facebook, expected `invalid_lead_payload` responses, and verified no phone/name/field-data business lead payload was sent by the verifier. This historical route contract was later superseded by DEC-039 and the current durable-receipt verifier checks.
 
 Command: `npm run lint`
 
@@ -1320,7 +1320,7 @@ Result: passed.
 
 Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
 
-Result: passed. Focused PostgreSQL run executed 3 decommission-readiness tests and skipped 61 by filter, including a regression case proving ignored direct-ingress validation probes do not count as stability evidence.
+Result: passed. Focused PostgreSQL run executed 3 decommission-readiness tests and skipped 61 by filter, including a regression case proving ignored direct-ingress deployment probes do not count as stability evidence.
 
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 

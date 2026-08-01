@@ -223,7 +223,7 @@
 - Commit `16c0ac5`: Added cutover readiness report.
 - Implementation slice: Added `docs/transition/DIRECT_INGRESS_PLAN.md` documenting local route contracts, explicit direct-ingress flags, staging route sequence, production canary route sequence, rollback, and decommission hold.
 - Commit `de20db4`: Added direct ingress route plan.
-- Implementation slice: Hardened `scripts/verify-deployment.sh` for MP-12 staging checks. The script accepts `--env-file`, `--base-url`, `--skip-ready`, `--skip-shadow`, `--check-direct-meta`, `--check-direct-lead`, and explicit expected direct-ingress modes. It verifies disabled direct routes as 503 and enabled Meta challenge echo without printing secrets. Its initial direct-lead enabled probe accepted non-5xx route reachability; DEC-026 supersedes that with explicit website/Facebook `invalid_lead_payload` validation probes.
+- Implementation slice: Hardened `scripts/verify-deployment.sh` for MP-12 staging checks. The script accepts `--env-file`, `--base-url`, `--skip-ready`, `--skip-shadow`, `--check-direct-meta`, `--check-direct-lead`, and explicit expected direct-ingress modes. It verifies disabled direct routes as 503 and enabled Meta challenge echo without printing secrets. Its initial direct-lead enabled probe accepted non-5xx route reachability; DEC-026 later superseded that with explicit website/Facebook validation probes, and DEC-039 superseded the route contract again with durable-receipt acknowledgement and worker-owned validation.
 - Decision: Deployment verification uses synthetic direct-ingress checks only; it does not mutate DNS, Caddy, provider accounts, n8n, Typebot, or production data.
 - Verification: `bash -n scripts/verify-deployment.sh` passed.
 - Verification: `npm run lint` passed.
@@ -292,7 +292,7 @@
 - Deferred external verification: Remaining work is blocked on owner/external inputs only: real Airtable export, Docker daemon for dump inspection/restore-smoke execution, rotated Meta/staging route access, website/Facebook source configuration, Google Calendar credentials/calendar IDs, production cutover approval, and destructive legacy retirement approval.
 - Commit `d1db5b1`: Recorded final local handoff gate.
 - Verification failure: A full-gate rerun at `d1db5b1` passed `npm ci`, artifact scan, lint, Vitest, and build, then `npm audit --audit-level=moderate` failed because the npm registry audit endpoint returned an error. Resolution: reran `npm audit --audit-level=moderate` directly and it passed with 0 vulnerabilities, then reran `npm run test:smoke` and `npm run test:integration`, both of which passed.
-- Implementation slice: Hardened MP-12 deployment verification so `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead=enabled` posts deliberately invalid website and Facebook lead validation probes and requires `invalid_lead_payload`, instead of accepting any non-5xx response from complete synthetic lead payloads.
+- Implementation slice: Hardened MP-12 deployment verification so `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead=enabled` posted deliberately invalid website and Facebook lead validation probes and required `invalid_lead_payload`, instead of accepting any non-5xx response from complete synthetic lead payloads. This route contract was later superseded by DEC-039, which requires durable receipt acknowledgement and worker-owned validation.
 - Decision: Enabled direct-lead deployment checks should prove both website and Facebook routes are enabled and reach validation without creating authoritative lead/contact state or outbound commands; ignored inbox receipts are acceptable staging evidence because direct ingress durably receipts before validation.
 - Verification failure: Initial TypeScript lint failed because the new test parsed `seenBodies[0]` without proving it existed. Resolution: destructured and explicitly checked the captured body before parsing.
 - Verification: `bash -n scripts/verify-deployment.sh`, `npx vitest run tests/ingress-gating.test.ts`, and `npm run lint` passed; focused route-gating tests now run 4 tests, including enabled website and Facebook direct-lead validation probe coverage.
@@ -369,7 +369,7 @@
 
 ## 2026-08-01 Decommission Direct-Ingress Stability Evidence
 
-- Implementation slice: Tightened MP-12 decommission readiness so direct-ingress stability requires aged processed direct inbox events. Ignored direct-ingress validation probes remain route-check evidence but no longer count toward fallback-removal stability.
+- Implementation slice: Tightened MP-12 decommission readiness so direct-ingress stability requires aged processed direct inbox events. Ignored direct-ingress deployment probes remain route-check evidence but no longer count toward fallback-removal stability.
 - Decision: Added DEC-036. Synthetic invalid route probes cannot satisfy decommission readiness for legacy fallback removal.
 - Verification: `npm run lint` passed.
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 3 PostgreSQL decommission-readiness tests and 61 skipped by filter, including the ignored-probe regression case.
