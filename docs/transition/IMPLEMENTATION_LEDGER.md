@@ -344,3 +344,4 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "retry delays|retryable inbox|outbox retry"` passed with 2 PostgreSQL tests and 59 skipped by filter, covering retryable inbox scheduling and outbox retry/dead-letter behavior.
 - Verification: `npm run lint` passed.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 133 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `5268c98`: Added jitter to runtime retry backoff.
