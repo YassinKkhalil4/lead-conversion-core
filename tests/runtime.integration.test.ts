@@ -51,6 +51,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let appointmentService: typeof import('../src/services/appointment-service.js');
   let calendarReconciliation: typeof import('../src/worker/calendar-reconciliation.js');
   let cutoverReadiness: typeof import('../src/services/cutover-readiness-service.js');
+  let decommissionReadiness: typeof import('../src/services/decommission-readiness-service.js');
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
@@ -85,6 +86,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     appointmentService = await import('../src/services/appointment-service.js');
     calendarReconciliation = await import('../src/worker/calendar-reconciliation.js');
     cutoverReadiness = await import('../src/services/cutover-readiness-service.js');
+    decommissionReadiness = await import('../src/services/decommission-readiness-service.js');
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
@@ -812,6 +814,137 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       outbox_backlog: 'fail',
       delivery_unknown: 'fail',
       dead_letters: 'fail',
+    });
+  });
+
+  it('reports decommission blockers for legacy conversations, n8n authority, and missing approvals', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO edge_config_snapshots (config_version, industry, config_json)
+       VALUES ('decommission-legacy-config', 'real_estate', '{}'::jsonb)`,
+    );
+    const conversation = await db.pool.query<{ conversation_id: string }>(
+      `INSERT INTO edge_conversations
+        (client_record_id, phone_normalized, lead_record_id, config_version, status, conversation_engine, state_authority, created_at)
+       VALUES ('recDECOMCLIENT', '+201011111111', 'recDECOMLEAD', 'decommission-legacy-config', 'in_qualification', 'legacy', 'legacy', now())
+       RETURNING conversation_id`,
+    );
+    const conversationId = conversation.rows[0]?.conversation_id;
+    if (!conversationId) throw new Error('decommission_legacy_conversation_not_created');
+    await db.pool.query(
+      `INSERT INTO edge_outbox (conversation_id, event_type, idempotency_key, payload_json, status)
+       VALUES ($1, 'qualification.answer_recorded', 'decommission-edge-outbox', '{}'::jsonb, 'pending')`,
+      [conversationId],
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('n8n', 'whatsapp.message_received', 'decommission-n8n-inbox', '+201011111111', '{}'::jsonb, 'pending', now())`,
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.scheduled_jobs (job_key, job_type, aggregate_key, payload_json, status, due_at)
+       VALUES ('n8n:legacy:schedule', 'n8n.legacy_job', 'legacy', '{}'::jsonb, 'pending', now())`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService().report();
+    expect(report.ok).toBe(false);
+    expect(report.metrics).toMatchObject({
+      legacyEdgeOutboxOpenCount: 1,
+      n8nScheduledAuthorityCount: 1,
+      n8nInboxUnresolvedCount: 1,
+      n8nInboxRecentCount: 1,
+      newLegacyConversationCount: 1,
+      activeLegacyConversationCount: 1,
+    });
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      legacy_edge_outbox_drained: 'fail',
+      no_n8n_scheduled_authority: 'fail',
+      no_unresolved_n8n_inbox: 'fail',
+      no_recent_n8n_compat_usage: 'fail',
+      no_new_legacy_conversations: 'fail',
+      no_active_legacy_conversations: 'fail',
+      owner_approved_n8n_decommission: 'fail',
+      owner_approved_typebot_decommission: 'fail',
+      owner_approved_airtable_decommission: 'fail',
+    });
+  });
+
+  it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('meta', 'whatsapp.message_received', 'decommission-direct-stable', '+201022222222', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('decommission-client', 'Decommission Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('decommission_client_not_created');
+    const contact = await db.pool.query<{ contact_id: string }>(
+      `INSERT INTO app.contacts (client_id, name, phone_raw, phone_e164)
+       VALUES ($1, 'Decommission Lead', '+201022222222', '+201022222222')
+       RETURNING contact_id`,
+      [clientId],
+    );
+    const contactId = contact.rows[0]?.contact_id;
+    if (!contactId) throw new Error('decommission_contact_not_created');
+    const lead = await db.pool.query<{ lead_id: string }>(
+      `INSERT INTO app.leads (client_id, contact_id, provider, provider_external_id, source, source_payload_hash)
+       VALUES ($1, $2, 'meta', 'decommission-lead', 'decommission-fixture', 'decommission-hash')
+       RETURNING lead_id`,
+      [clientId, contactId],
+    );
+    const leadId = lead.rows[0]?.lead_id;
+    if (!leadId) throw new Error('decommission_lead_not_created');
+    const config = await db.pool.query<{ configuration_version_id: string }>(
+      `INSERT INTO configuration.versions
+        (client_id, version_key, status, config_json, checksum_sha256, created_by, published_at)
+       VALUES ($1, 'decommission-config', 'published', '{}'::jsonb, 'decommission-checksum', 'test', now())
+       RETURNING configuration_version_id`,
+      [clientId],
+    );
+    const configurationVersionId = config.rows[0]?.configuration_version_id;
+    if (!configurationVersionId) throw new Error('decommission_config_not_created');
+    await db.pool.query(
+      `INSERT INTO configuration.active_versions (scope_key, client_id, configuration_version_id, activated_by)
+       VALUES ('client:decommission-client', $1, $2, 'test')`,
+      [clientId, configurationVersionId],
+    );
+    await db.pool.query(
+      `INSERT INTO app.qualification_sessions (lead_id, status, completed_at)
+       SELECT $1, 'completed', now()
+       FROM generate_series(1, 100)`,
+      [leadId],
+    );
+    await db.pool.query(
+      `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
+       VALUES ('decommission-fixture', 'pass', 1, 1, '{}'::jsonb)`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService().report({
+      ownerApprovedN8n: true,
+      ownerApprovedTypebot: true,
+      ownerApprovedAirtable: true,
+      finalLegacyExportComplete: true,
+      finalAirtableExportComplete: true,
+      appointmentMediaMigrated: true,
+      airtableProjectionOnlyVerified: true,
+    });
+    expect(report.ok).toBe(true);
+    expect(report.summary).toEqual({
+      n8nReady: true,
+      typebotReady: true,
+      airtableReady: true,
+    });
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_stable: 'pass',
+      versioned_config_active: 'pass',
+      edge_qualification_volume: 'pass',
+      airtable_reconciliation_stable: 'pass',
+      owner_approved_n8n_decommission: 'pass',
+      owner_approved_typebot_decommission: 'pass',
+      owner_approved_airtable_decommission: 'pass',
     });
   });
 

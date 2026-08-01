@@ -22,6 +22,8 @@
     "calendar:reconcile:prod": "node dist/scripts/calendar-reconcile.js",
     "cutover:readiness": "tsx scripts/cutover-readiness.ts",
     "cutover:readiness:prod": "node dist/scripts/cutover-readiness.js",
+    "decommission:readiness": "tsx scripts/decommission-readiness.ts",
+    "decommission:readiness:prod": "node dist/scripts/decommission-readiness.js",
     "sync-config": "tsx scripts/sync-config.ts",
     "config": "tsx scripts/config.ts",
     "config:prod": "node dist/scripts/config.js",
