@@ -116,7 +116,7 @@ export class DecommissionReadinessService {
         `SELECT count(*)::int AS count
          FROM runtime.inbox_events
          WHERE provider IN ('meta','website','facebook')
-           AND status IN ('processed','ignored')
+           AND status='processed'
            AND created_at <= now() - make_interval(days => $1)`,
         [directStabilityDays],
       ),
