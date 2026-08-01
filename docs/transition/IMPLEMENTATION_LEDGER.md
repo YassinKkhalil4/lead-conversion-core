@@ -710,3 +710,14 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed with 7 PostgreSQL cutover-readiness tests and 78 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 174 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `a228db1`: Block cutover on terminal runtime outbox failures.
+
+## 2026-08-01 Decommission Stability Completion-Time Gate
+
+- Implementation slice: Hardened `npm run decommission:readiness` so direct-ingress stability counts processed direct Meta inbound-message and website/Facebook lead events only when `runtime.inbox_events.completed_at` is older than the configured stability window.
+- Implementation slice: Added PostgreSQL regression coverage proving old direct-ingress receipts completed recently do not satisfy `direct_ingress_stable`; direct fixtures now seed `completed_at` explicitly when they are meant to prove aged successful processing.
+- Decision: Added DEC-069. Fallback removal readiness is based on aged successful Edge-owned processing, not merely aged durable receipt.
+- Documentation slice: Updated the decommission runbook, direct-ingress plan, production cutover owner action, status, and work queue to distinguish receipt time from processing completion time.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 15 PostgreSQL decommission-readiness tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 175 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3137324`: Measure decommission stability by completion time.

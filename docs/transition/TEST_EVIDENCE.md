@@ -1788,6 +1788,52 @@ Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
 
+## 2026-08-01 Decommission Stability Completion-Time Gate
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the decommission readiness completed-at query change and the explicit completed-at PostgreSQL test fixtures.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL decommission run executed 15 tests and skipped 71 by filter, including a regression case proving old direct-ingress receipts completed recently do not count as stability evidence.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the completed-at readiness contract after dependency installation.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 17 files and 175 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
 ## 2026-08-01 Terminal Runtime Outbox Failure Cutover Gate
 
 Command: `npm run lint`
