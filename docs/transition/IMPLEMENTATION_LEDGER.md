@@ -550,3 +550,12 @@
 - Audit slice: Reviewed n8n-compatible delivery-status receipt, processing, and decommission readiness classification.
 - Decision: Added DEC-056. Unresolved or recent n8n delivery-status inbox rows block n8n removal through existing checks, while older processed failed or unknown n8n delivery statuses remain delivery/reporting evidence and do not create an unbounded decommission blocker.
 - Verification: No code change was required. This audit relies on the already-verified `no_unresolved_n8n_inbox`, `no_recent_n8n_compat_usage`, and direct-ingress stability behavior covered by the 2026-08-01 decommission readiness test runs.
+
+## 2026-08-01 Direct Meta Unsigned Deployment Rejection
+
+- Implementation slice: Hardened `scripts/verify-deployment.sh --check-direct-meta --expect-direct-meta=enabled` so staging verification proves direct Meta challenge handling, signed durable receipt, and unsigned webhook rejection.
+- Implementation slice: The unsigned probe reuses the non-customer Meta payload and private curl config path, does not include a signature header, and expects HTTP 401 from the enabled direct Meta route.
+- Decision: Added DEC-057. Staging route verification must prove both positive and negative Meta signature behavior before route changes are treated as verified.
+- Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including the local verifier server observing both the signed accepted probe and unsigned rejected probe.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `985a49d`: Verify direct Meta unsigned rejection.
