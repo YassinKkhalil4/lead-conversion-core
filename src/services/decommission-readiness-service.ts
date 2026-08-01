@@ -58,6 +58,8 @@ function areaReady(checks: DecommissionCheck[], area: DecommissionCheck['area'])
   return checks.filter((check) => check.area === area).every((check) => check.status === 'pass');
 }
 
+const directIngressBusinessEventTypes = ['whatsapp.message_received', 'lead.created', 'leadgen.created'];
+
 async function scalar(sql: string, values: unknown[] = []): Promise<number> {
   const result = await pool.query<{ count: number }>(sql, values);
   return result.rows[0]?.count || 0;
@@ -116,15 +118,18 @@ export class DecommissionReadinessService {
         `SELECT count(*)::int AS count
          FROM runtime.inbox_events
          WHERE provider IN ('meta','website','facebook')
+           AND event_type = ANY($2::text[])
            AND status='processed'
            AND created_at <= now() - make_interval(days => $1)`,
-        [directStabilityDays],
+        [directStabilityDays, directIngressBusinessEventTypes],
       ),
       scalar(
         `SELECT count(*)::int AS count
          FROM runtime.inbox_events
          WHERE provider IN ('meta','website','facebook')
+           AND event_type = ANY($1::text[])
            AND status IN ('pending','processing','retryable','dead_lettered')`,
+        [directIngressBusinessEventTypes],
       ),
       scalar('SELECT count(*)::int AS count FROM configuration.active_versions'),
       scalar(

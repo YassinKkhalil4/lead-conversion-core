@@ -399,3 +399,11 @@ Decision: Meta/n8n WhatsApp delivery-status processing records every distinct pr
 Reason: Provider webhooks can arrive out of order. Reporting, cutover readiness, and operator reconciliation need the complete provider event trail, while the authoritative message state should represent the furthest known delivery outcome rather than the last webhook arrival order.
 
 Date: 2026-08-01
+
+## DEC-042: Decommission Stability Counts Business Ingress Only
+
+Decision: Direct-ingress stability evidence for decommission readiness counts only processed business ingress events: direct Meta inbound messages and direct website/Facebook lead events. Direct provider status callbacks remain retained as runtime evidence, but they do not satisfy n8n/Typebot fallback-removal stability.
+
+Reason: Delivery-status callbacks prove provider reporting, not that customer/lead ingress has been safely handled by Edge-owned business processing for the required stability window. Counting status callbacks could let synthetic or incidental provider events satisfy decommission criteria without real direct intake or conversation evidence.
+
+Date: 2026-08-01

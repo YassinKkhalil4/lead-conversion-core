@@ -1061,6 +1061,32 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('does not treat direct provider status callbacks as decommission ingress stability evidence', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('meta', 'whatsapp.message_status', 'decommission-status-callback', 'wamid.decommission.status', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService().report({
+      ownerApprovedN8n: true,
+      finalLegacyExportComplete: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.metrics.directIngressStableEventCount).toBe(0);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_stable: 'fail',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'direct_ingress_stable')?.details).toMatchObject({
+      stableEventCount: 0,
+      unresolvedCount: 0,
+      requiredDays: 14,
+    });
+  });
+
   it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query(
