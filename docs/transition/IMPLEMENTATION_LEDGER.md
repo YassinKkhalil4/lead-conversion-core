@@ -223,7 +223,7 @@
 - Commit `16c0ac5`: Added cutover readiness report.
 - Implementation slice: Added `docs/transition/DIRECT_INGRESS_PLAN.md` documenting local route contracts, explicit direct-ingress flags, staging route sequence, production canary route sequence, rollback, and decommission hold.
 - Commit `de20db4`: Added direct ingress route plan.
-- Implementation slice: Hardened `scripts/verify-deployment.sh` for MP-12 staging checks. The script now accepts `--env-file`, `--base-url`, `--skip-ready`, `--skip-shadow`, `--check-direct-meta`, `--check-direct-lead`, and explicit expected direct-ingress modes. It verifies disabled direct routes as 503 and enabled Meta challenge echo without printing secrets; direct lead enabled checks do not send real customer messages and accept non-5xx route reachability so staging does not require a seeded customer record.
+- Implementation slice: Hardened `scripts/verify-deployment.sh` for MP-12 staging checks. The script accepts `--env-file`, `--base-url`, `--skip-ready`, `--skip-shadow`, `--check-direct-meta`, `--check-direct-lead`, and explicit expected direct-ingress modes. It verifies disabled direct routes as 503 and enabled Meta challenge echo without printing secrets. Its initial direct-lead enabled probe accepted non-5xx route reachability; DEC-026 supersedes that with explicit website/Facebook `invalid_lead_payload` validation probes.
 - Decision: Deployment verification uses synthetic direct-ingress checks only; it does not mutate DNS, Caddy, provider accounts, n8n, Typebot, or production data.
 - Verification: `bash -n scripts/verify-deployment.sh` passed.
 - Verification: `npm run lint` passed.
