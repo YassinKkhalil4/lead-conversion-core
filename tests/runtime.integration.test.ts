@@ -1706,6 +1706,73 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('does not count imported or unlinked completed qualifications as Typebot decommission volume', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('decommission-imported-qualification-client', 'Imported Qualification Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('decommission_imported_qualification_client_not_created');
+    const contact = await db.pool.query<{ contact_id: string }>(
+      `INSERT INTO app.contacts (client_id, name, phone_raw, phone_e164)
+       VALUES ($1, 'Imported Qualification Lead', '+201022222232', '+201022222232')
+       RETURNING contact_id`,
+      [clientId],
+    );
+    const contactId = contact.rows[0]?.contact_id;
+    if (!contactId) throw new Error('decommission_imported_qualification_contact_not_created');
+    const lead = await db.pool.query<{ lead_id: string }>(
+      `INSERT INTO app.leads (client_id, contact_id, provider, provider_external_id, source, source_payload_hash)
+       VALUES ($1, $2, 'airtable', 'imported-qualification-lead', 'airtable-import', 'imported-qualification-hash')
+       RETURNING lead_id`,
+      [clientId, contactId],
+    );
+    const leadId = lead.rows[0]?.lead_id;
+    if (!leadId) throw new Error('decommission_imported_qualification_lead_not_created');
+    const config = await db.pool.query<{ configuration_version_id: string }>(
+      `INSERT INTO configuration.versions
+        (client_id, version_key, status, config_json, checksum_sha256, created_by, published_at)
+       VALUES ($1, 'decommission-imported-qualification-config', 'published', '{}'::jsonb, 'decommission-imported-qualification-checksum', 'test', now())
+       RETURNING configuration_version_id`,
+      [clientId],
+    );
+    const configurationVersionId = config.rows[0]?.configuration_version_id;
+    if (!configurationVersionId) throw new Error('decommission_imported_qualification_config_not_created');
+    await db.pool.query(
+      `INSERT INTO configuration.active_versions (scope_key, client_id, configuration_version_id, activated_by)
+       VALUES ('client:decommission-imported-qualification-client', $1, $2, 'test')`,
+      [clientId, configurationVersionId],
+    );
+    await db.pool.query(
+      `INSERT INTO app.qualification_sessions (lead_id, status, configuration_version_id, completed_at)
+       VALUES ($1, 'completed', $2, now())`,
+      [leadId, configurationVersionId],
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => ({
+      ...configEnv.getEnv(),
+      N8N_COMPAT_ROUTES_ENABLED: false,
+    })).report({
+      ownerApprovedTypebot: true,
+      appointmentMediaMigrated: true,
+      minCompletedEdgeQualifications: 1,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.summary.typebotReady).toBe(false);
+    expect(report.metrics.completedEdgeQualificationCount).toBe(0);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      versioned_config_active: 'pass',
+      active_legacy_config_snapshots_migrated: 'pass',
+      edge_qualification_volume: 'fail',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'edge_qualification_volume')?.details).toMatchObject({
+      count: 0,
+      required: 1,
+      countedSource: 'edge_conversations',
+      countedStateAuthority: 'edge',
+    });
+  });
+
   it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query('TRUNCATE migration.reconciliation_results RESTART IDENTITY');
@@ -1751,11 +1818,20 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
        VALUES ('client:decommission-client', $1, $2, 'test')`,
       [clientId, configurationVersionId],
     );
+    const conversation = await db.pool.query<{ conversation_id: string }>(
+      `INSERT INTO app.conversations
+        (client_id, contact_id, lead_id, configuration_version_id, status, current_stage, state_json)
+       VALUES ($1, $2, $3, $4, 'qualified', 'qualified', '{"source":"edge_conversations","stateAuthority":"edge"}'::jsonb)
+       RETURNING conversation_id`,
+      [clientId, contactId, leadId, configurationVersionId],
+    );
+    const appConversationId = conversation.rows[0]?.conversation_id;
+    if (!appConversationId) throw new Error('decommission_app_conversation_not_created');
     await db.pool.query(
-      `INSERT INTO app.qualification_sessions (lead_id, status, completed_at)
-       SELECT $1, 'completed', now()
+      `INSERT INTO app.qualification_sessions (conversation_id, lead_id, status, configuration_version_id, completed_at)
+       SELECT $1, $2, 'completed', $3, now()
        FROM generate_series(1, 100)`,
-      [leadId],
+      [appConversationId, leadId, configurationVersionId],
     );
     await insertPassingAirtableReconciliationResults();
     await db.pool.query(

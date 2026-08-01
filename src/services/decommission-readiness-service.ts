@@ -198,9 +198,14 @@ export class DecommissionReadinessService {
       ),
       scalar(
         `SELECT count(*)::int AS count
-         FROM app.qualification_sessions
-         WHERE status='completed'
-           AND completed_at IS NOT NULL`,
+         FROM app.qualification_sessions qs
+         JOIN app.conversations c
+           ON c.conversation_id = qs.conversation_id
+          AND c.lead_id = qs.lead_id
+         WHERE qs.status='completed'
+           AND qs.completed_at IS NOT NULL
+           AND c.state_json->>'source' = 'edge_conversations'
+           AND c.state_json->>'stateAuthority' = 'edge'`,
       ),
       scalar(
         `SELECT count(*)::int AS count
@@ -403,7 +408,12 @@ export class DecommissionReadinessService {
         area: 'typebot',
         checkKey: 'edge_qualification_volume',
         status: passFail(completedEdgeQualificationCount >= minCompletedEdgeQualifications),
-        details: { count: completedEdgeQualificationCount, required: minCompletedEdgeQualifications },
+        details: {
+          count: completedEdgeQualificationCount,
+          required: minCompletedEdgeQualifications,
+          countedSource: 'edge_conversations',
+          countedStateAuthority: 'edge',
+        },
       },
       {
         area: 'typebot',

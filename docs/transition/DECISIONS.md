@@ -639,3 +639,11 @@ Decision: `npm run decommission:readiness` fails Typebot readiness when an activ
 Reason: Typebot removal requires all live conversation content authority to be present in immutable versioned configuration. The legacy snapshot table remains as a rollback compatibility path, but an active snapshot without a published immutable version is still legacy-only content evidence.
 
 Date: 2026-08-01
+
+## DEC-072: Typebot Qualification Volume Counts Edge-Owned Sessions Only
+
+Decision: `npm run decommission:readiness` counts completed Edge qualification volume only from `app.qualification_sessions` rows linked to matching `app.conversations` rows whose projected state came from `edge_conversations` with `stateAuthority='edge'`.
+
+Reason: Imported historical qualification sessions and detached synthetic rows can prove migration history, but they do not prove real Edge-owned conversation processing has replaced Typebot. Typebot removal readiness must measure successful Edge-owned qualifications, not all completed qualification rows.
+
+Date: 2026-08-01
