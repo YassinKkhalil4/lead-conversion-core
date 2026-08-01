@@ -26,9 +26,22 @@ function command(overrides: Partial<ClaimedOutboxCommand> = {}): ClaimedOutboxCo
   };
 }
 
+function calendarCommand() {
+  return {
+    calendarId: 'calendar-primary',
+    idempotencyKey: 'calendar.create_event:retry-after',
+    summary: 'Appointment with Lead',
+    description: '',
+    startsAt: '2026-07-31T09:00:00.000Z',
+    endsAt: '2026-07-31T09:45:00.000Z',
+    timezone: 'Africa/Cairo',
+  };
+}
+
 describe('CalendarOutboxDispatcher', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('maps created provider events to delivered outbox outcomes', async () => {
@@ -151,6 +164,38 @@ describe('CalendarOutboxDispatcher', () => {
 
   it('requires real Google credentials when constructing the adapter', () => {
     expect(() => new GoogleCalendarAdapter({ accessToken: '' })).toThrow('google_calendar_access_token_required');
+  });
+
+  it('caps numeric Google retry-after hints', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ error: { message: 'rate limited' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'retry-after': '999999' } },
+    )));
+    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+
+    await expect(adapter.checkAvailability(calendarCommand())).resolves.toEqual({
+      outcome: 'retryable',
+      error: 'google_calendar_freebusy_retryable:429',
+      retryAfterSeconds: 3600,
+      providerResponse: { error: { message: 'rate limited' } },
+    });
+  });
+
+  it('parses date-based Google retry-after hints', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-31T09:00:00.000Z'));
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ error: { message: 'try later' } }),
+      { status: 503, headers: { 'content-type': 'application/json', 'retry-after': 'Fri, 31 Jul 2026 09:02:00 GMT' } },
+    )));
+    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+
+    await expect(adapter.createEvent(calendarCommand())).resolves.toEqual({
+      outcome: 'retryable',
+      error: 'google_calendar_retryable:503',
+      retryAfterSeconds: 120,
+      providerResponse: { error: { message: 'try later' } },
+    });
   });
 
   it('classifies Google free/busy network failures as retryable before event creation', async () => {

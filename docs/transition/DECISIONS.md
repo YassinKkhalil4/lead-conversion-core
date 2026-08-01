@@ -306,8 +306,8 @@ Date: 2026-08-01
 
 ## DEC-030: Calendar Network Errors Preserve Replay Safety
 
-Decision: Google Calendar free/busy network failures are classified as retryable, while create-event network failures are classified as `delivery_unknown`.
+Decision: Google Calendar free/busy network failures are classified as retryable, create-event network failures are classified as `delivery_unknown`, and numeric or HTTP-date `Retry-After` hints are parsed with a one-hour cap.
 
-Reason: Free/busy checks happen before attempting an external calendar mutation and can be retried safely. A network failure during event creation may have occurred after Google accepted the request, so the durable outbox must preserve ambiguity for operator reconciliation instead of blindly creating a second event.
+Reason: Free/busy checks happen before attempting an external calendar mutation and can be retried safely. A network failure during event creation may have occurred after Google accepted the request, so the durable outbox must preserve ambiguity for operator reconciliation instead of blindly creating a second event. Provider retry hints should be respected without allowing an unbounded provider value to hide stuck work indefinitely.
 
 Date: 2026-08-01

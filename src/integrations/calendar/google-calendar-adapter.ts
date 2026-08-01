@@ -15,9 +15,13 @@ async function parseResponse(response: Response): Promise<Record<string, unknown
 }
 
 function retryAfterSeconds(response: Response): number | undefined {
-  const raw = response.headers.get('retry-after') || '';
+  const raw = response.headers.get('retry-after');
+  if (!raw) return undefined;
   const seconds = Number(raw);
-  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds, 3600);
+  const dateMs = Date.parse(raw);
+  if (!Number.isNaN(dateMs)) return Math.min(Math.max(0, Math.ceil((dateMs - Date.now()) / 1000)), 3600);
+  return undefined;
 }
 
 export class GoogleCalendarAdapter implements CalendarProvider {

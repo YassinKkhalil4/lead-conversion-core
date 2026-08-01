@@ -350,7 +350,7 @@ Result: failed to connect to `unix:///var/run/docker.sock`; Docker-backed Postgr
 
 Command: `npx vitest run tests/calendar-outbox-dispatcher.test.ts`
 
-Result: passed. Focused calendar tests ran 8 tests covering dispatcher delivery/retry/busy/malformed-payload behavior, required Google credentials, retryable Google free/busy network failures, and `delivery_unknown` Google create-event network failures.
+Result: passed. Focused calendar tests ran 10 tests covering dispatcher delivery/retry/busy/malformed-payload behavior, required Google credentials, bounded numeric/date Google retry hints, retryable Google free/busy network failures, and `delivery_unknown` Google create-event network failures.
 
 Command: `npm run lint`
 
