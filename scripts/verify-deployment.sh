@@ -66,10 +66,12 @@ if [[ "$EXPECT_DIRECT_LEAD" != "enabled" && "$EXPECT_DIRECT_LEAD" != "disabled" 
 fi
 
 tmp_body="$(mktemp)"
+tmp_edge_header="$(mktemp)"
 cleanup() {
-  rm -f "$tmp_body"
+  rm -f "$tmp_body" "$tmp_edge_header"
 }
 trap cleanup EXIT
+chmod 600 "$tmp_body" "$tmp_edge_header"
 
 status_request() {
   curl -sS -o "$tmp_body" -w "%{http_code}" "$@"
@@ -122,10 +124,11 @@ if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then
     echo "EDGE_SHARED_SECRET is required for --check-direct-lead" >&2
     exit 1
   fi
+  printf 'X-Edge-Secret: %s\n' "$EDGE_SHARED_SECRET" > "$tmp_edge_header"
   echo "Direct website lead ingress ($EXPECT_DIRECT_LEAD):"
   event="verify-direct-website-lead-invalid-$(date +%s)"
   status="$(status_request \
-    -H "X-Edge-Secret: $EDGE_SHARED_SECRET" \
+    -H "@$tmp_edge_header" \
     -H 'Content-Type: application/json' \
     -d "{
       \"eventId\":\"$event\",
@@ -151,7 +154,7 @@ if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then
   echo "Direct Facebook lead ingress ($EXPECT_DIRECT_LEAD):"
   event="verify-direct-facebook-lead-invalid-$(date +%s)"
   status="$(status_request \
-    -H "X-Edge-Secret: $EDGE_SHARED_SECRET" \
+    -H "@$tmp_edge_header" \
     -H 'Content-Type: application/json' \
     -d "{
       \"leadgen_id\":\"$event\",
@@ -180,12 +183,13 @@ if [[ "$SKIP_SHADOW" != "true" ]]; then
     echo "EDGE_SHARED_SECRET is required for shadow verification" >&2
     exit 1
   fi
+  printf 'X-Edge-Secret: %s\n' "$EDGE_SHARED_SECRET" > "$tmp_edge_header"
   PHONE="+2010$(date +%H%M%S)00"
   EVENT="verify-$(date +%s)-1"
 
   echo "First shadow evaluation:"
   curl -fsS \
-    -H "X-Edge-Secret: $EDGE_SHARED_SECRET" \
+    -H "@$tmp_edge_header" \
     -H 'Content-Type: application/json' \
     -d "{
       \"eventId\":\"$EVENT\",

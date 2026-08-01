@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -220,5 +220,12 @@ describe('direct ingress route gates', () => {
       }).catch(() => undefined);
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('keeps shared secrets out of verifier curl process arguments', () => {
+    const script = readFileSync('scripts/verify-deployment.sh', 'utf8');
+    expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
+    expect(script).not.toContain("-H 'X-Edge-Secret: $EDGE_SHARED_SECRET'");
+    expect(script).toContain('-H "@$tmp_edge_header"');
   });
 });

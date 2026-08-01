@@ -287,3 +287,11 @@ Decision: Fastify/Pino request logging redacts sensitive query parameters, inclu
 Reason: Direct webhook verification uses provider-defined query parameters and headers that can contain credential or signature material. Logs must preserve route and status evidence without printing reusable secrets.
 
 Date: 2026-08-01
+
+## DEC-028: Deployment Verifier Keeps Secrets Out Of Process Arguments
+
+Decision: `scripts/verify-deployment.sh` writes shared-secret HTTP headers to private temporary files and passes them to curl with `--header @file` instead of putting secret values directly in curl arguments.
+
+Reason: Staging verification can run on shared hosts or under process monitors. Secrets in command-line arguments are observable via process listings, while temporary header files scoped to the verifier process reduce exposure and are deleted by the script cleanup trap.
+
+Date: 2026-08-01

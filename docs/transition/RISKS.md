@@ -7,6 +7,7 @@
 | Legacy `/v1/turn` active route can fall back to legacy after definite Meta rejection | High | mitigated_locally | The route is disabled by default behind `ACTIVE_TURN_COMPAT_ENABLED`; new edge-owned durable inbound processing ignores legacy-owned conversations and enqueues outbound effects transactionally. |
 | Legacy `edge_outbox` compatibility worker can retry forever | High | mitigated_locally | Legacy `edge_outbox` now has a terminal `dead_lettered` status after bounded retries; durable runtime outbox already has leases, bounded attempts, and dead letters. |
 | Webhook verification tokens can appear in request URLs | High | mitigated_locally | Request logging redacts sensitive query parameters, including Meta `hub.verify_token`, and authentication/signature headers before emission. |
+| Deployment verification can expose secrets through process arguments | High | mitigated_locally | `scripts/verify-deployment.sh` passes shared-secret headers to curl via private temporary header files rather than inline `-H` arguments. |
 | API and worker both run migrations at startup | High | mitigated_locally | One-shot migrator added; local concurrent migration test passed. |
 | No complete Airtable export is present | High | owner_action_pending | Build importer/dry-run/reconciliation and await owner export. |
 | Local `pg_restore` cannot inspect supplied dumps | Medium | workaround_available | Use PostgreSQL 16+ Docker tooling for dump metadata and restore tests. |
