@@ -91,6 +91,18 @@ describe('environment contract', () => {
     });
   });
 
+  it('requires the runtime worker before n8n compatibility callback routes can be enabled', () => {
+    expect(() => parseEnv({ ...baseEnv, N8N_COMPAT_ROUTES_ENABLED: 'true' })).toThrow(/RUNTIME_WORKER_ENABLED/);
+    expect(parseEnv({
+      ...baseEnv,
+      N8N_COMPAT_ROUTES_ENABLED: 'true',
+      RUNTIME_WORKER_ENABLED: 'true',
+    })).toMatchObject({
+      N8N_COMPAT_ROUTES_ENABLED: true,
+      RUNTIME_WORKER_ENABLED: true,
+    });
+  });
+
   it('requires Meta send credentials before direct sends or active-turn compatibility can be enabled', () => {
     expect(() => parseEnv({ ...baseEnv, DIRECT_META_SEND_ENABLED: 'true' })).toThrow(/META_WA_ACCESS_TOKEN/);
     expect(() => parseEnv({ ...baseEnv, ACTIVE_TURN_COMPAT_ENABLED: 'true' })).toThrow(/DIRECT_META_SEND_ENABLED/);

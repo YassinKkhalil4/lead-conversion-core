@@ -37,6 +37,7 @@ describe('direct ingress route gates', () => {
       DIRECT_META_WEBHOOK_ENABLED: 'false',
       DIRECT_LEAD_INGRESS_ENABLED: 'false',
       N8N_COMPAT_ROUTES_ENABLED: 'true',
+      RUNTIME_WORKER_ENABLED: 'true',
     });
     try {
       const meta = await app.inject({
@@ -113,6 +114,7 @@ describe('direct ingress route gates', () => {
       DIRECT_META_WEBHOOK_ENABLED: 'false',
       DIRECT_LEAD_INGRESS_ENABLED: 'false',
       N8N_COMPAT_ROUTES_ENABLED: 'true',
+      RUNTIME_WORKER_ENABLED: 'true',
     });
     const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-deployment.'));
     try {

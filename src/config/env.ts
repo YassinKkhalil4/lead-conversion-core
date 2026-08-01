@@ -66,11 +66,11 @@ const schema = baseSchema.superRefine((env, ctx) => {
   requireConfigured(env.DIRECT_META_WEBHOOK_ENABLED, 'META_WEBHOOK_VERIFY_TOKEN', 'META_WEBHOOK_VERIFY_TOKEN is required when DIRECT_META_WEBHOOK_ENABLED=true');
   requireConfigured(env.DIRECT_META_WEBHOOK_ENABLED, 'META_APP_SECRET', 'META_APP_SECRET is required when DIRECT_META_WEBHOOK_ENABLED=true');
 
-  if ((env.DIRECT_META_WEBHOOK_ENABLED || env.DIRECT_LEAD_INGRESS_ENABLED) && !env.RUNTIME_WORKER_ENABLED) {
+  if ((env.DIRECT_META_WEBHOOK_ENABLED || env.DIRECT_LEAD_INGRESS_ENABLED || env.N8N_COMPAT_ROUTES_ENABLED) && !env.RUNTIME_WORKER_ENABLED) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['RUNTIME_WORKER_ENABLED'],
-      message: 'RUNTIME_WORKER_ENABLED must be true when direct ingress is enabled',
+      message: 'RUNTIME_WORKER_ENABLED must be true when direct ingress or n8n compatibility routes are enabled',
     });
   }
 

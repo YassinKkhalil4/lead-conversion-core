@@ -16,7 +16,7 @@ Required flags:
 - `DIRECT_META_WEBHOOK_ENABLED=true` enables direct Meta challenge and signed webhook receipt. It requires `RUNTIME_WORKER_ENABLED=true` and `META_STATUS_PROCESSOR_ENABLED=true`.
 - `DIRECT_LEAD_INGRESS_ENABLED=true` enables direct website/Facebook lead ingress. It requires `RUNTIME_WORKER_ENABLED=true`.
 - `ACTIVE_TURN_COMPAT_ENABLED=true` enables the legacy synchronous `/v1/turn` compatibility route; leave it false for normal durable direct-ingress cutover.
-- `N8N_COMPAT_ROUTES_ENABLED=true` keeps n8n fallback routes available.
+- `N8N_COMPAT_ROUTES_ENABLED=true` keeps n8n fallback routes available and requires `RUNTIME_WORKER_ENABLED=true` so callback inbox rows can be processed.
 
 Default state keeps all direct provider ingress disabled even when provider secrets are present.
 
@@ -27,7 +27,7 @@ Default state keeps all direct provider ingress disabled even when provider secr
 3. Enable only the direct route under test:
    - Meta test: `DIRECT_META_WEBHOOK_ENABLED=true`, `RUNTIME_WORKER_ENABLED=true`, `META_STATUS_PROCESSOR_ENABLED=true`
    - Lead-source test: `DIRECT_LEAD_INGRESS_ENABLED=true`, `RUNTIME_WORKER_ENABLED=true`
-4. Keep `N8N_COMPAT_ROUTES_ENABLED=true` during staging.
+4. Keep `N8N_COMPAT_ROUTES_ENABLED=true` with `RUNTIME_WORKER_ENABLED=true` during staging.
 5. Run `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-pending-scheduled-jobs=0 --max-queue-age-seconds=300`.
 6. Verify `/health`, `/ready`, webhook challenge, signed webhook receipt, invalid signature rejection, and fallback route availability.
 7. Use `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead` with explicit `--expect-direct-meta=<enabled|disabled>` and `--expect-direct-lead=<enabled|disabled>` to prove the intended direct-ingress state before changing external routes. The enabled direct-Meta check verifies the challenge route, sends a signed non-customer webhook probe that should be durably acknowledged through the ignored-webhook path, and sends an unsigned POST that must be rejected. The enabled direct-lead check probes both website and Facebook routes with deliberately incomplete payloads and expects durable receipt acknowledgement; it must not create an authoritative lead or outbound command inside the webhook request. Disabled direct-ingress checks require no Meta token, app secret, or edge shared secret when shadow verification is skipped; they prove the routes return unavailable before authentication or durable receipt.

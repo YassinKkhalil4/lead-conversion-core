@@ -12,6 +12,7 @@ Status: pending owner infrastructure setup.
 - Network access for Meta callbacks
 - Caddy route for staging edge ingress
 - Explicit staging flags for direct ingress: `DIRECT_META_WEBHOOK_ENABLED=true`, `RUNTIME_WORKER_ENABLED=true`, and `META_STATUS_PROCESSOR_ENABLED=true` only for Meta callback tests; `DIRECT_LEAD_INGRESS_ENABLED=true` and `RUNTIME_WORKER_ENABLED=true` only for direct website/Facebook callback tests
+- If n8n compatibility fallback routes remain enabled in staging, `N8N_COMPAT_ROUTES_ENABLED=true` must be paired with `RUNTIME_WORKER_ENABLED=true`
 - Encrypted backup target
 - Named operators authorized to run live commands
 

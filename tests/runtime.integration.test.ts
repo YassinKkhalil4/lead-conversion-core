@@ -869,6 +869,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       direct_lead_ingress_flag: 'pass',
       direct_lead_inbox_processor: 'pass',
       n8n_compatibility_flag: 'pass',
+      n8n_compatibility_inbox_processor: 'pass',
       active_turn_compatibility_disabled: 'pass',
       inbox_backlog: 'pass',
       outbox_backlog: 'pass',
@@ -912,7 +913,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         1,
         now(),
         now(),
-        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored"],"inboxProviders":["meta"],"jobProcessorConfigured":true}'::jsonb
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","salesperson.command_received","whatsapp.webhook_ignored"],"inboxProviders":["meta","n8n"],"jobProcessorConfigured":true}'::jsonb
        )`,
     );
 
@@ -921,12 +922,13 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
       direct_meta_inbox_processor: 'pass',
       direct_lead_inbox_processor: 'fail',
+      n8n_compatibility_inbox_processor: 'pass',
       runtime_worker_heartbeat: 'pass',
     });
     expect(report.checks.find((check) => check.checkKey === 'direct_lead_inbox_processor')?.details).toMatchObject({
       configured: false,
-      inboxEventTypes: ['whatsapp.message_status', 'whatsapp.message_received', 'whatsapp.webhook_ignored'],
-      inboxProviders: ['meta'],
+      inboxEventTypes: ['whatsapp.message_status', 'whatsapp.message_received', 'salesperson.command_received', 'whatsapp.webhook_ignored'],
+      inboxProviders: ['meta', 'n8n'],
     });
   });
 
@@ -949,10 +951,40 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
       direct_meta_inbox_processor: 'fail',
       direct_lead_inbox_processor: 'pass',
+      n8n_compatibility_inbox_processor: 'pass',
       runtime_worker_heartbeat: 'pass',
     });
     expect(report.checks.find((check) => check.checkKey === 'direct_meta_inbox_processor')?.details).toMatchObject({
       configured: false,
+    });
+  });
+
+  it('fails cutover readiness when n8n compatibility lacks its inbox processor', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'cutover-missing-n8n-processor',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","salesperson.command_received","whatsapp.webhook_ignored","lead.created","leadgen.created"],"inboxProviders":["meta","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new cutoverReadiness.CutoverReadinessService().report();
+    expect(report.ok).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_meta_inbox_processor: 'pass',
+      direct_lead_inbox_processor: 'pass',
+      n8n_compatibility_inbox_processor: 'fail',
+      runtime_worker_heartbeat: 'pass',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'n8n_compatibility_inbox_processor')?.details).toMatchObject({
+      configured: false,
+      inboxEventTypes: ['whatsapp.message_status', 'whatsapp.message_received', 'salesperson.command_received', 'whatsapp.webhook_ignored', 'lead.created', 'leadgen.created'],
+      inboxProviders: ['meta', 'website', 'facebook'],
     });
   });
 

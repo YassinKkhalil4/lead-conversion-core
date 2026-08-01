@@ -543,3 +543,11 @@ Decision: The runtime worker wires the shared WhatsApp/status/salesperson inbox 
 Reason: n8n-compatible callback routes durably receipt WhatsApp status, inbound message, and salesperson command events while fallback infrastructure remains active. Those rows must remain processable even when direct Meta webhook ingress is disabled for cutover staging or rollback.
 
 Date: 2026-08-01
+
+## DEC-060: N8n Compatibility Requires Runtime Worker Readiness
+
+Decision: `N8N_COMPAT_ROUTES_ENABLED=true` requires `RUNTIME_WORKER_ENABLED=true` at startup, and `npm run cutover:readiness` fails unless the latest operational runtime worker heartbeat advertises the n8n inbox provider and the WhatsApp status, inbound message, and salesperson command event types.
+
+Reason: n8n compatibility routes are fallback infrastructure, but their callback routes are still durable external event ingress. A deployment that accepts n8n callbacks without a runtime worker able to process those inbox rows would create hidden backlog and false cutover confidence.
+
+Date: 2026-08-01

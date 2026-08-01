@@ -126,6 +126,14 @@ export class CutoverReadinessService {
       && inboxEventTypes.includes('leadgen.created')
       && inboxProviders.includes('website')
       && inboxProviders.includes('facebook');
+    const n8nCompatProcessorConfigured = inboxEventTypes.includes('whatsapp.message_status')
+      && inboxEventTypes.includes('whatsapp.message_received')
+      && inboxEventTypes.includes('salesperson.command_received')
+      && inboxProviders.includes('n8n');
+    const runtimeWorkerRequired = env.RUNTIME_WORKER_ENABLED
+      || env.DIRECT_META_WEBHOOK_ENABLED
+      || env.DIRECT_LEAD_INGRESS_ENABLED
+      || env.N8N_COMPAT_ROUTES_ENABLED;
 
     const checks: ReadinessCheck[] = [
       {
@@ -156,6 +164,13 @@ export class CutoverReadinessService {
         checkKey: 'n8n_compatibility_flag',
         status: env.N8N_COMPAT_ROUTES_ENABLED ? 'pass' : 'warn',
         details: { enabled: env.N8N_COMPAT_ROUTES_ENABLED },
+      },
+      {
+        checkKey: 'n8n_compatibility_inbox_processor',
+        status: env.N8N_COMPAT_ROUTES_ENABLED
+          ? n8nCompatProcessorConfigured ? 'pass' : 'fail'
+          : 'warn',
+        details: { requiredWhenEnabled: true, configured: n8nCompatProcessorConfigured, inboxEventTypes, inboxProviders },
       },
       {
         checkKey: 'active_turn_compatibility_disabled',
@@ -191,7 +206,7 @@ export class CutoverReadinessService {
         checkKey: 'runtime_worker_heartbeat',
         status: heartbeatAgeSeconds !== null && heartbeatAgeSeconds <= maxWorkerHeartbeatAgeSeconds && runtimeOperationalState.operational
           ? 'pass'
-          : env.RUNTIME_WORKER_ENABLED ? 'fail' : 'warn',
+          : runtimeWorkerRequired ? 'fail' : 'warn',
         details: {
           latestWorkerName: heartbeatRow?.worker_name || '',
           heartbeatAgeSeconds,
