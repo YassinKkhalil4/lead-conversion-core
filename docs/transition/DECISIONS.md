@@ -607,3 +607,11 @@ Decision: `npm run cutover:readiness` fails unless at least one direct-ingress r
 Reason: n8n compatibility and empty queues are useful fallback and operational evidence, but they do not prove Edge is ready to receive direct provider traffic. Operators must enable the approved direct route and required runtime worker flags before using cutover readiness as route-change evidence.
 
 Date: 2026-08-01
+
+## DEC-068: Terminal Runtime Outbox Failures Block Cutover
+
+Decision: `npm run cutover:readiness` fails when any `runtime.outbox_commands` row is in `permanently_failed` or `dead_lettered` state, independent of whether a corresponding `runtime.dead_letters` row exists.
+
+Reason: A terminal external-effect failure is unresolved operational state that can affect customer messaging, calendar side effects, reporting, or fallback reconciliation. Cutover readiness should not depend on secondary dead-letter evidence alone when the authoritative outbox row already records a terminal failure.
+
+Date: 2026-08-01

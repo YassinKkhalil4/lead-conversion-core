@@ -870,6 +870,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       outboxPendingCount: 0,
       scheduledJobPendingCount: 0,
       deliveryUnknownCount: 0,
+      terminalOutboxFailureCount: 0,
       deadLetterCount: 0,
     });
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
@@ -885,6 +886,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       outbox_backlog: 'pass',
       scheduled_job_backlog: 'pass',
       delivery_unknown: 'pass',
+      terminal_outbox_failures: 'pass',
       dead_letters: 'pass',
       runtime_worker_heartbeat: 'pass',
     });
@@ -1035,7 +1037,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
-  it('fails cutover readiness when queues contain stale pending work, delivery unknowns, or dead letters', async () => {
+  it('fails cutover readiness when queues contain stale pending work, delivery unknowns, terminal failures, or dead letters', async () => {
     await db.pool.query(
       `INSERT INTO runtime.inbox_events
         (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
@@ -1061,6 +1063,19 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
        WHERE outbox_command_id=$1`,
       [unknownOutboxId],
     );
+    const permanentlyFailedOutboxId = await new runtime.RuntimeOutboxRepository().enqueue(db.pool, {
+      commandType: 'whatsapp.send_message',
+      destination: '+201000000002',
+      idempotencyKey: 'whatsapp.send_message:cutover-readiness-permanent',
+      aggregateKey: 'lead-cutover-readiness',
+      payload: { text: 'permanent failure fixture' },
+    });
+    await db.pool.query(
+      `UPDATE runtime.outbox_commands
+       SET state='permanently_failed'
+       WHERE outbox_command_id=$1`,
+      [permanentlyFailedOutboxId],
+    );
     await db.pool.query(
       `INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
        VALUES ('runtime.outbox_commands', $1, 'cutover readiness fixture', '{}'::jsonb)`,
@@ -1080,6 +1095,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       outboxPendingCount: 1,
       scheduledJobPendingCount: 1,
       deliveryUnknownCount: 1,
+      terminalOutboxFailureCount: 1,
       deadLetterCount: 1,
     });
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
@@ -1087,6 +1103,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       outbox_backlog: 'fail',
       scheduled_job_backlog: 'fail',
       delivery_unknown: 'fail',
+      terminal_outbox_failures: 'fail',
       dead_letters: 'fail',
     });
   });

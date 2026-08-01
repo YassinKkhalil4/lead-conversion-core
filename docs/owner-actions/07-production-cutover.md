@@ -10,6 +10,7 @@ Status: not approved for execution.
 - Provider credentials rotated.
 - Templates approved and verified.
 - Queue age below thresholds.
+- No terminal runtime outbox failures.
 - `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-pending-scheduled-jobs=0 --max-queue-age-seconds=300` reviewed with no unresolved `fail` checks.
 - Rollback path rehearsed.
 

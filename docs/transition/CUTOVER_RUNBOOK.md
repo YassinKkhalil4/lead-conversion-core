@@ -14,7 +14,7 @@ Status: draft, not approved for production execution.
 10. Verify webhook challenge/signature. For direct Meta ingress, the deployment verifier must prove challenge handling, signed durable receipt, and unsigned POST rejection. For direct website/Facebook lead ingress, use the deployment verifier's incomplete durable-receipt probes first; they should be durably acknowledged without creating an authoritative lead or outbound command inside the webhook request.
 11. Send a real test message.
 12. Confirm provider message ID and delivery status.
-13. Monitor inbox/outbox age, dead letters, delivery unknown, provider errors, and DB pool saturation.
+13. Monitor inbox/outbox age, terminal outbox failures, dead letters, delivery unknown, provider errors, and DB pool saturation.
 14. Roll back if thresholds in `docs/owner-actions/07-production-cutover.md` are met.
 
 Legacy fallback removal is a separate owner-approved step after cutover stability. Before any removal, run `npm run decommission:readiness` and review every n8n, Typebot, and Airtable check.

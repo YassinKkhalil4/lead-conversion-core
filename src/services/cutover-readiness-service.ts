@@ -27,6 +27,7 @@ export interface CutoverReadinessReport {
     scheduledJobPendingCount: number;
     scheduledJobOldestAgeSeconds: number | null;
     deliveryUnknownCount: number;
+    terminalOutboxFailureCount: number;
     deadLetterCount: number;
   };
   workerHeartbeat: {
@@ -74,11 +75,13 @@ export class CutoverReadinessService {
         pending_count: number;
         oldest_age_seconds: number | null;
         delivery_unknown_count: number;
+        terminal_failure_count: number;
       }>(
         `SELECT
            count(*) FILTER (WHERE state IN ('pending','processing','retryable'))::int AS pending_count,
            EXTRACT(EPOCH FROM now() - (min(created_at) FILTER (WHERE state IN ('pending','processing','retryable'))))::int AS oldest_age_seconds,
-           count(*) FILTER (WHERE state='delivery_unknown')::int AS delivery_unknown_count
+           count(*) FILTER (WHERE state='delivery_unknown')::int AS delivery_unknown_count,
+           count(*) FILTER (WHERE state IN ('permanently_failed','dead_lettered'))::int AS terminal_failure_count
          FROM runtime.outbox_commands`,
       ),
       pool.query<{ count: number; oldest_age_seconds: number | null }>(
@@ -107,7 +110,12 @@ export class CutoverReadinessService {
     ]);
 
     const inboxRow = inbox.rows[0] || { count: 0, oldest_age_seconds: null };
-    const outboxRow = outbox.rows[0] || { pending_count: 0, oldest_age_seconds: null, delivery_unknown_count: 0 };
+    const outboxRow = outbox.rows[0] || {
+      pending_count: 0,
+      oldest_age_seconds: null,
+      delivery_unknown_count: 0,
+      terminal_failure_count: 0,
+    };
     const scheduledJobRow = scheduledJobs.rows[0] || { count: 0, oldest_age_seconds: null };
     const deadLetterCount = deadLetters.rows[0]?.count || 0;
     const heartbeatRow = heartbeat.rows[0] || null;
@@ -211,6 +219,11 @@ export class CutoverReadinessService {
         details: { count: outboxRow.delivery_unknown_count },
       },
       {
+        checkKey: 'terminal_outbox_failures',
+        status: outboxRow.terminal_failure_count === 0 ? 'pass' : 'fail',
+        details: { count: outboxRow.terminal_failure_count, states: ['permanently_failed', 'dead_lettered'] },
+      },
+      {
         checkKey: 'dead_letters',
         status: deadLetterCount === 0 ? 'pass' : 'fail',
         details: { count: deadLetterCount },
@@ -248,6 +261,7 @@ export class CutoverReadinessService {
         scheduledJobPendingCount: scheduledJobRow.count,
         scheduledJobOldestAgeSeconds: scheduledJobRow.oldest_age_seconds,
         deliveryUnknownCount: outboxRow.delivery_unknown_count,
+        terminalOutboxFailureCount: outboxRow.terminal_failure_count,
         deadLetterCount,
       },
       workerHeartbeat: {
