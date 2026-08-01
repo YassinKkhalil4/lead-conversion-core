@@ -1788,6 +1788,52 @@ Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
 
+## 2026-08-01 Terminal Runtime Outbox Failure Cutover Gate
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the `terminalOutboxFailureCount` queue summary and `terminal_outbox_failures` readiness check.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"`
+
+Result: passed. Focused PostgreSQL cutover-readiness coverage ran 7 tests and skipped 78 by filter, including a permanently failed runtime outbox command that fails `terminal_outbox_failures`.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 17 files and 174 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
 ## 2026-08-01 Cutover Direct Ingress Target Enforcement
 
 Command: `npm run lint`

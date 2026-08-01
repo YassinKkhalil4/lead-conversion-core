@@ -699,3 +699,14 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed with 7 PostgreSQL cutover-readiness tests and 78 skipped by filter, including fallback-only cutover failure.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 174 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `29226e6`: Require direct ingress target for cutover readiness.
+
+## 2026-08-01 Terminal Runtime Outbox Failure Cutover Gate
+
+- Implementation slice: Hardened `npm run cutover:readiness` with `terminal_outbox_failures`, counting `runtime.outbox_commands` rows in `permanently_failed` or `dead_lettered` state directly from the durable outbox.
+- Implementation slice: Added `terminalOutboxFailureCount` to the cutover readiness queue summary and updated the PostgreSQL cutover fixture so a terminal outbox command blocks cutover even when separate dead-letter evidence is not the source of truth.
+- Decision: Added DEC-068. Terminal runtime outbox failures are unresolved external-effect state and block cutover independent of `runtime.dead_letters`.
+- Documentation slice: Updated the cutover runbook, direct-ingress plan, production cutover owner action, status, work queue, and next action with terminal outbox failure monitoring.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed with 7 PostgreSQL cutover-readiness tests and 78 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 174 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `a228db1`: Block cutover on terminal runtime outbox failures.
