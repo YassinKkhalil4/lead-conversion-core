@@ -528,3 +528,11 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 10 PostgreSQL tests and 69 skipped by filter, including an aged processed n8n command inbox receipt plus a rejected `app.salesperson_commands` row that fails only the new rejected-command readiness check.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 162 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `5192fdb`: Block decommission on rejected n8n commands.
+
+## 2026-08-01 Parked Legacy Edge Outbox Blocks Decommission
+
+- Implementation slice: Hardened `npm run decommission:readiness` so legacy `edge_outbox.status='parked'` rows count as unresolved n8n compatibility work rather than appearing drained.
+- Decision: Added DEC-054. Parked shadow-rollout rows are retained side-effect records that require operator-visible disposition before compatibility infrastructure retirement.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 11 PostgreSQL tests and 69 skipped by filter, including a parked legacy `edge_outbox` row that fails `legacy_edge_outbox_drained` while direct-ingress and legacy-conversation checks pass.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 163 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `486e7ee`: Block decommission on parked edge outbox.
