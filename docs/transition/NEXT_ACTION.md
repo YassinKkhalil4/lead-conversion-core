@@ -67,6 +67,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `51c1fc0` (`Centralize Airtable reconciliation check contract`), with focused importer/reconciliation and decommission PostgreSQL tests, `npm ci`, tracked artifact scan, TypeScript lint, full Vitest suite, production build, `dist/tests` exclusion check, moderate audit, smoke test, and integration smoke all passing.
+Last verified commit: `29226e6` (`Require direct ingress target for cutover readiness`), with focused cutover-readiness PostgreSQL tests, `npm ci`, tracked artifact scan, TypeScript lint, full Vitest suite, production build, `dist/tests` exclusion check, moderate audit, smoke test, and integration smoke all passing.
 
 Git worktree clean when recorded: yes

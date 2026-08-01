@@ -688,3 +688,14 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 14 PostgreSQL decommission tests and 70 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 173 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `51c1fc0`: Centralize Airtable reconciliation check contract.
+
+## 2026-08-01 Cutover Direct Ingress Target Enforcement
+
+- Implementation slice: Hardened `npm run cutover:readiness` with `direct_ingress_target_selected`, which fails unless `DIRECT_META_WEBHOOK_ENABLED=true` or `DIRECT_LEAD_INGRESS_ENABLED=true`.
+- Implementation slice: Added environment-provider injection to `CutoverReadinessService` so tests can prove fallback-only states without mutating cached process environment.
+- Decision: Added DEC-067. n8n fallback and empty queues are not enough direct-ingress cutover evidence.
+- Documentation slice: Updated the cutover runbook, direct-ingress plan, staging owner action, status, work queue, and next-action files so operators enable the approved direct route and runtime worker flags before using cutover readiness as route-change evidence.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed with 7 PostgreSQL cutover-readiness tests and 78 skipped by filter, including fallback-only cutover failure.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 174 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `29226e6`: Require direct ingress target for cutover readiness.
