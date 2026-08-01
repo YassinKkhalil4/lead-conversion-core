@@ -21,7 +21,7 @@ Options:
   --base-url=URL                  Edge base URL. Defaults to http://127.0.0.1:$EDGE_PORT.
   --skip-ready                    Skip /ready check.
   --skip-shadow                   Skip /v1/shadow/evaluate check.
-  --check-direct-meta             Verify direct Meta challenge behavior.
+  --check-direct-meta             Verify direct Meta challenge behavior and, when enabled, signed non-customer webhook receipt.
   --check-direct-lead             Verify direct website and Facebook lead route behavior with non-business durable-receipt probes.
   --expect-direct-meta=MODE       MODE is enabled or disabled. Defaults from DIRECT_META_WEBHOOK_ENABLED.
   --expect-direct-lead=MODE       MODE is enabled or disabled. Defaults from DIRECT_LEAD_INGRESS_ENABLED.
@@ -66,11 +66,14 @@ fi
 tmp_body="$(mktemp)"
 tmp_edge_header="$(mktemp)"
 tmp_meta_curl_config="$(mktemp)"
+tmp_meta_post_config="$(mktemp)"
+tmp_meta_probe_body="$(mktemp)"
+tmp_meta_secret_file="$(mktemp)"
 cleanup() {
-  rm -f "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config"
+  rm -f "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
 }
 trap cleanup EXIT
-chmod 600 "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config"
+chmod 600 "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
 
 status_request() {
   curl -sS -o "$tmp_body" -w "%{http_code}" "$@"
@@ -87,6 +90,20 @@ write_url_config() {
   local file="$1"
   local url="$2"
   printf 'url = "%s"\n' "$(curl_config_escape "$url")" > "$file"
+}
+
+write_signed_meta_probe_config() {
+  local file="$1"
+  local url="$2"
+  local signature="$3"
+  local body_file="$4"
+  {
+    printf 'url = "%s"\n' "$(curl_config_escape "$url")"
+    printf 'request = "POST"\n'
+    printf 'header = "Content-Type: application/json"\n'
+    printf 'header = "X-Hub-Signature-256: %s"\n' "$(curl_config_escape "$signature")"
+    printf 'data-binary = "@%s"\n' "$(curl_config_escape "$body_file")"
+  } > "$file"
 }
 
 assert_status() {
@@ -130,6 +147,38 @@ if [[ "$CHECK_DIRECT_META" == "true" ]]; then
     assert_status "$status" "503" "Disabled direct Meta challenge"
   fi
   echo "ok"
+
+  if [[ "$EXPECT_DIRECT_META" == "enabled" ]]; then
+    if [[ -z "${META_APP_SECRET:-}" ]]; then
+      echo "META_APP_SECRET is required for enabled --check-direct-meta signed webhook verification" >&2
+      exit 1
+    fi
+    cat > "$tmp_meta_probe_body" <<JSON
+{"object":"whatsapp_business_account","entry":[{"id":"verify-deployment-waba","changes":[{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"phone_number_id":"verify-deployment-phone-number"}}}]}]}
+JSON
+    printf '%s' "$META_APP_SECRET" > "$tmp_meta_secret_file"
+    signature="$(python3 - "$tmp_meta_secret_file" "$tmp_meta_probe_body" <<'PY'
+import hashlib
+import hmac
+import sys
+from pathlib import Path
+
+secret = Path(sys.argv[1]).read_bytes()
+body = Path(sys.argv[2]).read_bytes()
+print("sha256=" + hmac.new(secret, body, hashlib.sha256).hexdigest())
+PY
+)"
+    write_signed_meta_probe_config "$tmp_meta_post_config" "$BASE/webhooks/meta/whatsapp" "$signature" "$tmp_meta_probe_body"
+    echo "Direct Meta signed webhook ($EXPECT_DIRECT_META):"
+    status="$(status_request --config "$tmp_meta_post_config")"
+    assert_status "$status" "200" "Direct Meta signed webhook"
+    if ! grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$tmp_body"; then
+      echo "Direct Meta signed webhook failed: receipt response did not include ok=true" >&2
+      cat "$tmp_body" >&2 || true
+      exit 1
+    fi
+    echo "ok"
+  fi
 fi
 
 if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then

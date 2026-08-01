@@ -479,3 +479,11 @@ Decision: `npm run decommission:readiness` counts dead-lettered n8n inbox events
 Reason: A dead-lettered compatibility callback is not active backlog, but it is unresolved migration evidence. Fallback removal must not hide dead-lettered n8n ingress that may require reconciliation before retirement.
 
 Date: 2026-08-01
+
+## DEC-052: Deployment Verifier Uses Signed Non-Customer Meta Probe
+
+Decision: `scripts/verify-deployment.sh --check-direct-meta --expect-direct-meta=enabled` verifies both the Meta challenge route and a signed non-customer webhook POST that should produce durable receipt acknowledgement. The probe payload contains no customer message/status data and exercises the `whatsapp.webhook_ignored` durable receipt path.
+
+Reason: Challenge verification alone proves only URL/token reachability. Direct Meta cutover also depends on signature handling and durable POST receipt before business processing.
+
+Date: 2026-08-01

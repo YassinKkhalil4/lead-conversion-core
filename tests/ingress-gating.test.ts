@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -226,6 +227,87 @@ describe('direct ingress route gates', () => {
     }
   });
 
+  it('verifies enabled direct Meta ingress with a signed non-customer webhook probe', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-direct-meta.'));
+    let challengeVerified = false;
+    let signedProbeVerified = false;
+    const server = createServer((request, response) => {
+      if (request.method === 'GET' && request.url === '/health') {
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end('{"ok":true}');
+        return;
+      }
+      if (request.method === 'GET' && request.url?.startsWith('/webhooks/meta/whatsapp')) {
+        const url = new URL(request.url, 'http://127.0.0.1');
+        if (url.searchParams.get('hub.verify_token') !== 'test_meta_verify_token_123456') {
+          response.writeHead(403, { 'content-type': 'application/json' });
+          response.end('{"ok":false}');
+          return;
+        }
+        challengeVerified = true;
+        response.writeHead(200, { 'content-type': 'text/plain' });
+        response.end(url.searchParams.get('hub.challenge') || '');
+        return;
+      }
+      if (request.method === 'POST' && request.url === '/webhooks/meta/whatsapp') {
+        let body = '';
+        request.on('data', (chunk) => {
+          body += String(chunk);
+        });
+        request.on('end', () => {
+          const expected = `sha256=${createHmac('sha256', 'test_meta_app_secret_123456').update(body).digest('hex')}`;
+          if (request.headers['x-hub-signature-256'] !== expected) {
+            response.writeHead(401, { 'content-type': 'application/json' });
+            response.end('{"ok":false,"error":"invalid_signature"}');
+            return;
+          }
+          const payload = JSON.parse(body) as Record<string, unknown>;
+          signedProbeVerified = payload.object === 'whatsapp_business_account' && body.includes('verify-deployment-phone-number');
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end('{"ok":true,"received":1,"duplicates":0}');
+        });
+        return;
+      }
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end('{"ok":false}');
+    });
+
+    try {
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
+      const envFile = join(root, 'verify.env');
+      writeFileSync(envFile, [
+        'META_WEBHOOK_VERIFY_TOKEN=test_meta_verify_token_123456',
+        'META_APP_SECRET=test_meta_app_secret_123456',
+        'DIRECT_META_WEBHOOK_ENABLED=true',
+      ].join('\n'));
+
+      const { stdout } = await execFileAsync('bash', [
+        'scripts/verify-deployment.sh',
+        `--env-file=${envFile}`,
+        `--base-url=http://127.0.0.1:${address.port}`,
+        '--skip-ready',
+        '--skip-shadow',
+        '--check-direct-meta',
+        '--expect-direct-meta=enabled',
+      ], {
+        cwd: process.cwd(),
+        timeout: 10_000,
+      });
+
+      expect(stdout).toContain('Direct Meta challenge (enabled):');
+      expect(stdout).toContain('Direct Meta signed webhook (enabled):');
+      expect(challengeVerified).toBe(true);
+      expect(signedProbeVerified).toBe(true);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }).catch(() => undefined);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('keeps shared secrets out of verifier curl process arguments', () => {
     const script = readFileSync('scripts/verify-deployment.sh', 'utf8');
     expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
@@ -235,5 +317,7 @@ describe('direct ingress route gates', () => {
     expect(script).not.toContain('set +a');
     expect(script).not.toContain('status_request "$BASE/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=$META_WEBHOOK_VERIFY_TOKEN');
     expect(script).toContain('status_request --config "$tmp_meta_curl_config"');
+    expect(script).toContain('status_request --config "$tmp_meta_post_config"');
+    expect(script).not.toContain('python3 - "$META_APP_SECRET"');
   });
 });
