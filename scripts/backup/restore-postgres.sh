@@ -15,22 +15,32 @@ if [ ! -r "$ENCRYPTED_DUMP_PATH" ]; then
   exit 1
 fi
 
-object_count="$(psql "$RESTORE_TARGET_DATABASE_URL" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema')")"
+restore_target_database_url_file="$(mktemp)"
+pg_service_file="$(mktemp)"
+plain_dump="$(mktemp)"
+cleanup() {
+  rm -f "$plain_dump" "$restore_target_database_url_file" "$pg_service_file"
+}
+trap cleanup EXIT
+chmod 600 "$plain_dump" "$restore_target_database_url_file" "$pg_service_file"
+
+restore_target_database_url_value="$RESTORE_TARGET_DATABASE_URL"
+unset RESTORE_TARGET_DATABASE_URL
+printf '%s' "$restore_target_database_url_value" > "$restore_target_database_url_file"
+unset restore_target_database_url_value
+python3 scripts/backup/write-pg-service.py "$restore_target_database_url_file" "$pg_service_file" lead_core_restore_target
+rm -f "$restore_target_database_url_file"
+
+object_count="$(PGSERVICEFILE="$pg_service_file" psql "service=lead_core_restore_target" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema')")"
 if [ "$object_count" != "0" ] && [ "${RESTORE_ALLOW_NONEMPTY:-false}" != "true" ]; then
   echo "Restore target is not empty. Set RESTORE_ALLOW_NONEMPTY=true only for an intentional restore." >&2
   exit 1
 fi
-
-plain_dump="$(mktemp)"
-cleanup() {
-  rm -f "$plain_dump"
-}
-trap cleanup EXIT
 
 openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
   -pass "file:$BACKUP_ENCRYPTION_PASSWORD_FILE" \
   -in "$ENCRYPTED_DUMP_PATH" \
   -out "$plain_dump"
 
-pg_restore --exit-on-error --dbname="$RESTORE_TARGET_DATABASE_URL" "$plain_dump"
+PGSERVICEFILE="$pg_service_file" pg_restore --exit-on-error --dbname="service=lead_core_restore_target" "$plain_dump"
 echo "Restore completed into target database"

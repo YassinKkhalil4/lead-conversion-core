@@ -2,9 +2,15 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-set -a
 source .env
-set +a
+
+tmp_edge_header="$(mktemp)"
+cleanup() {
+  rm -f "$tmp_edge_header"
+}
+trap cleanup EXIT
+chmod 600 "$tmp_edge_header"
+printf 'X-Edge-Secret: %s\n' "$EDGE_SHARED_SECRET" > "$tmp_edge_header"
 
 BASE="http://127.0.0.1:${EDGE_PORT:-8080}"
 PHONE="+2010$(date +%H%M%S)11"
@@ -32,7 +38,7 @@ print(json.dumps(p))
 PY
 )"
   curl -fsS \
-    -H "X-Edge-Secret: $EDGE_SHARED_SECRET" \
+    -H "@$tmp_edge_header" \
     -H 'Content-Type: application/json' \
     -d "$payload" \
     "$BASE/v1/shadow/evaluate" \

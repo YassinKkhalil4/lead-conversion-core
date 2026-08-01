@@ -295,3 +295,11 @@ Decision: `scripts/verify-deployment.sh` keeps sourced environment values shell-
 Reason: Staging verification can run on shared hosts or under process monitors. Secrets in command-line arguments or exported child-process environments are observable via process tooling, while temporary files scoped to the verifier process reduce exposure and are deleted by the script cleanup trap.
 
 Date: 2026-08-01
+
+## DEC-029: Operator Scripts Keep Connection Secrets Out Of Process Arguments
+
+Decision: Shell operator scripts must not pass shared secrets or password-bearing PostgreSQL URLs directly to child process command arguments. Shadow verification writes `EDGE_SHARED_SECRET` to a private curl header file, and backup/restore scripts convert database URLs into private libpq service files before invoking `pg_dump`, `psql`, or `pg_restore`.
+
+Reason: Backup, restore, and shadow verification are likely to run on operator hosts where process listings may be available to monitoring tools or other users. Private temporary files with cleanup traps reduce exposure while preserving normal PostgreSQL and curl behavior.
+
+Date: 2026-08-01

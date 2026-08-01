@@ -344,6 +344,30 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tra
 
 Verified commit: `5f78182`
 
+## 2026-08-01 Operator Script Secret Handling
+
+Command: `bash -n scripts/shadow-sequence.sh && bash -n scripts/backup/backup-postgres.sh && bash -n scripts/backup/restore-postgres.sh && bash -n scripts/backup/verify-restore.sh`
+
+Result: passed.
+
+Command: `python3 -c "from pathlib import Path; compile(Path('scripts/backup/write-pg-service.py').read_text(), 'scripts/backup/write-pg-service.py', 'exec')"`
+
+Result: passed.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: failed on the first run because the static assertion rejected the safe shell variable assignment used before unsetting `RESTORE_TARGET_DATABASE_URL`.
+
+Resolution: narrowed the static assertion to the unsafe PostgreSQL tool argument forms: `psql "$RESTORE_TARGET_DATABASE_URL"`, `pg_restore --dbname="$RESTORE_TARGET_DATABASE_URL"`, and `pg_dump --dbname="$DATABASE_URL"`.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed. Focused shell tests ran 4 tests covering script syntax, shadow sequence curl header secret handling, libpq service-file generation from a PostgreSQL URL, and absence of raw database URL arguments in backup/restore PostgreSQL tool invocations.
+
+Command: `npm run lint`
+
+Result: passed.
+
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 120 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
