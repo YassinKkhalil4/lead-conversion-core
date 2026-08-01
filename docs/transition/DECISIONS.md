@@ -535,3 +535,11 @@ Decision: Disabled direct Meta and direct website/Facebook lead ingress routes r
 Reason: Missing rotated provider credentials or internal route secrets should not block proof that a direct ingress route family is disabled and unavailable. Enabled route verification still requires the appropriate credentials and proves authentication or signature enforcement before cutover.
 
 Date: 2026-08-01
+
+## DEC-059: N8n Compatibility Inbox Processing Is Independent Of Direct Meta Enablement
+
+Decision: The runtime worker wires the shared WhatsApp/status/salesperson inbox processor when either `META_STATUS_PROCESSOR_ENABLED=true` or `N8N_COMPAT_ROUTES_ENABLED=true`. Direct website/Facebook lead processors remain gated only by `DIRECT_LEAD_INGRESS_ENABLED=true`.
+
+Reason: n8n-compatible callback routes durably receipt WhatsApp status, inbound message, and salesperson command events while fallback infrastructure remains active. Those rows must remain processable even when direct Meta webhook ingress is disabled for cutover staging or rollback.
+
+Date: 2026-08-01

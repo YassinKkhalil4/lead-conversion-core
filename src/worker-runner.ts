@@ -4,8 +4,8 @@ import { closePool } from './db/pool.js';
 import type { ClaimedJob } from './infrastructure/runtime.js';
 import { GoogleCalendarAdapter } from './integrations/calendar/google-calendar-adapter.js';
 import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adapter.js';
-import { LeadIngressInboxProcessor, leadIngressInboxEventTypes, leadIngressInboxProviders } from './services/lead-ingress-inbox-processor.js';
-import { MetaInboxProcessor, metaInboxEventTypes, metaInboxProviders } from './services/meta-inbox-processor.js';
+import { leadIngressInboxEventTypes } from './services/lead-ingress-inbox-processor.js';
+import { MetaInboxProcessor } from './services/meta-inbox-processor.js';
 import { FollowupJobProcessor } from './services/followup-job-processor.js';
 import { ReportingService } from './services/reporting-service.js';
 import { SlaService } from './services/sla-service.js';
@@ -13,6 +13,7 @@ import { CalendarOutboxDispatcher } from './worker/calendar-outbox-dispatcher.js
 import { MessagingOutboxDispatcher } from './worker/messaging-outbox-dispatcher.js';
 import { OutboxWorker } from './worker/outbox-worker.js';
 import { RuntimeWorker } from './worker/runtime-worker.js';
+import { buildRuntimeInboxWiring } from './worker/runtime-worker-wiring.js';
 
 const env = getEnv();
 const messagingDispatcher = env.DIRECT_META_SEND_ENABLED
@@ -21,16 +22,12 @@ const messagingDispatcher = env.DIRECT_META_SEND_ENABLED
 const calendarDispatcher = env.GOOGLE_CALENDAR_ENABLED
   ? new CalendarOutboxDispatcher({ calendar: GoogleCalendarAdapter.fromEnv() })
   : undefined;
-const metaInboxProcessor = env.META_STATUS_PROCESSOR_ENABLED ? new MetaInboxProcessor() : undefined;
-const leadIngressInboxProcessor = env.DIRECT_LEAD_INGRESS_ENABLED ? new LeadIngressInboxProcessor() : undefined;
-const inboxEventTypes = [
-  ...(metaInboxProcessor ? metaInboxEventTypes : []),
-  ...(leadIngressInboxProcessor ? leadIngressInboxEventTypes : []),
-];
-const inboxProviders = [
-  ...(metaInboxProcessor ? metaInboxProviders : []),
-  ...(leadIngressInboxProcessor ? leadIngressInboxProviders : []),
-];
+const {
+  metaInboxProcessor,
+  leadIngressInboxProcessor,
+  inboxEventTypes,
+  inboxProviders,
+} = buildRuntimeInboxWiring(env);
 const followupJobProcessor = new FollowupJobProcessor();
 const slaService = new SlaService();
 const reportingService = new ReportingService();
