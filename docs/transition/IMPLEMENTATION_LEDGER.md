@@ -494,3 +494,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 7 PostgreSQL tests and 69 skipped by filter, including no-heartbeat and missing-direct-lead-processor regressions.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 158 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `69bad40`: Require direct ingress worker heartbeat for decommission.
+
+## 2026-08-01 Decommission Route-Family Stability Evidence
+
+- Implementation slice: Hardened `npm run decommission:readiness` so direct-ingress stability must match each currently enabled direct-ingress route family. Enabled direct Meta ingress requires aged processed Meta inbound-message evidence; enabled direct lead ingress requires aged processed website or Facebook lead evidence.
+- Implementation slice: Added direct Meta and direct lead stability counts to the decommission readiness metrics and `direct_ingress_stable` check details while preserving the aggregate direct-ingress stability count.
+- Decision: Added DEC-050. Stability evidence from one ingress family does not prove another enabled route family has replaced legacy fallback authority.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 8 PostgreSQL tests and 69 skipped by filter, including a Meta-only stability regression while direct lead ingress is enabled.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 159 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3a62a8c`: Match decommission stability to direct ingress families.
