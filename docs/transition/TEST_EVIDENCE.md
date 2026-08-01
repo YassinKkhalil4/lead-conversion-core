@@ -2167,3 +2167,49 @@ Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 me
 Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+## 2026-08-01 N8n Semantic Scheduled Authority Gate
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the expanded n8n scheduled-authority query and details shape.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|decommission"`
+
+Result: passed. Focused PostgreSQL decommission coverage ran 19 tests and skipped 71 by filter, including a generic job type whose n8n semantic job key and aggregate key fail `no_n8n_scheduled_authority`.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 179 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

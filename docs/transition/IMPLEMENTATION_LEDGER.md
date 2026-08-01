@@ -752,3 +752,14 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 18 PostgreSQL decommission-readiness tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 178 tests, audit found 0 vulnerabilities after one transient DNS failure/retry, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `b1482ad`: Count only Edge qualifications for Typebot removal.
+
+## 2026-08-01 N8n Semantic Scheduled Authority Gate
+
+- Implementation slice: Hardened `npm run decommission:readiness` so `no_n8n_scheduled_authority` inspects `runtime.scheduled_jobs.job_key`, `job_type`, `aggregate_key`, and `payload_json` for pending, processing, or retryable n8n-owned work.
+- Implementation slice: Added PostgreSQL regression coverage proving a generic scheduled job type still blocks n8n decommission when its semantic job identity or aggregate key references n8n.
+- Decision: Added DEC-073. Durable job semantic identity is decommission authority evidence, not only executable job type.
+- Documentation slice: Updated the decommission runbook with the inspected scheduled-job fields.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|decommission"` passed with 19 PostgreSQL decommission-readiness tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 179 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `19da1b0`: Detect n8n semantic scheduled authority.
