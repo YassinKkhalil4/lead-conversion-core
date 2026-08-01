@@ -484,3 +484,13 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 5 PostgreSQL tests and 69 skipped by filter, including the new disabled-current-direct-ingress regression case.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 156 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3c81394`: Require current direct ingress for decommission readiness.
+
+## 2026-08-01 Decommission Direct-Ingress Worker Heartbeat Authority
+
+- Implementation slice: Hardened `npm run decommission:readiness` so n8n fallback-removal readiness requires a fresh operational runtime worker heartbeat whose metadata includes the inbox providers and event types required by the currently enabled direct-ingress routes.
+- Implementation slice: Added `--max-worker-heartbeat-age-seconds` to `npm run decommission:readiness` and included that threshold plus latest runtime worker heartbeat state in the JSON report.
+- Test hardening: PostgreSQL integration setup now truncates `runtime.worker_heartbeats` between tests so readiness cases cannot pass from stale heartbeats created by earlier tests.
+- Decision: Added DEC-049. Decommission requires operational direct-ingress worker metadata, not route flags alone.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 7 PostgreSQL tests and 69 skipped by filter, including no-heartbeat and missing-direct-lead-processor regressions.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 158 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `69bad40`: Require direct ingress worker heartbeat for decommission.
