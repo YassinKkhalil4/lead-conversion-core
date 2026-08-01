@@ -4,6 +4,15 @@ import { SalespersonCommandProcessor } from './salesperson-command-processor.js'
 import type { ClaimedInboxEvent } from '../infrastructure/runtime.js';
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 
+export const metaInboxEventTypes = [
+  'whatsapp.message_status',
+  'whatsapp.message_received',
+  'salesperson.command_received',
+  'whatsapp.webhook_ignored',
+];
+
+export const metaInboxProviders = ['meta', 'n8n'];
+
 export class MetaInboxProcessor {
   constructor(
     private readonly statuses = new MetaStatusProcessor(),
@@ -15,6 +24,9 @@ export class MetaInboxProcessor {
     if (event.eventType === 'whatsapp.message_status') return this.statuses.process(event);
     if (event.eventType === 'whatsapp.message_received') return this.messages.process(event);
     if (event.eventType === 'salesperson.command_received') return this.salespersonCommands.process(event);
+    if (event.provider === 'meta' && event.eventType === 'whatsapp.webhook_ignored') {
+      return { outcome: 'ignored', reason: 'unsupported_meta_webhook_payload' };
+    }
     return { outcome: 'ignored', reason: `unsupported_inbox_event:${event.provider}:${event.eventType}` };
   }
 }

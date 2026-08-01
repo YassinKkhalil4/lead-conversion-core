@@ -5,7 +5,7 @@ import type { ClaimedJob } from './infrastructure/runtime.js';
 import { GoogleCalendarAdapter } from './integrations/calendar/google-calendar-adapter.js';
 import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adapter.js';
 import { LeadIngressInboxProcessor, leadIngressInboxEventTypes, leadIngressInboxProviders } from './services/lead-ingress-inbox-processor.js';
-import { MetaInboxProcessor } from './services/meta-inbox-processor.js';
+import { MetaInboxProcessor, metaInboxEventTypes, metaInboxProviders } from './services/meta-inbox-processor.js';
 import { FollowupJobProcessor } from './services/followup-job-processor.js';
 import { ReportingService } from './services/reporting-service.js';
 import { SlaService } from './services/sla-service.js';
@@ -24,11 +24,11 @@ const calendarDispatcher = env.GOOGLE_CALENDAR_ENABLED
 const metaInboxProcessor = env.META_STATUS_PROCESSOR_ENABLED ? new MetaInboxProcessor() : undefined;
 const leadIngressInboxProcessor = env.DIRECT_LEAD_INGRESS_ENABLED ? new LeadIngressInboxProcessor() : undefined;
 const inboxEventTypes = [
-  ...(metaInboxProcessor ? ['whatsapp.message_status', 'whatsapp.message_received', 'salesperson.command_received'] : []),
+  ...(metaInboxProcessor ? metaInboxEventTypes : []),
   ...(leadIngressInboxProcessor ? leadIngressInboxEventTypes : []),
 ];
 const inboxProviders = [
-  ...(metaInboxProcessor ? ['meta', 'n8n'] : []),
+  ...(metaInboxProcessor ? metaInboxProviders : []),
   ...(leadIngressInboxProcessor ? leadIngressInboxProviders : []),
 ];
 const followupJobProcessor = new FollowupJobProcessor();

@@ -423,3 +423,11 @@ Decision: `npm run build` uses `tsconfig.build.json` to clean `dist` and compile
 Reason: Tests should remain strictly typechecked and runnable locally, but production build artifacts and images should contain deployable runtime code, operational scripts, config, and migrations rather than compiled test code.
 
 Date: 2026-08-01
+
+## DEC-045: Unsupported Meta Webhooks Are Worker-Ignored Receipts
+
+Decision: Signed Meta webhook payloads that contain no supported status or inbound message events are still durably receipted, then claimed by the runtime Meta inbox processor and marked `ignored` with an operator-visible reason. Cutover readiness requires runtime heartbeat metadata to include this ignored-webhook event type when direct Meta ingress is enabled.
+
+Reason: Durable receipt should acknowledge valid provider delivery without synchronous business processing, but unsupported signed payloads must not remain permanently pending. Explicit worker-owned ignore handling preserves receipt evidence and keeps inbox backlog/readiness meaningful.
+
+Date: 2026-08-01

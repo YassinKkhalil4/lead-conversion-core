@@ -120,6 +120,7 @@ export class CutoverReadinessService {
       : [];
     const directMetaProcessorConfigured = inboxEventTypes.includes('whatsapp.message_status')
       && inboxEventTypes.includes('whatsapp.message_received')
+      && inboxEventTypes.includes('whatsapp.webhook_ignored')
       && inboxProviders.includes('meta');
     const directLeadProcessorConfigured = inboxEventTypes.includes('lead.created')
       && inboxEventTypes.includes('leadgen.created')

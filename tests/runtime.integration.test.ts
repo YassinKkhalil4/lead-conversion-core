@@ -841,7 +841,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         1,
         now(),
         now(),
-        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","salesperson.command_received","lead.created","leadgen.created"],"inboxProviders":["meta","n8n","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","salesperson.command_received","whatsapp.webhook_ignored","lead.created","leadgen.created"],"inboxProviders":["meta","n8n","website","facebook"],"jobProcessorConfigured":true}'::jsonb
        )`,
     );
     const report = await new cutoverReadiness.CutoverReadinessService().report();
@@ -908,7 +908,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         1,
         now(),
         now(),
-        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received"],"inboxProviders":["meta"],"jobProcessorConfigured":true}'::jsonb
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored"],"inboxProviders":["meta"],"jobProcessorConfigured":true}'::jsonb
        )`,
     );
 
@@ -921,8 +921,34 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
     expect(report.checks.find((check) => check.checkKey === 'direct_lead_inbox_processor')?.details).toMatchObject({
       configured: false,
-      inboxEventTypes: ['whatsapp.message_status', 'whatsapp.message_received'],
+      inboxEventTypes: ['whatsapp.message_status', 'whatsapp.message_received', 'whatsapp.webhook_ignored'],
       inboxProviders: ['meta'],
+    });
+  });
+
+  it('fails cutover readiness when direct Meta ingress cannot process ignored webhook receipts', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'cutover-missing-meta-ignored-processor',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","salesperson.command_received","lead.created","leadgen.created"],"inboxProviders":["meta","n8n","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new cutoverReadiness.CutoverReadinessService().report();
+    expect(report.ok).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_meta_inbox_processor: 'fail',
+      direct_lead_inbox_processor: 'pass',
+      runtime_worker_heartbeat: 'pass',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'direct_meta_inbox_processor')?.details).toMatchObject({
+      configured: false,
     });
   });
 
@@ -1591,6 +1617,59 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       });
       expect(invalid.statusCode).toBe(401);
       expect((await db.pool.query('SELECT count(*) FROM runtime.inbox_events')).rows[0]?.count).toBe('0');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('durably receives unsupported signed Meta webhooks and lets the worker mark them ignored', async () => {
+    const app = await appModule.buildApp();
+    try {
+      const signed = signedMetaWebhook({
+        object: 'whatsapp_business_account',
+        entry: [
+          {
+            id: 'waba-sanitized',
+            changes: [
+              {
+                field: 'messages',
+                value: {
+                  messaging_product: 'whatsapp',
+                  metadata: { phone_number_id: 'phone-number-id-test' },
+                },
+              },
+            ],
+          },
+        ],
+      });
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ ok: true, received: 1, duplicates: 0 });
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE provider='meta' AND event_type='whatsapp.webhook_ignored'")).rows[0]?.status).toBe('pending');
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        {
+          enabled: true,
+          batchSize: 10,
+          inboxEventTypes: metaInbox.metaInboxEventTypes,
+          inboxProviders: metaInbox.metaInboxProviders,
+        },
+      );
+      expect(await worker.tick()).toBe(1);
+      expect((await db.pool.query("SELECT status, ignored_reason FROM runtime.inbox_events WHERE provider='meta' AND event_type='whatsapp.webhook_ignored'")).rows[0]).toMatchObject({
+        status: 'ignored',
+        ignored_reason: 'unsupported_meta_webhook_payload',
+      });
     } finally {
       await app.close();
     }
