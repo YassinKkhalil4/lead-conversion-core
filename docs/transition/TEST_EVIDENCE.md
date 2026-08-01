@@ -2121,3 +2121,49 @@ Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 me
 Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+## 2026-08-01 Edge-Owned Qualification Volume Decommission Gate
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the Edge-owned qualification-volume readiness query and fixture updates.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL decommission coverage ran 18 tests and skipped 71 by filter, including imported/detached qualification-volume rejection.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 178 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: first attempt failed with DNS resolution error for `registry.npmjs.org`; immediate retry passed and reported 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

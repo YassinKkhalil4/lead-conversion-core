@@ -741,3 +741,14 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 17 PostgreSQL decommission-readiness tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 177 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `7a686b4`: Require versioned active config for Typebot removal.
+
+## 2026-08-01 Edge-Owned Qualification Volume Decommission Gate
+
+- Implementation slice: Hardened `npm run decommission:readiness` so Typebot qualification volume counts only completed `app.qualification_sessions` linked to matching `app.conversations` projected from `edge_conversations` with `stateAuthority='edge'`.
+- Implementation slice: Added PostgreSQL regression coverage proving imported or detached completed qualification rows do not satisfy Typebot removal volume, while the positive decommission fixture now seeds Edge-owned conversation evidence explicitly.
+- Decision: Added DEC-072. Typebot removal readiness measures successful Edge-owned qualifications, not imported migration history or synthetic detached rows.
+- Documentation slice: Updated the decommission runbook and production cutover owner action with the Edge-owned qualification-volume evidence rule.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 18 PostgreSQL decommission-readiness tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 178 tests, audit found 0 vulnerabilities after one transient DNS failure/retry, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `b1482ad`: Count only Edge qualifications for Typebot removal.
