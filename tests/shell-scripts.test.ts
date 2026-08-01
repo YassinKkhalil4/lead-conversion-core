@@ -104,4 +104,11 @@ describe('shell scripts', () => {
     expect(restore).toContain('--dbname="service=lead_core_restore_target"');
     expect(verify).toContain('psql "service=lead_core_restore_target"');
   });
+
+  it('does not mutate configuration from the API container startup command', () => {
+    const compose = readFileSync('docker-compose.yml', 'utf8');
+    expect(compose).toContain('lead-core-api:');
+    expect(compose).not.toContain('seed:prod && npm start');
+    expect(compose).toContain('command: ["npm", "start"]');
+  });
 });

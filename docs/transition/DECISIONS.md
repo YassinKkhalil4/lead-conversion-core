@@ -407,3 +407,11 @@ Decision: Direct-ingress stability evidence for decommission readiness counts on
 Reason: Delivery-status callbacks prove provider reporting, not that customer/lead ingress has been safely handled by Edge-owned business processing for the required stability window. Counting status callbacks could let synthetic or incidental provider events satisfy decommission criteria without real direct intake or conversation evidence.
 
 Date: 2026-08-01
+
+## DEC-043: API Startup Must Not Seed Configuration
+
+Decision: The production API container starts with `npm start` only. Database migrations and configuration seed/publish operations remain explicit operator or migrator actions, not normal API startup side effects.
+
+Reason: Configuration is versioned, audited, and separately published from executable code. Even an idempotent seed step mutates PostgreSQL from the API startup path and can blur deployment, rollback, and configuration authority during cutover.
+
+Date: 2026-08-01
