@@ -25,6 +25,7 @@ const schema = z.object({
   DIRECT_META_WEBHOOK_ENABLED: booleanString.default('false'),
   DIRECT_LEAD_INGRESS_ENABLED: booleanString.default('false'),
   DIRECT_META_SEND_ENABLED: booleanString.default('false'),
+  ACTIVE_TURN_COMPAT_ENABLED: booleanString.default('false'),
   META_WA_ACCESS_TOKEN: z.string().optional().default(''),
   META_WA_PHONE_NUMBER_ID: z.string().optional().default(''),
   META_APPROVED_TEMPLATE_NAMES: z.string().optional().default(''),

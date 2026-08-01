@@ -59,6 +59,19 @@ describe('direct ingress route gates', () => {
       });
       expect(compat.statusCode).toBe(400);
       expect(compat.json()).toMatchObject({ ok: false });
+
+      const activeCompat = await app.inject({
+        method: 'POST',
+        url: '/v1/turn',
+        headers: { 'x-edge-secret': 'test_shared_secret_123456' },
+        payload: {},
+      });
+      expect(activeCompat.statusCode).toBe(503);
+      expect(activeCompat.json()).toEqual({
+        ok: false,
+        handled: false,
+        error: 'active_turn_compat_disabled',
+      });
     } finally {
       await app.close();
     }

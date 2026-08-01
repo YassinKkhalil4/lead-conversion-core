@@ -64,6 +64,10 @@ Upserts compliance and business controls. It succeeds even if the conversation h
 
 Changes the per-conversation engine and authority with an audit row.
 
+## `POST /v1/turn`
+
+Legacy synchronous active-turn compatibility route. It is disabled unless `ACTIVE_TURN_COMPAT_ENABLED=true`. New direct Meta ingress must use the durable inbox path instead.
+
 ## `GET /internal/outbox/summary`
 
 Shows parked, pending, failed and completed event counts.

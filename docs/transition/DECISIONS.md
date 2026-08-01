@@ -247,3 +247,11 @@ Decision: Compose runs the durable runtime worker as `lead-core-runtime-worker` 
 Reason: MP-04 and later durable inbox, runtime outbox, and scheduled job processing must be deployable without overloading the legacy n8n compatibility outbox path. Keeping both workers explicit preserves rollback while letting staging fail readiness when an enabled worker is not actually alive.
 
 Date: 2026-08-01
+
+## DEC-023: Legacy Active-Turn Compatibility Gate
+
+Decision: The legacy synchronous `/v1/turn` route is disabled by default behind `ACTIVE_TURN_COMPAT_ENABLED`; direct Meta ingress must use the durable inbox path unless an operator deliberately enables legacy compatibility.
+
+Reason: `/v1/turn` preserves rollback compatibility for the original active edge path, but it predates the durable outbox architecture and sends through the old synchronous Meta path. Keeping it opt-in prevents accidental reintroduction of in-transaction external sends or legacy fallback behavior during cutover.
+
+Date: 2026-08-01

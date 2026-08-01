@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { getEnv } from '../config/env.js';
 import { ActiveTurnService } from '../services/active-turn-service.js';
 import { requireSharedSecret } from './auth.js';
 
@@ -19,6 +20,10 @@ export async function activeRoutes(app: FastifyInstance): Promise<void> {
   const service = new ActiveTurnService();
   app.post('/v1/turn', async (request: FastifyRequest, reply: FastifyReply) => {
     requireSharedSecret(request);
+    if (!getEnv().ACTIVE_TURN_COMPAT_ENABLED) {
+      reply.code(503);
+      return { ok: false, handled: false, error: 'active_turn_compat_disabled' };
+    }
     const parsed = schema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400);
