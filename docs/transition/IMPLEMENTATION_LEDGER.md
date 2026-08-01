@@ -312,3 +312,4 @@
 - Decision: Deployment verification should avoid printing secrets and avoid exposing them through argv/process listings; temporary header files are removed by the existing cleanup trap.
 - Verification: `bash -n scripts/verify-deployment.sh`, `npx vitest run tests/ingress-gating.test.ts`, and `npm run lint` passed; focused ingress-gating tests ran 5 tests including static coverage that the verifier no longer embeds `EDGE_SHARED_SECRET` in curl header arguments.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 15 files and 121 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3588ff5`: Kept verifier secrets out of curl arguments.
