@@ -350,3 +350,4 @@
 - Verification: `npx vitest run tests/env-contract.test.ts` passed with 6 tests covering env-template alignment, disabled integration blanks, legacy outbox requirements, direct Meta webhook requirements, direct Meta send/active-turn compatibility requirements, and Google Calendar requirements.
 - Verification: `npm run lint` passed.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 138 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `b9927f3`: Required credentials for enabled integrations.
