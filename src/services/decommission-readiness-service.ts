@@ -41,6 +41,7 @@ export interface DecommissionReadinessReport {
     n8nScheduledAuthorityCount: number;
     n8nInboxUnresolvedCount: number;
     n8nInboxRecentCount: number;
+    n8nRejectedSalespersonCommandCount: number;
     newLegacyConversationCount: number;
     activeLegacyConversationCount: number;
     directIngressStableEventCount: number;
@@ -92,6 +93,7 @@ export class DecommissionReadinessService {
       n8nScheduledAuthorityCount,
       n8nInboxUnresolvedCount,
       n8nInboxRecentCount,
+      n8nRejectedSalespersonCommandCount,
       newLegacyConversationCount,
       activeLegacyConversationCount,
       directIngressStableEventCount,
@@ -120,6 +122,7 @@ export class DecommissionReadinessService {
            AND created_at >= now() - make_interval(days => $1)`,
         [directStabilityDays],
       ),
+      scalar("SELECT count(*)::int AS count FROM app.salesperson_commands WHERE provider='n8n' AND status='rejected'"),
       scalar(
         `SELECT count(*)::int AS count
          FROM edge_conversations
@@ -247,6 +250,12 @@ export class DecommissionReadinessService {
         checkKey: 'no_recent_n8n_compat_usage',
         status: passFail(n8nInboxRecentCount === 0),
         details: { count: n8nInboxRecentCount, windowDays: directStabilityDays },
+      },
+      {
+        area: 'n8n',
+        checkKey: 'no_rejected_n8n_salesperson_commands',
+        status: passFail(n8nRejectedSalespersonCommandCount === 0),
+        details: { count: n8nRejectedSalespersonCommandCount },
       },
       {
         area: 'n8n',
@@ -395,6 +404,7 @@ export class DecommissionReadinessService {
         n8nScheduledAuthorityCount,
         n8nInboxUnresolvedCount,
         n8nInboxRecentCount,
+        n8nRejectedSalespersonCommandCount,
         newLegacyConversationCount,
         activeLegacyConversationCount,
         directIngressStableEventCount,

@@ -119,6 +119,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         configuration.active_versions,
         configuration.versions,
         app.message_delivery_events,
+        app.salesperson_commands,
         app.messages,
         app.leads,
         app.contacts,
@@ -1124,6 +1125,51 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
       no_unresolved_n8n_inbox: 'fail',
       no_recent_n8n_compat_usage: 'pass',
+      direct_ingress_stable: 'pass',
+      direct_ingress_worker_operational: 'pass',
+    });
+  });
+
+  it('treats rejected n8n salesperson commands as unresolved decommission work', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES
+        ('n8n', 'salesperson.command_received', 'decommission-n8n-rejected-command-inbox', '+201011111113', '{}'::jsonb, 'processed', now() - interval '15 days'),
+        ('meta', 'whatsapp.message_received', 'decommission-rejected-command-meta-stable', '+201022222228', '{}'::jsonb, 'processed', now() - interval '15 days'),
+        ('website', 'lead.created', 'decommission-rejected-command-lead-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'decommission-rejected-command-runtime-ready',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored","lead.created","leadgen.created"],"inboxProviders":["meta","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+    await db.pool.query(
+      `INSERT INTO app.salesperson_commands
+        (provider, external_event_id, idempotency_key, from_phone_e164, command_text, command_intent, status, outcome_reason)
+       VALUES ('n8n', 'decommission-rejected-command', 'n8n:salesperson_command:decommission-rejected-command', '+201011111113', 'ack', 'acknowledge', 'rejected', 'sender_not_active_assignee')`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService().report({
+      ownerApprovedN8n: true,
+      finalLegacyExportComplete: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.metrics.n8nRejectedSalespersonCommandCount).toBe(1);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      no_unresolved_n8n_inbox: 'pass',
+      no_recent_n8n_compat_usage: 'pass',
+      no_rejected_n8n_salesperson_commands: 'fail',
       direct_ingress_stable: 'pass',
       direct_ingress_worker_operational: 'pass',
     });

@@ -487,3 +487,11 @@ Decision: `scripts/verify-deployment.sh --check-direct-meta --expect-direct-meta
 Reason: Challenge verification alone proves only URL/token reachability. Direct Meta cutover also depends on signature handling and durable POST receipt before business processing.
 
 Date: 2026-08-01
+
+## DEC-053: Rejected N8n Salesperson Commands Block Decommission
+
+Decision: `npm run decommission:readiness` counts rejected n8n salesperson command rows as unresolved n8n compatibility work even when their inbox receipt has already been processed.
+
+Reason: Inbox processing proves durable receipt handling, but a rejected command proves compatibility traffic failed business-authority validation. Fallback removal should not hide those command outcomes before operator reconciliation.
+
+Date: 2026-08-01
