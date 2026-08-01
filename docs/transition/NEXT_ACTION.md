@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, and disabled direct-ingress verifier credential independence.
+Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, and n8n fallback inbox worker wiring independent of direct Meta enablement.
 
 Files expected to change:
 
@@ -13,11 +13,10 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `docs/transition/DIRECT_INGRESS_PLAN.md`
-- `docs/owner-actions/06-staging-dns-and-access.md`
-- `docs/owner-actions/07-production-cutover.md`
-- `scripts/verify-deployment.sh`
-- `tests/ingress-gating.test.ts`
+- `src/worker-runner.ts`
+- `src/worker/runtime-worker-wiring.ts`
+- `tests/runtime-worker-wiring.test.ts`
+- `tests/runtime.integration.test.ts`
 
 Required verification:
 
@@ -47,6 +46,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `158b802` (`Allow disabled ingress verification without secrets`), with verifier syntax, focused ingress-gating tests, and the full local gate passing before persistent state docs were updated.
+Last verified commit: `838971b` (`Wire n8n fallback inbox processing independently`), with focused runtime worker wiring tests, focused n8n compatibility/runtime readiness tests, and the full local gate passing before persistent state docs were updated.
 
 Git worktree clean when recorded: yes

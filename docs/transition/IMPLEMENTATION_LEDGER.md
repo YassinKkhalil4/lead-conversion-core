@@ -588,3 +588,14 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including a child process with a minimal environment proving disabled direct-route verification does not inherit or require Meta/edge secrets.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `158b802`: Allow disabled ingress verification without secrets.
+
+## 2026-08-01 N8n Fallback Runtime Inbox Wiring
+
+- Implementation slice: Added `buildRuntimeInboxWiring` and changed `worker-runner` so n8n-compatible WhatsApp status, inbound message, and salesperson command inbox events are claimed by the shared Meta/n8n inbox processor whenever `N8N_COMPAT_ROUTES_ENABLED=true`, independent of direct Meta webhook processing.
+- Implementation slice: Kept website/Facebook lead processors gated by `DIRECT_LEAD_INGRESS_ENABLED=true` and preserved specialized runtime inbox claim filters by provider and event type.
+- Decision: Added DEC-059. n8n fallback callback rows must remain processable while direct Meta webhook ingress is disabled during staging, rollback, or phased cutover.
+- Verification: First focused run failed: `npm run lint` found `leadIngressInboxEventTypes` missing from `worker-runner`, and `tests/runtime-worker-wiring.test.ts` imported processor modules before test environment variables were set. Fixed the import and switched the test to dynamic imports after applying test env.
+- Verification: `npm run lint` passed after the fix.
+- Verification: `npx vitest run tests/runtime-worker-wiring.test.ts tests/runtime.integration.test.ts -t "runtime worker wiring|n8n-compatible|configured inbox event types|cutover readiness"` passed with 12 tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 166 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `838971b`: Wire n8n fallback inbox processing independently.

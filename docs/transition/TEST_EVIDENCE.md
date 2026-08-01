@@ -1601,3 +1601,27 @@ Result: passed. Focused route/deployment-script run executed 6 tests. The disabl
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 164 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 N8n Fallback Runtime Inbox Wiring
+
+Command: `npm run lint`
+
+Result: failed. TypeScript reported `src/worker-runner.ts(56,44): error TS2304: Cannot find name 'leadIngressInboxEventTypes'` after the first wiring refactor.
+
+Command: `npx vitest run tests/runtime-worker-wiring.test.ts tests/runtime.integration.test.ts -t "runtime worker wiring|n8n-compatible|configured inbox event types|cutover readiness"`
+
+Result: failed. The new wiring test imported service modules before test environment variables were set, causing runtime logger/database initialization to call `getEnv()` without `DATABASE_URL`, `EDGE_SHARED_SECRET`, or `EDGE_INTERNAL_SECRET`.
+
+Resolution: Restored the `leadIngressInboxEventTypes` import for runtime dispatch branching and changed the wiring test to dynamically import runtime wiring after setting a minimal test environment.
+
+Command: `npm run lint`
+
+Result: passed after the wiring/import fixes.
+
+Command: `npx vitest run tests/runtime-worker-wiring.test.ts tests/runtime.integration.test.ts -t "runtime worker wiring|n8n-compatible|configured inbox event types|cutover readiness"`
+
+Result: passed. Focused run executed 12 tests and skipped 71 by filter, proving n8n compatibility inbox processors are wired even when direct Meta webhook processing is disabled, direct lead processors remain separately gated, n8n-compatible callbacks still process through runtime inbox paths, and cutover readiness checks still pass/fail as expected.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 166 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
