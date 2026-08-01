@@ -463,3 +463,11 @@ Decision: `npm run decommission:readiness` requires a fresh operational runtime 
 Reason: Enabled route flags do not prove that durable worker processing is currently active. Fallback removal must not pass if Edge can receive direct ingress but no worker is proving ownership of the matching business processors.
 
 Date: 2026-08-01
+
+## DEC-050: Decommission Stability Must Match Enabled Direct-Ingress Families
+
+Decision: `npm run decommission:readiness` evaluates direct-ingress stability by currently enabled route family. Enabled direct Meta ingress requires aged processed Meta inbound-message evidence, and enabled direct lead ingress requires aged processed website or Facebook lead evidence.
+
+Reason: Aged direct activity from one ingress family does not prove another enabled direct route has safely replaced legacy fallback authority.
+
+Date: 2026-08-01

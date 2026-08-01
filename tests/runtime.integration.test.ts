@@ -1153,7 +1153,9 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     await db.pool.query(
       `INSERT INTO runtime.inbox_events
         (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
-       VALUES ('website', 'lead.created', 'decommission-no-heartbeat-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+       VALUES
+        ('meta', 'whatsapp.message_received', 'decommission-no-heartbeat-meta-stable', '+201022222224', '{}'::jsonb, 'processed', now() - interval '15 days'),
+        ('website', 'lead.created', 'decommission-no-heartbeat-lead-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
     );
 
     const report = await new decommissionReadiness.DecommissionReadinessService(() => configEnv.getEnv()).report({
@@ -1181,7 +1183,9 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     await db.pool.query(
       `INSERT INTO runtime.inbox_events
         (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
-       VALUES ('website', 'lead.created', 'decommission-missing-processor-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+       VALUES
+        ('meta', 'whatsapp.message_received', 'decommission-missing-processor-meta-stable', '+201022222225', '{}'::jsonb, 'processed', now() - interval '15 days'),
+        ('website', 'lead.created', 'decommission-missing-processor-lead-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
     );
     await db.pool.query(
       `INSERT INTO runtime.worker_heartbeats
@@ -1217,12 +1221,57 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('requires decommission stability evidence for every currently enabled direct-ingress family', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('meta', 'whatsapp.message_received', 'decommission-meta-only-stable', '+201022222226', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'decommission-runtime-ready-meta-only-evidence',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored","lead.created","leadgen.created"],"inboxProviders":["meta","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => configEnv.getEnv()).report({
+      ownerApprovedN8n: true,
+      finalLegacyExportComplete: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_stable: 'fail',
+      direct_ingress_currently_enabled: 'pass',
+      direct_ingress_worker_operational: 'pass',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'direct_ingress_stable')?.details).toMatchObject({
+      stableEventCount: 1,
+      directMetaStableEventCount: 1,
+      directLeadStableEventCount: 0,
+      directMetaWebhookEnabled: true,
+      directLeadIngressEnabled: true,
+      unresolvedCount: 0,
+      requiredDays: 14,
+    });
+  });
+
   it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query(
       `INSERT INTO runtime.inbox_events
         (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
-       VALUES ('meta', 'whatsapp.message_received', 'decommission-direct-stable', '+201022222222', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+       VALUES
+        ('meta', 'whatsapp.message_received', 'decommission-direct-meta-stable', '+201022222222', '{}'::jsonb, 'processed', now() - interval '15 days'),
+        ('website', 'lead.created', 'decommission-direct-lead-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
     );
     const client = await db.pool.query<{ client_id: string }>(
       "INSERT INTO app.clients (client_key, company_name) VALUES ('decommission-client', 'Decommission Client') RETURNING client_id",

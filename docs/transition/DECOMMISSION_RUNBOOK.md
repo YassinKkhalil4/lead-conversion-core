@@ -31,6 +31,8 @@ N8n removal requires no edge outbox target to n8n, no n8n scheduled authority, n
 
 Direct-ingress stability requires the current environment to have direct ingress enabled with a fresh operational runtime worker heartbeat whose metadata includes the enabled direct-ingress providers and event types. Old processed direct-ingress rows are not sufficient when the current route or worker state no longer proves Edge-owned durable processing.
 
+Stability evidence must match the currently enabled direct-ingress route family. Enabled direct Meta ingress needs aged processed Meta inbound-message evidence. Enabled direct lead ingress needs aged processed website or Facebook lead evidence. Ignored probes and provider delivery-status callbacks do not satisfy this requirement.
+
 `ACTIVE_TURN_COMPAT_ENABLED` must be false before decommission. The readiness report exposes this as `active_turn_compat_disabled`; do not treat n8n/Typebot fallback as removable while the legacy synchronous active-turn path is still enabled.
 
 Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval.

@@ -44,6 +44,8 @@ export interface DecommissionReadinessReport {
     newLegacyConversationCount: number;
     activeLegacyConversationCount: number;
     directIngressStableEventCount: number;
+    directMetaStableEventCount: number;
+    directLeadStableEventCount: number;
     directIngressUnresolvedCount: number;
     activeConfigurationCount: number;
     completedEdgeQualificationCount: number;
@@ -93,6 +95,8 @@ export class DecommissionReadinessService {
       newLegacyConversationCount,
       activeLegacyConversationCount,
       directIngressStableEventCount,
+      directMetaStableEventCount,
+      directLeadStableEventCount,
       directIngressUnresolvedCount,
       activeConfigurationCount,
       completedEdgeQualificationCount,
@@ -137,6 +141,24 @@ export class DecommissionReadinessService {
            AND status='processed'
            AND created_at <= now() - make_interval(days => $1)`,
         [directStabilityDays, directIngressBusinessEventTypes],
+      ),
+      scalar(
+        `SELECT count(*)::int AS count
+         FROM runtime.inbox_events
+         WHERE provider='meta'
+           AND event_type='whatsapp.message_received'
+           AND status='processed'
+           AND created_at <= now() - make_interval(days => $1)`,
+        [directStabilityDays],
+      ),
+      scalar(
+        `SELECT count(*)::int AS count
+         FROM runtime.inbox_events
+         WHERE provider IN ('website','facebook')
+           AND event_type IN ('lead.created','leadgen.created')
+           AND status='processed'
+           AND created_at <= now() - make_interval(days => $1)`,
+        [directStabilityDays],
       ),
       scalar(
         `SELECT count(*)::int AS count
@@ -197,6 +219,9 @@ export class DecommissionReadinessService {
       && runtimeOperationalState.operational
       && (!env.DIRECT_META_WEBHOOK_ENABLED || directMetaProcessorConfigured)
       && (!env.DIRECT_LEAD_INGRESS_ENABLED || directLeadProcessorConfigured);
+    const directIngressStable = directIngressUnresolvedCount === 0
+      && (!env.DIRECT_META_WEBHOOK_ENABLED || directMetaStableEventCount > 0)
+      && (!env.DIRECT_LEAD_INGRESS_ENABLED || directLeadStableEventCount > 0);
 
     const checks: DecommissionCheck[] = [
       {
@@ -244,8 +269,16 @@ export class DecommissionReadinessService {
       {
         area: 'n8n',
         checkKey: 'direct_ingress_stable',
-        status: passFail(directIngressStableEventCount > 0 && directIngressUnresolvedCount === 0),
-        details: { stableEventCount: directIngressStableEventCount, unresolvedCount: directIngressUnresolvedCount, requiredDays: directStabilityDays },
+        status: passFail(directIngressStable),
+        details: {
+          stableEventCount: directIngressStableEventCount,
+          directMetaStableEventCount,
+          directLeadStableEventCount,
+          directMetaWebhookEnabled: env.DIRECT_META_WEBHOOK_ENABLED,
+          directLeadIngressEnabled: env.DIRECT_LEAD_INGRESS_ENABLED,
+          unresolvedCount: directIngressUnresolvedCount,
+          requiredDays: directStabilityDays,
+        },
       },
       {
         area: 'n8n',
@@ -365,6 +398,8 @@ export class DecommissionReadinessService {
         newLegacyConversationCount,
         activeLegacyConversationCount,
         directIngressStableEventCount,
+        directMetaStableEventCount,
+        directLeadStableEventCount,
         directIngressUnresolvedCount,
         activeConfigurationCount,
         completedEdgeQualificationCount,
