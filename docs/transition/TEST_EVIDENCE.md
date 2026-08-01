@@ -1073,3 +1073,17 @@ Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm ru
 Result: passed from commit `9c67bea`. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 14 files and 115 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 Verification level: final local repository handoff gate. Live provider, staging route, real Airtable export, Docker daemon, production cutover, and destructive decommission verification remain owner/external-action blocked.
+
+## 2026-08-01 Final Handoff Rerun At Current Head
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: failed only at `npm audit --audit-level=moderate` after `npm ci`, artifact scan, lint, Vitest, and build passed. The audit command reported an npm registry audit endpoint error rather than a dependency advisory.
+
+Resolution command: `npm audit --audit-level=moderate`
+
+Result: passed on direct retry with 0 vulnerabilities.
+
+Resolution command: `npm run test:smoke && npm run test:integration`
+
+Result: passed. Smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
