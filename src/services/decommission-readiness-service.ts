@@ -112,7 +112,7 @@ export class DecommissionReadinessService {
          WHERE status IN ('pending','processing','retryable')
            AND (job_type ILIKE '%n8n%' OR payload_json::text ILIKE '%n8n%')`,
       ),
-      scalar("SELECT count(*)::int AS count FROM runtime.inbox_events WHERE provider='n8n' AND status IN ('pending','processing','retryable')"),
+      scalar("SELECT count(*)::int AS count FROM runtime.inbox_events WHERE provider='n8n' AND status IN ('pending','processing','retryable','dead_lettered')"),
       scalar(
         `SELECT count(*)::int AS count
          FROM runtime.inbox_events

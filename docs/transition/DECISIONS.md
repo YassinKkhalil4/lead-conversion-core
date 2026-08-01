@@ -471,3 +471,11 @@ Decision: `npm run decommission:readiness` evaluates direct-ingress stability by
 Reason: Aged direct activity from one ingress family does not prove another enabled direct route has safely replaced legacy fallback authority.
 
 Date: 2026-08-01
+
+## DEC-051: N8n Dead Letters Block Decommission
+
+Decision: `npm run decommission:readiness` counts dead-lettered n8n inbox events as unresolved n8n compatibility work until they are explicitly replayed, ignored, or otherwise resolved by an operator-approved path.
+
+Reason: A dead-lettered compatibility callback is not active backlog, but it is unresolved migration evidence. Fallback removal must not hide dead-lettered n8n ingress that may require reconciliation before retirement.
+
+Date: 2026-08-01
