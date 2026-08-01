@@ -1745,3 +1745,45 @@ Result: passed on rerun. Vitest ran 17 files and 172 tests successfully.
 Command: `npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. Build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Airtable Contact Opt-Out Preservation
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts`
+
+Result: passed. Focused importer coverage ran 6 tests, including idempotent Airtable apply, imported `app.contacts.opted_out` plus `opt_out_reason`, and persisted `opt_out_count` reconciliation evidence from the sanitized fixture.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the importer opt-out mapping, reconciliation SQL, and integration assertions.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 17 files and 172 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

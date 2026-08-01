@@ -656,3 +656,13 @@
 - Verification: `npm test` passed on rerun with 17 files and 172 tests.
 - Verification: `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `fb7a3fc`: Expand Airtable reconciliation coverage.
+
+## 2026-08-01 Airtable Contact Opt-Out Preservation
+
+- Implementation slice: Preserved contact opt-out state during Airtable Lead import by mapping `Opted Out` truthy values and opted-out `Consent Status` values into `app.contacts.opted_out`.
+- Implementation slice: Preserved `Opt-Out Reason` on imported contacts and updated contact conflict handling so idempotent reruns keep opt-out state aligned with the accepted source row.
+- Implementation slice: Added accepted-source reconciliation check `opt_out_count`, comparing opt-out source rows joined through `migration.entity_map` to imported `app.contacts.opted_out` rows.
+- Decision: Added DEC-065. Contact opt-out is durable business state and must be carried into PostgreSQL authority rather than remaining display-only Airtable metadata.
+- Verification: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts` passed with 6 importer/reconciliation tests, including imported opt-out reason and persisted `opt_out_count` evidence.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 172 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `051d7dc`: Preserve Airtable opt-out state.
