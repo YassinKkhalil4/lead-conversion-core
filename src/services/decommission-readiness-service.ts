@@ -1,6 +1,7 @@
 import { getEnv } from '../config/env.js';
 import type { Env } from '../config/env.js';
 import { pool } from '../db/pool.js';
+import { workerHeartbeatOperationalState } from './worker-heartbeat-readiness.js';
 
 export interface DecommissionCheck {
   area: 'n8n' | 'typebot' | 'airtable';
@@ -12,6 +13,7 @@ export interface DecommissionCheck {
 export interface DecommissionReadinessOptions {
   directStabilityDays?: number;
   minCompletedEdgeQualifications?: number;
+  maxWorkerHeartbeatAgeSeconds?: number;
   ownerApprovedN8n?: boolean;
   ownerApprovedTypebot?: boolean;
   ownerApprovedAirtable?: boolean;
@@ -27,6 +29,7 @@ export interface DecommissionReadinessReport {
   thresholds: {
     directStabilityDays: number;
     minCompletedEdgeQualifications: number;
+    maxWorkerHeartbeatAgeSeconds: number;
   };
   summary: {
     n8nReady: boolean;
@@ -47,6 +50,11 @@ export interface DecommissionReadinessReport {
     airtableProjectionBlockedCount: number;
     airtableReconciliationResultCount: number;
     airtableReconciliationFailureCount: number;
+  };
+  workerHeartbeat: {
+    latestWorkerName: string;
+    heartbeatAgeSeconds: number | null;
+    operational: boolean;
   };
   checks: DecommissionCheck[];
 }
@@ -72,6 +80,7 @@ export class DecommissionReadinessService {
   async report(options: DecommissionReadinessOptions = {}): Promise<DecommissionReadinessReport> {
     const directStabilityDays = options.directStabilityDays ?? 14;
     const minCompletedEdgeQualifications = options.minCompletedEdgeQualifications ?? 100;
+    const maxWorkerHeartbeatAgeSeconds = options.maxWorkerHeartbeatAgeSeconds ?? 120;
     const env = this.envProvider();
     const directIngressCurrentlyEnabled = env.RUNTIME_WORKER_ENABLED
       && (env.DIRECT_META_WEBHOOK_ENABLED || env.DIRECT_LEAD_INGRESS_ENABLED);
@@ -90,6 +99,7 @@ export class DecommissionReadinessService {
       airtableProjectionBlockedCount,
       airtableReconciliationResultCount,
       airtableReconciliationFailureCount,
+      heartbeat,
     ] = await Promise.all([
       scalar("SELECT count(*)::int AS count FROM edge_outbox WHERE status IN ('pending','processing','failed','dead_lettered')"),
       scalar(
@@ -151,7 +161,42 @@ export class DecommissionReadinessService {
       ),
       scalar('SELECT count(*)::int AS count FROM migration.reconciliation_results'),
       scalar("SELECT count(*)::int AS count FROM migration.reconciliation_results WHERE status='fail'"),
+      pool.query<{ worker_name: string; heartbeat_age_seconds: number | null; metadata_json: Record<string, unknown> }>(
+        `SELECT
+           worker_name,
+           EXTRACT(EPOCH FROM now() - heartbeat_at)::int AS heartbeat_age_seconds,
+           metadata_json
+         FROM runtime.worker_heartbeats
+         WHERE worker_kind='runtime'
+         ORDER BY heartbeat_at DESC
+         LIMIT 1`,
+      ),
     ]);
+    const heartbeatRow = heartbeat.rows[0] || null;
+    const heartbeatAgeSeconds = heartbeatRow?.heartbeat_age_seconds ?? null;
+    const runtimeOperationalState = heartbeatRow
+      ? workerHeartbeatOperationalState('runtime', heartbeatRow.metadata_json)
+      : { operational: false, metadata: {} };
+    const inboxEventTypes = Array.isArray(runtimeOperationalState.metadata.inboxEventTypes)
+      ? runtimeOperationalState.metadata.inboxEventTypes.filter((value): value is string => typeof value === 'string')
+      : [];
+    const inboxProviders = Array.isArray(runtimeOperationalState.metadata.inboxProviders)
+      ? runtimeOperationalState.metadata.inboxProviders.filter((value): value is string => typeof value === 'string')
+      : [];
+    const directMetaProcessorConfigured = inboxEventTypes.includes('whatsapp.message_status')
+      && inboxEventTypes.includes('whatsapp.message_received')
+      && inboxEventTypes.includes('whatsapp.webhook_ignored')
+      && inboxProviders.includes('meta');
+    const directLeadProcessorConfigured = inboxEventTypes.includes('lead.created')
+      && inboxEventTypes.includes('leadgen.created')
+      && inboxProviders.includes('website')
+      && inboxProviders.includes('facebook');
+    const directIngressWorkerOperational = directIngressCurrentlyEnabled
+      && heartbeatAgeSeconds !== null
+      && heartbeatAgeSeconds <= maxWorkerHeartbeatAgeSeconds
+      && runtimeOperationalState.operational
+      && (!env.DIRECT_META_WEBHOOK_ENABLED || directMetaProcessorConfigured)
+      && (!env.DIRECT_LEAD_INGRESS_ENABLED || directLeadProcessorConfigured);
 
     const checks: DecommissionCheck[] = [
       {
@@ -210,6 +255,21 @@ export class DecommissionReadinessService {
           directMetaWebhookEnabled: env.DIRECT_META_WEBHOOK_ENABLED,
           directLeadIngressEnabled: env.DIRECT_LEAD_INGRESS_ENABLED,
           runtimeWorkerEnabled: env.RUNTIME_WORKER_ENABLED,
+        },
+      },
+      {
+        area: 'n8n',
+        checkKey: 'direct_ingress_worker_operational',
+        status: passFail(directIngressWorkerOperational),
+        details: {
+          latestWorkerName: heartbeatRow?.worker_name || '',
+          heartbeatAgeSeconds,
+          maxWorkerHeartbeatAgeSeconds,
+          operational: runtimeOperationalState.operational,
+          directMetaProcessorConfigured,
+          directLeadProcessorConfigured,
+          inboxEventTypes,
+          inboxProviders,
         },
       },
       {
@@ -295,7 +355,7 @@ export class DecommissionReadinessService {
     return {
       ok: summary.n8nReady && summary.typebotReady && summary.airtableReady,
       generatedAt: new Date().toISOString(),
-      thresholds: { directStabilityDays, minCompletedEdgeQualifications },
+      thresholds: { directStabilityDays, minCompletedEdgeQualifications, maxWorkerHeartbeatAgeSeconds },
       summary,
       metrics: {
         legacyEdgeOutboxOpenCount,
@@ -311,6 +371,11 @@ export class DecommissionReadinessService {
         airtableProjectionBlockedCount,
         airtableReconciliationResultCount,
         airtableReconciliationFailureCount,
+      },
+      workerHeartbeat: {
+        latestWorkerName: heartbeatRow?.worker_name || '',
+        heartbeatAgeSeconds,
+        operational: runtimeOperationalState.operational,
       },
       checks,
     };

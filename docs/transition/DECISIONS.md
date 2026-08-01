@@ -455,3 +455,11 @@ Decision: `npm run decommission:readiness` requires direct ingress to be current
 Reason: Historical processed direct-ingress rows prove past behavior only. Fallback removal must not pass when the current environment is no longer routing business ingress through Edge-owned durable processing.
 
 Date: 2026-08-01
+
+## DEC-049: Decommission Requires Operational Direct-Ingress Worker Metadata
+
+Decision: `npm run decommission:readiness` requires a fresh operational runtime worker heartbeat whose metadata advertises the inbox providers and event types for every currently enabled direct-ingress route.
+
+Reason: Enabled route flags do not prove that durable worker processing is currently active. Fallback removal must not pass if Edge can receive direct ingress but no worker is proving ownership of the matching business processors.
+
+Date: 2026-08-01

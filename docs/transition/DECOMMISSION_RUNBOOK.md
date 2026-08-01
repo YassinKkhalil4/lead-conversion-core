@@ -9,7 +9,8 @@ Run this against the intended environment before any removal:
 ```bash
 npm run decommission:readiness -- \
   --direct-stability-days=14 \
-  --min-completed-edge-qualifications=100
+  --min-completed-edge-qualifications=100 \
+  --max-worker-heartbeat-age-seconds=120
 ```
 
 Only add these flags when the matching evidence is complete and owner-approved:
@@ -27,6 +28,8 @@ The command is read-only. A passing report is a decommission precondition, not a
 ## Exit Criteria
 
 N8n removal requires no edge outbox target to n8n, no n8n scheduled authority, no new Typebot conversation, no active legacy conversation for 14 days, direct ingress stable for 14 days, final workflow/DB export, and explicit owner approval.
+
+Direct-ingress stability requires the current environment to have direct ingress enabled with a fresh operational runtime worker heartbeat whose metadata includes the enabled direct-ingress providers and event types. Old processed direct-ingress rows are not sufficient when the current route or worker state no longer proves Edge-owned durable processing.
 
 `ACTIVE_TURN_COMPAT_ENABLED` must be false before decommission. The readiness report exposes this as `active_turn_compat_disabled`; do not treat n8n/Typebot fallback as removable while the legacy synchronous active-turn path is still enabled.
 

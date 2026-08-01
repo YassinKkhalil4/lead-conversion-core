@@ -110,6 +110,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         runtime.outbox_command_attempts,
         runtime.scheduled_job_attempts,
         runtime.dead_letters,
+        runtime.worker_heartbeats,
         runtime.inbox_events,
         runtime.webhook_receipts,
         runtime.outbox_commands,
@@ -1147,6 +1148,75 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('does not allow decommission readiness without a current direct-ingress worker heartbeat', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('website', 'lead.created', 'decommission-no-heartbeat-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => configEnv.getEnv()).report({
+      ownerApprovedN8n: true,
+      finalLegacyExportComplete: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.summary.n8nReady).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_stable: 'pass',
+      direct_ingress_currently_enabled: 'pass',
+      direct_ingress_worker_operational: 'fail',
+    });
+    expect(report.workerHeartbeat).toMatchObject({
+      latestWorkerName: '',
+      heartbeatAgeSeconds: null,
+      operational: false,
+    });
+  });
+
+  it('does not allow decommission readiness when the runtime worker lacks enabled direct-ingress processors', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES ('website', 'lead.created', 'decommission-missing-processor-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'decommission-missing-lead-processor',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored"],"inboxProviders":["meta"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => configEnv.getEnv()).report({
+      ownerApprovedN8n: true,
+      finalLegacyExportComplete: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_stable: 'pass',
+      direct_ingress_currently_enabled: 'pass',
+      direct_ingress_worker_operational: 'fail',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'direct_ingress_worker_operational')?.details).toMatchObject({
+      latestWorkerName: 'decommission-missing-lead-processor',
+      operational: true,
+      directMetaProcessorConfigured: true,
+      directLeadProcessorConfigured: false,
+      inboxProviders: ['meta'],
+    });
+  });
+
   it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query(
@@ -1199,6 +1269,18 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
        VALUES ('decommission-fixture', 'pass', 1, 1, '{}'::jsonb)`,
     );
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'decommission-runtime-ready',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored","lead.created","leadgen.created"],"inboxProviders":["meta","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
 
     const report = await new decommissionReadiness.DecommissionReadinessService().report({
       ownerApprovedN8n: true,
@@ -1218,6 +1300,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
       direct_ingress_stable: 'pass',
       direct_ingress_currently_enabled: 'pass',
+      direct_ingress_worker_operational: 'pass',
       versioned_config_active: 'pass',
       edge_qualification_volume: 'pass',
       airtable_reconciliation_stable: 'pass',

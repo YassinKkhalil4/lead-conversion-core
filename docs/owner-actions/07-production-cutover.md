@@ -47,7 +47,7 @@ Status: not approved for execution.
 
 Production cutover approval does not authorize fallback removal. Before removing n8n, Typebot, Airtable projection, MinIO, databases, volumes, or production routes:
 
-- Review `npm run decommission:readiness` for the production environment.
+- Review `npm run decommission:readiness -- --direct-stability-days=14 --min-completed-edge-qualifications=100 --max-worker-heartbeat-age-seconds=120` for the production environment.
 - Provide final legacy export evidence.
 - Provide final Airtable export evidence.
 - Confirm Airtable has been projection-only for the agreed window.

@@ -5,6 +5,7 @@ import { DecommissionReadinessService, type DecommissionReadinessOptions } from 
 const numericArguments = new Set([
   '--direct-stability-days',
   '--min-completed-edge-qualifications',
+  '--max-worker-heartbeat-age-seconds',
 ]);
 
 const booleanArguments = new Set([
@@ -34,6 +35,7 @@ function parseArgs(argv: string[]): DecommissionReadinessOptions {
       const parsed = parseNumberArg(name, value);
       if (name === '--direct-stability-days') options.directStabilityDays = parsed;
       if (name === '--min-completed-edge-qualifications') options.minCompletedEdgeQualifications = parsed;
+      if (name === '--max-worker-heartbeat-age-seconds') options.maxWorkerHeartbeatAgeSeconds = parsed;
       continue;
     }
     if (!booleanArguments.has(name) || separator >= 0) throw new Error(`Unknown decommission readiness argument: ${arg}`);
