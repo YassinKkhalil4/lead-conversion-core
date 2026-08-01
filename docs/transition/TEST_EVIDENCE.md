@@ -1357,3 +1357,17 @@ Result: passed. Focused PostgreSQL run executed 5 readiness tests and skipped 61
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 142 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Direct Lead Inbox Processing
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/ingress-gating.test.ts tests/runtime.integration.test.ts -t "configured inbox event types|direct lead|website lead|Facebook lead|cutover readiness|durably records invalid"`
+
+Result: passed. Focused PostgreSQL and route-gating run executed 10 tests and skipped 63 by filter, covering direct website/Facebook durable receipt, worker-owned lead intake processing, duplicate receipt suppression before business effects, invalid receipt worker ignore, provider/event-type filtered inbox claims, deployment verifier durable-receipt probes, and cutover readiness failure when direct lead ingress lacks its worker processor metadata.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 145 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

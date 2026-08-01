@@ -394,3 +394,14 @@
 - Verification: `npx vitest run tests/health-readiness.integration.test.ts tests/runtime.integration.test.ts -t "readiness"` passed with 5 PostgreSQL readiness tests and 61 skipped by filter, covering `/ready` and cutover readiness disabled-heartbeat rejection.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 142 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `25c0dfc`: Required operational worker heartbeats for readiness.
+
+## 2026-08-01 Direct Lead Inbox Processing
+
+- Implementation slice: Moved direct website/Facebook lead webhook business processing out of the HTTP request path. The routes now authenticate, gate, durably receipt, deduplicate, and acknowledge; `LeadIngressInboxProcessor` validates and processes lead receipts through `LeadIntakeService` from the runtime worker.
+- Implementation slice: Added provider/event-type filters to `InboxRepository.claim` and `RuntimeWorker` so specialized inbox processors claim only the inbox events they are configured to process. Runtime worker heartbeat metadata now advertises configured inbox providers and event types.
+- Implementation slice: Hardened MP-12 cutover readiness so direct Meta and direct lead ingress require matching runtime inbox processor metadata when their direct route flags are enabled.
+- Decision: Added DEC-039. Direct lead webhooks acknowledge durable receipt only; validation, permanent ignores, retryable failures, and lead-intake business state belong to the runtime worker.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/ingress-gating.test.ts tests/runtime.integration.test.ts -t "configured inbox event types|direct lead|website lead|Facebook lead|cutover readiness|durably records invalid"` passed with 10 tests and 63 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 145 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `9cc10e1`: Processed direct lead ingress through runtime inbox.

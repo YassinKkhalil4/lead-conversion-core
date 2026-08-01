@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Run staging MP-12 verification once the owner supplies staging route access and provider/source credentials. Use `scripts/verify-deployment.sh` with explicit direct-ingress expectations, run `npm run cutover:readiness`, and run `npm run decommission:readiness` only as a read-only report. Do not remove n8n, Typebot, Airtable, MinIO, databases, volumes, or production routes without explicit owner approval.
+Exact next implementation task: Run staging MP-12 verification once the owner supplies staging route access and provider/source credentials. Use `scripts/verify-deployment.sh` with explicit direct-ingress expectations, confirm `npm run cutover:readiness` shows direct-inbox processor metadata for any enabled direct route, and run `npm run decommission:readiness` only as a read-only report. Do not remove n8n, Typebot, Airtable, MinIO, databases, volumes, or production routes without explicit owner approval.
 
 Files expected to change:
 
@@ -45,6 +45,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `25c0dfc` (`Require operational worker heartbeats for readiness`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `9cc10e1` (`Process direct lead ingress through runtime inbox`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes
