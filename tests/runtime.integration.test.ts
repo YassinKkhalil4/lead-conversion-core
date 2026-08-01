@@ -191,7 +191,11 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     return outboxId;
   }
 
-  function metaStatusPayload(providerMessageId = 'wamid.status.delivered'): Record<string, unknown> {
+  function metaStatusPayload(
+    providerMessageId = 'wamid.status.delivered',
+    status = 'delivered',
+    timestamp = '1785370000',
+  ): Record<string, unknown> {
     return {
       object: 'whatsapp_business_account',
       entry: [
@@ -209,8 +213,8 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
                 statuses: [
                   {
                     id: providerMessageId,
-                    status: 'delivered',
-                    timestamp: '1785370000',
+                    status,
+                    timestamp,
                     recipient_id: '201000000001',
                     conversation: { id: 'conversation-sanitized' },
                     pricing: { billable: true, pricing_model: 'CBP', category: 'service' },
@@ -1618,6 +1622,61 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='message.delivery_status_received'")).rows[0]?.count).toBe('1');
       expect(await worker.tick()).toBe(0);
       expect((await db.pool.query('SELECT count(*) FROM app.message_delivery_events')).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not regress message delivery state when Meta sends older status events after read', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-status-ordering', 'Status Ordering Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    await db.pool.query(
+      `INSERT INTO app.messages
+        (client_id, direction, channel, to_address, message_text, message_type, provider_message_id, state)
+       VALUES ($1, 'outbound', 'whatsapp', '+201000000002', 'Read status target', 'text', 'wamid.status.ordering', 'accepted')`,
+      [clientId],
+    );
+
+    const app = await appModule.buildApp();
+    const processor = new metaStatus.MetaStatusProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processInbox: (event) => processor.process(event) },
+      { enabled: true, batchSize: 10 },
+    );
+    try {
+      const read = signedMetaWebhook(metaStatusPayload('wamid.status.ordering', 'read', '1785370100'));
+      const readResponse = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': read.signature,
+        },
+        payload: read.rawBody,
+      });
+      expect(readResponse.statusCode).toBe(200);
+      expect(await worker.tick()).toBe(1);
+      expect((await db.pool.query("SELECT state FROM app.messages WHERE provider_message_id='wamid.status.ordering'")).rows[0]?.state).toBe('read');
+
+      const sent = signedMetaWebhook(metaStatusPayload('wamid.status.ordering', 'sent', '1785370000'));
+      const sentResponse = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': sent.signature,
+        },
+        payload: sent.rawBody,
+      });
+      expect(sentResponse.statusCode).toBe(200);
+      expect(await worker.tick()).toBe(1);
+
+      expect((await db.pool.query("SELECT state FROM app.messages WHERE provider_message_id='wamid.status.ordering'")).rows[0]?.state).toBe('read');
+      expect((await db.pool.query("SELECT count(*) FROM app.message_delivery_events WHERE provider_message_id='wamid.status.ordering'")).rows[0]?.count).toBe('2');
+      expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='message.delivery_status_received' AND after_json->>'stateAdvanced'='false'")).rows[0]?.count).toBe('1');
     } finally {
       await app.close();
     }

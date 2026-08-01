@@ -177,12 +177,27 @@ export function extractMetaMessages(payload: unknown): ParsedMetaMessage[] {
   return messages;
 }
 
-function mapMessageState(providerStatus: string): 'sent' | 'delivered' | 'read' | 'failed' | 'delivery_unknown' {
+type MessageDeliveryState = 'sent' | 'delivered' | 'read' | 'failed' | 'delivery_unknown';
+
+const deliveryStateRank: Record<MessageDeliveryState, number> = {
+  delivery_unknown: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+  failed: 4,
+};
+
+function mapMessageState(providerStatus: string): MessageDeliveryState {
   if (providerStatus === 'sent') return 'sent';
   if (providerStatus === 'delivered') return 'delivered';
   if (providerStatus === 'read') return 'read';
   if (providerStatus === 'failed') return 'failed';
   return 'delivery_unknown';
+}
+
+function shouldAdvanceMessageState(currentState: string, incomingState: MessageDeliveryState): boolean {
+  const currentRank = deliveryStateRank[currentState as MessageDeliveryState];
+  return currentRank === undefined || deliveryStateRank[incomingState] >= currentRank;
 }
 
 export class MetaStatusWebhookService {
@@ -284,8 +299,8 @@ export class MetaStatusProcessor {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const message = await client.query<{ message_id: string; client_id: string }>(
-        `SELECT message_id, client_id
+      const message = await client.query<{ message_id: string; client_id: string; state: string }>(
+        `SELECT message_id, client_id, state
          FROM app.messages
          WHERE provider_message_id=$1
          ORDER BY created_at DESC
@@ -298,6 +313,8 @@ export class MetaStatusProcessor {
         await client.query('ROLLBACK');
         return { outcome: 'retryable', error: `message_not_found_for_provider_status:${status.providerMessageId}` };
       }
+      const incomingState = mapMessageState(status.providerStatus);
+      const stateAdvanced = shouldAdvanceMessageState(row.state, incomingState);
       const payloadHash = sha256Hex(stableJson(status.rawStatus));
       await client.query(
         `INSERT INTO app.message_delivery_events
@@ -316,12 +333,14 @@ export class MetaStatusProcessor {
           JSON.stringify(status.rawStatus),
         ],
       );
-      await client.query(
-        `UPDATE app.messages
-         SET state=$2
-         WHERE message_id=$1`,
-        [row.message_id, mapMessageState(status.providerStatus)],
-      );
+      if (stateAdvanced) {
+        await client.query(
+          `UPDATE app.messages
+           SET state=$2
+           WHERE message_id=$1`,
+          [row.message_id, incomingState],
+        );
+      }
       await this.audit.record(client, {
         eventType: 'message.delivery_status_received',
         actorType: 'external_user',
@@ -337,7 +356,9 @@ export class MetaStatusProcessor {
           providerMessageId: status.providerMessageId,
         },
         after: {
-          state: mapMessageState(status.providerStatus),
+          state: stateAdvanced ? incomingState : row.state,
+          receivedState: incomingState,
+          stateAdvanced,
         },
       });
       await client.query('COMMIT');

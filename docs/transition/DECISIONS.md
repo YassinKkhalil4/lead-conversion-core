@@ -391,3 +391,11 @@ Decision: Enabling direct website/Facebook lead ingress requires `RUNTIME_WORKER
 Reason: A direct webhook route that can acknowledge durable receipt while no runtime worker is configured would create an unbounded pending inbox and false cutover confidence. Readiness still verifies fresh operational heartbeats, but startup validation should catch impossible direct-ingress configurations before traffic is routed.
 
 Date: 2026-08-01
+
+## DEC-041: Delivery Status Processing Is Monotonic
+
+Decision: Meta/n8n WhatsApp delivery-status processing records every distinct provider status event, but `app.messages.state` only advances according to delivery lifecycle precedence. Older `sent` or `delivered` events received after `read` are preserved as delivery events and audit evidence without regressing the current message state.
+
+Reason: Provider webhooks can arrive out of order. Reporting, cutover readiness, and operator reconciliation need the complete provider event trail, while the authoritative message state should represent the furthest known delivery outcome rather than the last webhook arrival order.
+
+Date: 2026-08-01
