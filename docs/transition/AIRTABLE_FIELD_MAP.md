@@ -102,7 +102,7 @@ These field names appear in current source, seed config, or workflow code.
 - `Question`
 - `Message Key`
 
-### Messages And Events
+### Messages
 
 - `Message ID`
 - `Direction`
@@ -117,6 +117,20 @@ These field names appear in current source, seed config, or workflow code.
 - `Read`
 - `Created At`
 
+### Events
+
+Verified from the n8n Audit Log Utility workflow writing to the Airtable `Events` table.
+
+- `Event ID`
+- `Event Type`
+- `Description`
+- `Workflow Name`
+- `Payload JSON`
+- `Created At`
+- `Event Channel`
+- `Client`
+- `Lead`
+
 ## Inferred Mappings
 
 These fields are referenced by expected migration requirements or derived from adjacent workflow behavior, but must be confirmed in the real export.
@@ -128,7 +142,7 @@ These fields are referenced by expected migration requirements or derived from a
 
 ## Unknown Until Real Export
 
-- Exact table names and primary fields for FollowUps, Appointments, Scores, and Events
+- Exact table names and primary fields for FollowUps, Appointments, and Scores
 - Whether linked-record exports preserve record IDs in CSV format or require JSON exports
 - Whether email and phone fields contain normalized values consistently
 - Whether historical message provider IDs are unique across all clients

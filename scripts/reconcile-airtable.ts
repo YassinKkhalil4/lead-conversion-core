@@ -26,6 +26,22 @@ async function scalar(client: PoolClient, sql: string, values: unknown[] = []): 
   return Number(result.rows[0]?.count || 0);
 }
 
+async function mappedCountForRun(client: PoolClient, importRunId: string, sourceTable: string, targetTable: string): Promise<number> {
+  return scalar(
+    client,
+    `SELECT count(*)::text AS count
+     FROM migration.airtable_raw_records raw
+     JOIN migration.entity_map mapped
+       ON mapped.source_system='airtable'
+      AND mapped.source_table=raw.table_name
+      AND mapped.source_record_id=raw.record_id
+      AND mapped.target_table=$3
+     WHERE raw.import_run_id=$1
+       AND raw.table_name=$2`,
+    [importRunId, sourceTable, targetTable],
+  );
+}
+
 export async function reconcileAirtableImport(input: {
   importRunId?: string;
   recordResults?: boolean;
@@ -59,12 +75,7 @@ export async function reconcileAirtableImport(input: {
     });
 
     const expectedClients = Number(rawCounts.Clients || 0);
-    const mappedClients = await scalar(
-      client,
-      `SELECT count(*)::text AS count
-       FROM migration.entity_map
-       WHERE source_table='Clients' AND target_table='app.clients'`,
-    );
+    const mappedClients = await mappedCountForRun(client, importRunId, 'Clients', 'app.clients');
     checks.push({
       checkKey: 'clients_mapped',
       status: mappedClients === expectedClients ? 'pass' : 'fail',
@@ -74,12 +85,7 @@ export async function reconcileAirtableImport(input: {
     });
 
     const expectedProjects = Number(rawCounts.Projects || 0);
-    const mappedProjects = await scalar(
-      client,
-      `SELECT count(*)::text AS count
-       FROM migration.entity_map
-       WHERE source_table='Projects' AND target_table='app.projects'`,
-    );
+    const mappedProjects = await mappedCountForRun(client, importRunId, 'Projects', 'app.projects');
     checks.push({
       checkKey: 'projects_mapped',
       status: mappedProjects === expectedProjects ? 'pass' : 'fail',
@@ -89,12 +95,7 @@ export async function reconcileAirtableImport(input: {
     });
 
     const expectedSalespeople = Number(rawCounts.Salespeople || 0);
-    const mappedSalespeople = await scalar(
-      client,
-      `SELECT count(*)::text AS count
-       FROM migration.entity_map
-       WHERE source_table='Salespeople' AND target_table='app.salespeople'`,
-    );
+    const mappedSalespeople = await mappedCountForRun(client, importRunId, 'Salespeople', 'app.salespeople');
     checks.push({
       checkKey: 'salespeople_mapped',
       status: mappedSalespeople === expectedSalespeople ? 'pass' : 'fail',
@@ -104,12 +105,7 @@ export async function reconcileAirtableImport(input: {
     });
 
     const expectedLeads = Number(rawCounts.Leads || 0);
-    const mappedLeads = await scalar(
-      client,
-      `SELECT count(*)::text AS count
-       FROM migration.entity_map
-       WHERE source_table='Leads' AND target_table='app.leads'`,
-    );
+    const mappedLeads = await mappedCountForRun(client, importRunId, 'Leads', 'app.leads');
     checks.push({
       checkKey: 'leads_mapped',
       status: mappedLeads === expectedLeads ? 'pass' : 'fail',
@@ -124,15 +120,10 @@ export async function reconcileAirtableImport(input: {
       ['Messages', 'app.messages', 'messages_mapped'],
       ['FollowUps', 'app.followups', 'followups_mapped'],
       ['Appointments', 'app.appointments', 'appointments_mapped'],
+      ['Events', 'audit.events', 'events_mapped'],
     ] as const) {
       const expected = Number(rawCounts[sourceTable] || 0);
-      const actual = await scalar(
-        client,
-        `SELECT count(*)::text AS count
-         FROM migration.entity_map
-         WHERE source_table=$1 AND target_table=$2`,
-        [sourceTable, targetTable],
-      );
+      const actual = await mappedCountForRun(client, importRunId, sourceTable, targetTable);
       checks.push({
         checkKey,
         status: actual === expected ? 'pass' : 'fail',

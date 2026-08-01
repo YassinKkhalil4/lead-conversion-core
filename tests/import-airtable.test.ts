@@ -4,8 +4,8 @@ import { loadAirtableExport } from '../scripts/import-airtable.js';
 describe('airtable import dry run', () => {
   it('loads json and csv exports, validates minimum required fields, and reports missing tables', async () => {
     const { summary } = await loadAirtableExport('tests/fixtures/airtable-export');
-    expect(summary.totalRecords).toBe(9);
-    expect(summary.validRecords).toBe(9);
+    expect(summary.totalRecords).toBe(10);
+    expect(summary.validRecords).toBe(10);
     expect(summary.rejectedRecords).toBe(0);
     expect(summary.manifest.present).toBe(true);
     expect(summary.manifest.errors).toContain('manifest_missing_table:Questions');
@@ -13,6 +13,7 @@ describe('airtable import dry run', () => {
     expect(summary.tables.Projects?.valid).toBe(1);
     expect(summary.tables.Salespeople?.valid).toBe(1);
     expect(summary.tables.Messages?.valid).toBe(1);
+    expect(summary.tables.Events?.valid).toBe(1);
     expect(summary.missingTables).toContain('Questions');
   });
 

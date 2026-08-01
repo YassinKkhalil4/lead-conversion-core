@@ -65,14 +65,21 @@ describePg('airtable importer with real PostgreSQL', () => {
     expect(psqlScalar('SELECT count(*) FROM app.messages')).toBe('1');
     expect(psqlScalar('SELECT count(*) FROM app.followups')).toBe('1');
     expect(psqlScalar('SELECT count(*) FROM app.appointments')).toBe('1');
+    expect(psqlScalar("SELECT count(*) FROM migration.entity_map WHERE source_table='Events' AND target_table='audit.events'")).toBe('1');
+    expect(psqlScalar("SELECT count(*) FROM audit.events WHERE event_type='lead_contacted' AND actor_type='migration'")).toBe('1');
+    expect(psqlScalar("SELECT payload_json->'payload'->>'access_token' FROM audit.events WHERE event_type='lead_contacted'")).toBe('[REDACTED]');
+    runScript('reconcile:airtable', ['--record-results']);
+    expect(psqlScalar("SELECT status FROM migration.reconciliation_results WHERE check_key='events_mapped' ORDER BY created_at DESC LIMIT 1")).toBe('pass');
   }, 30_000);
 
   it('records missing relationship rejects without creating target entities', () => {
     runScript('import:airtable', ['--input=tests/fixtures/airtable-export-missing-relationships', '--apply']);
     expect(psqlScalar("SELECT count(*) FROM migration.rejected_records WHERE reason='missing_mapped_client'")).toBe('1');
     expect(psqlScalar("SELECT count(*) FROM migration.rejected_records WHERE reason='missing_mapped_project'")).toBe('1');
+    expect(psqlScalar("SELECT count(*) FROM migration.rejected_records WHERE reason='missing_mapped_lead' AND table_name='Events'")).toBe('1');
     expect(psqlScalar("SELECT count(*) FROM app.projects WHERE legacy_airtable_id='recPROJECTBAD'")).toBe('0');
     expect(psqlScalar("SELECT count(*) FROM app.leads WHERE legacy_airtable_id='recLEADBAD'")).toBe('0');
+    expect(psqlScalar("SELECT count(*) FROM migration.entity_map WHERE source_table='Events' AND source_record_id='recEVENTBAD'")).toBe('0');
   }, 30_000);
 
   it('rolls back raw records when apply fails mid-transaction', () => {

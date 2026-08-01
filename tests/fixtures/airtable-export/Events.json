@@ -1,0 +1,16 @@
+[
+  {
+    "id": "recEVENT001",
+    "fields": {
+      "Event ID": "evt_synthetic_001",
+      "Event Type": "lead_contacted",
+      "Description": "Lead contacted patch merged before follow-up scheduling.",
+      "Workflow Name": "01 - MASTER - Lead Intake Orchestrator",
+      "Payload JSON": "{\"lead_record_id\":\"recLEAD001\",\"access_token\":\"synthetic-placeholder\"}",
+      "Created At": "2026-07-30T00:05:00.000Z",
+      "Event Channel": "n8n",
+      "Client": ["recCLIENT001"],
+      "Lead": ["recLEAD001"]
+    }
+  }
+]

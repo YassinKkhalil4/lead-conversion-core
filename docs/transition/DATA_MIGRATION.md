@@ -36,12 +36,13 @@ Implemented locally:
 - Stable Airtable record IDs are required; missing or duplicate IDs are rejected.
 - Invalid lead/salesperson phone values are rejected.
 - Missing mapped client/project relationships are rejected rather than invented.
-- Initial apply mappings: Clients, Projects, Salespeople, Contacts derived from Leads, Leads, Qualifications, Scores, Messages, FollowUps, Appointments
+- Initial apply mappings: Clients, Projects, Salespeople, Contacts derived from Leads, Leads, Qualifications, Scores, Messages, FollowUps, Appointments, Events
+- Events import into `audit.events` as historical migration actor records, redact secret-like payload keys, preserve source record IDs in `migration.entity_map`, and reject unresolved client/lead links rather than inventing relationships.
 - Provisional field map: `docs/transition/AIRTABLE_FIELD_MAP.md`
 
 Pending:
 
 - Complete owner export
-- Full mappings for questions/options/conversation messages and events
+- Full mappings for questions/options/conversation messages
 - Versioned configuration publication from imported question/message records is deferred to MP-06
 - Count and linked-record reconciliation against real export

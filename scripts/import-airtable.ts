@@ -75,7 +75,10 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   Salespeople: ['Name', 'Phone'],
   Leads: ['Phone Raw'],
   Messages: ['Direction', 'Message Text'],
+  Events: ['Event Type'],
 };
+
+const SECRET_FIELD_PATTERN = /token|secret|api[_-]?key|authorization|password|access[_-]?key|credential/i;
 
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -134,6 +137,29 @@ function dateOrNull(fields: AirtableFields, key: string): string | null {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function parseJsonField(fields: AirtableFields, key: string): Record<string, unknown> {
+  const value = fields[key];
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  const raw = String(value);
+  if (!raw.trim()) return {};
+  const parsed = JSON.parse(raw) as unknown;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`invalid_json_object_field:${key}`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function redactSecretLikeValues(value: unknown, depth = 0): unknown {
+  if (depth > 12) return '[REDACTED_DEPTH]';
+  if (Array.isArray(value)) return value.map((item) => redactSecretLikeValues(item, depth + 1));
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => [
+    key,
+    SECRET_FIELD_PATTERN.test(key) ? '[REDACTED]' : redactSecretLikeValues(child, depth + 1),
+  ]));
 }
 
 function addMinutes(iso: string, minutes: number): string {
@@ -384,6 +410,16 @@ async function mappedId(client: PoolClient, sourceTable: string, sourceRecordId:
     [sourceTable, sourceRecordId, targetTable],
   );
   return result.rows[0]?.target_id || null;
+}
+
+async function mappedEntity(client: PoolClient, sourceTable: string, sourceRecordId: string, targetTable: string): Promise<{ targetId: string; contentHash: string } | null> {
+  const result = await client.query<{ target_id: string; content_hash: string }>(
+    `SELECT target_id, content_hash FROM migration.entity_map
+     WHERE source_system='airtable' AND source_table=$1 AND source_record_id=$2 AND target_table=$3`,
+    [sourceTable, sourceRecordId, targetTable],
+  );
+  const row = result.rows[0];
+  return row ? { targetId: row.target_id, contentHash: row.content_hash } : null;
 }
 
 async function rejectRecord(client: PoolClient, input: {
@@ -933,6 +969,79 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
         sourceRecordId: record.id,
         targetTable: 'app.appointments',
         targetId: result.rows[0]?.appointment_id || '',
+        contentHash: record.contentHash,
+      });
+    }
+
+    const events = loads.find((load) => load.tableName === 'Events')?.valid || [];
+    for (const record of events) {
+      const clientRecordId = linkedRecord(record.fields, 'Client') || linkedRecord(record.fields, 'Clients');
+      const leadRecordId = linkedRecord(record.fields, 'Lead') || linkedRecord(record.fields, 'Leads');
+      const clientId = clientRecordId ? await mappedId(client, 'Clients', clientRecordId, 'app.clients') : null;
+      const leadId = leadRecordId ? await mappedId(client, 'Leads', leadRecordId, 'app.leads') : null;
+      if (clientRecordId && !clientId) {
+        await rejectRecord(client, { importRunId, tableName: 'Events', record, reason: 'missing_mapped_client' });
+        continue;
+      }
+      if (leadRecordId && !leadId) {
+        await rejectRecord(client, { importRunId, tableName: 'Events', record, reason: 'missing_mapped_lead' });
+        continue;
+      }
+
+      const leadClient = leadId
+        ? await client.query<{ client_id: string }>('SELECT client_id FROM app.leads WHERE lead_id=$1', [leadId])
+        : null;
+      const leadClientId = leadClient?.rows[0]?.client_id || null;
+      if (clientId && leadClientId && clientId !== leadClientId) {
+        await rejectRecord(client, { importRunId, tableName: 'Events', record, reason: 'client_lead_mismatch' });
+        continue;
+      }
+
+      const existing = await mappedEntity(client, 'Events', record.id, 'audit.events');
+      if (existing?.contentHash === record.contentHash) continue;
+
+      let parsedPayload: Record<string, unknown>;
+      try {
+        parsedPayload = parseJsonField(record.fields, 'Payload JSON');
+      } catch {
+        await rejectRecord(client, { importRunId, tableName: 'Events', record, reason: 'invalid_payload_json' });
+        continue;
+      }
+
+      const aggregateType = leadId ? 'lead' : clientId ? 'client' : '';
+      const aggregateId = leadId || clientId || null;
+      const result = await client.query<{ audit_event_id: string }>(
+        `INSERT INTO audit.events
+          (client_id, actor_type, actor_id, event_type, aggregate_type, aggregate_id,
+           payload_json, created_at, correlation_id, causation_id)
+         VALUES ($1, 'migration', 'airtable_import', $2, $3, $4::uuid,
+          $5::jsonb, $6::timestamptz, $7, $8)
+         RETURNING audit_event_id`,
+        [
+          clientId || leadClientId,
+          stringField(record.fields, 'Event Type'),
+          aggregateType,
+          aggregateId,
+          JSON.stringify({
+            sourceSystem: 'airtable',
+            sourceTable: 'Events',
+            sourceRecordId: record.id,
+            sourceEventId: stringField(record.fields, 'Event ID') || record.id,
+            description: stringField(record.fields, 'Description'),
+            workflowName: stringField(record.fields, 'Workflow Name'),
+            eventChannel: stringField(record.fields, 'Event Channel') || 'n8n',
+            payload: redactSecretLikeValues(parsedPayload),
+          }),
+          dateOrNull(record.fields, 'Created At') || new Date().toISOString(),
+          stringField(record.fields, 'Event ID') || record.id,
+          leadId || clientId || '',
+        ],
+      );
+      await upsertEntityMap(client, {
+        sourceTable: 'Events',
+        sourceRecordId: record.id,
+        targetTable: 'audit.events',
+        targetId: result.rows[0]?.audit_event_id || '',
         contentHash: record.contentHash,
       });
     }
