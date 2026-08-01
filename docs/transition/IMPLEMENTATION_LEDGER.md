@@ -329,3 +329,5 @@
 - Commit `89bc46e`: Classified Google Calendar network failures.
 - Implementation slice: Hardened Google Calendar retry-hint parsing so numeric and HTTP-date `Retry-After` headers are supported and capped at one hour before being passed to durable outbox retry scheduling.
 - Verification: `npx vitest run tests/calendar-outbox-dispatcher.test.ts` passed with 10 tests covering dispatcher mapping, network-error classification, and bounded numeric/date Google retry hints; `npm run lint` passed.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 15 files and 128 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3cba1c3`: Bounded Google Calendar retry hints.
