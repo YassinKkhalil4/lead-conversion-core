@@ -325,3 +325,5 @@
 - Implementation slice: Hardened the Google Calendar adapter so free/busy network exceptions return retryable outcomes, while create-event network exceptions return `delivery_unknown` outcomes for operator reconciliation instead of falling through as generic runtime exceptions.
 - Decision: Network errors before an external calendar mutation can be retried, but network errors during create may occur after provider acceptance and must preserve ambiguity to avoid duplicate calendar events.
 - Verification: `npx vitest run tests/calendar-outbox-dispatcher.test.ts` passed with 8 tests covering dispatcher mapping plus Google adapter network-error classification; `npm run lint` passed.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 15 files and 126 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `89bc46e`: Classified Google Calendar network failures.
