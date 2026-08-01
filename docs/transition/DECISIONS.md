@@ -263,3 +263,11 @@ Decision: The legacy `edge_outbox` compatibility queue now marks rows `dead_lett
 Reason: The durable runtime outbox is the target architecture, but the legacy compatibility worker may still be deliberately enabled during rollback. Bounded retry with an operator-visible terminal state prevents runaway compatibility retries while preserving the row for decommission readiness and manual inspection.
 
 Date: 2026-08-01
+
+## DEC-025: Cutover Reports Surface Legacy Active-Turn Compatibility
+
+Decision: Cutover readiness fails when `ACTIVE_TURN_COMPAT_ENABLED=true`, and decommission readiness includes `active_turn_compat_disabled` before n8n/Typebot fallback can be considered removable.
+
+Reason: The legacy active-turn route is intentionally preserved as a rollback switch, but it must not be invisible in cutover evidence. Operator reports should prevent accidental promotion or decommission while the old synchronous send path is enabled.
+
+Date: 2026-08-01

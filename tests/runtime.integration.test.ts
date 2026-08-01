@@ -799,6 +799,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       directMetaWebhookEnabled: true,
       directLeadIngressEnabled: true,
       n8nCompatRoutesEnabled: true,
+      activeTurnCompatEnabled: false,
     });
     expect(report.queues).toMatchObject({
       inboxPendingCount: 0,
@@ -810,6 +811,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       direct_meta_webhook_flag: 'pass',
       direct_lead_ingress_flag: 'pass',
       n8n_compatibility_flag: 'pass',
+      active_turn_compatibility_disabled: 'pass',
       inbox_backlog: 'pass',
       outbox_backlog: 'pass',
       delivery_unknown: 'pass',
@@ -912,6 +914,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       no_recent_n8n_compat_usage: 'fail',
       no_new_legacy_conversations: 'fail',
       no_active_legacy_conversations: 'fail',
+      active_turn_compat_disabled: 'pass',
       owner_approved_n8n_decommission: 'fail',
       owner_approved_typebot_decommission: 'fail',
       owner_approved_airtable_decommission: 'fail',

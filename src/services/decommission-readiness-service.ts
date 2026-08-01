@@ -1,3 +1,4 @@
+import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
 
 export interface DecommissionCheck {
@@ -66,6 +67,7 @@ export class DecommissionReadinessService {
   async report(options: DecommissionReadinessOptions = {}): Promise<DecommissionReadinessReport> {
     const directStabilityDays = options.directStabilityDays ?? 14;
     const minCompletedEdgeQualifications = options.minCompletedEdgeQualifications ?? 100;
+    const env = getEnv();
 
     const [
       legacyEdgeOutboxOpenCount,
@@ -177,6 +179,12 @@ export class DecommissionReadinessService {
         checkKey: 'no_active_legacy_conversations',
         status: passFail(activeLegacyConversationCount === 0),
         details: { count: activeLegacyConversationCount },
+      },
+      {
+        area: 'n8n',
+        checkKey: 'active_turn_compat_disabled',
+        status: passFail(!env.ACTIVE_TURN_COMPAT_ENABLED),
+        details: { enabled: env.ACTIVE_TURN_COMPAT_ENABLED },
       },
       {
         area: 'n8n',

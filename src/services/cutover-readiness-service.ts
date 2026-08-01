@@ -14,6 +14,7 @@ export interface CutoverReadinessReport {
     directMetaWebhookEnabled: boolean;
     directLeadIngressEnabled: boolean;
     n8nCompatRoutesEnabled: boolean;
+    activeTurnCompatEnabled: boolean;
     runtimeWorkerEnabled: boolean;
   };
   queues: {
@@ -110,6 +111,11 @@ export class CutoverReadinessService {
         details: { enabled: env.N8N_COMPAT_ROUTES_ENABLED },
       },
       {
+        checkKey: 'active_turn_compatibility_disabled',
+        status: env.ACTIVE_TURN_COMPAT_ENABLED ? 'fail' : 'pass',
+        details: { enabled: env.ACTIVE_TURN_COMPAT_ENABLED },
+      },
+      {
         checkKey: 'inbox_backlog',
         status: backlogStatus(inboxRow.count, inboxRow.oldest_age_seconds, maxPendingInbox, maxQueueAgeSeconds),
         details: { count: inboxRow.count, oldestAgeSeconds: inboxRow.oldest_age_seconds, maxPendingInbox, maxQueueAgeSeconds },
@@ -145,6 +151,7 @@ export class CutoverReadinessService {
         directMetaWebhookEnabled: env.DIRECT_META_WEBHOOK_ENABLED,
         directLeadIngressEnabled: env.DIRECT_LEAD_INGRESS_ENABLED,
         n8nCompatRoutesEnabled: env.N8N_COMPAT_ROUTES_ENABLED,
+        activeTurnCompatEnabled: env.ACTIVE_TURN_COMPAT_ENABLED,
         runtimeWorkerEnabled: env.RUNTIME_WORKER_ENABLED,
       },
       queues: {

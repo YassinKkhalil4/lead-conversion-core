@@ -15,6 +15,7 @@ Required flags:
 
 - `DIRECT_META_WEBHOOK_ENABLED=true` enables direct Meta challenge and signed webhook receipt.
 - `DIRECT_LEAD_INGRESS_ENABLED=true` enables direct website/Facebook lead ingress.
+- `ACTIVE_TURN_COMPAT_ENABLED=true` enables the legacy synchronous `/v1/turn` compatibility route; leave it false for normal durable direct-ingress cutover.
 - `N8N_COMPAT_ROUTES_ENABLED=true` keeps n8n fallback routes available.
 
 Default state keeps all direct provider ingress disabled even when provider secrets are present.
