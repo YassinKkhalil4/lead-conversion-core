@@ -33,6 +33,8 @@ Direct-ingress stability requires the current environment to have direct ingress
 
 Stability evidence must match the currently enabled direct-ingress route family. Enabled direct Meta ingress needs aged processed Meta inbound-message evidence. Enabled direct lead ingress needs aged processed website or Facebook lead evidence. Ignored probes and provider delivery-status callbacks do not satisfy this requirement.
 
+Processed n8n delivery-status callbacks older than the stability window remain delivery/reporting evidence. They do not extend the n8n decommission window unless their durable inbox row is unresolved, dead-lettered, or recent enough to fail `no_recent_n8n_compat_usage`.
+
 `ACTIVE_TURN_COMPAT_ENABLED` must be false before decommission. The readiness report exposes this as `active_turn_compat_disabled`; do not treat n8n/Typebot fallback as removable while the legacy synchronous active-turn path is still enabled.
 
 Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval.

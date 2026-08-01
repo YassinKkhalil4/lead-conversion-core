@@ -544,3 +544,9 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 12 PostgreSQL tests and 69 skipped by filter, including a cancelled Airtable projection command that fails `airtable_projection_outbox_stable` while owner flags and reconciliation evidence pass.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `6378f7d`: Block Airtable decommission on cancelled projections.
+
+## 2026-08-01 N8n Delivery Status Decommission Classification
+
+- Audit slice: Reviewed n8n-compatible delivery-status receipt, processing, and decommission readiness classification.
+- Decision: Added DEC-056. Unresolved or recent n8n delivery-status inbox rows block n8n removal through existing checks, while older processed failed or unknown n8n delivery statuses remain delivery/reporting evidence and do not create an unbounded decommission blocker.
+- Verification: No code change was required. This audit relies on the already-verified `no_unresolved_n8n_inbox`, `no_recent_n8n_compat_usage`, and direct-ingress stability behavior covered by the 2026-08-01 decommission readiness test runs.

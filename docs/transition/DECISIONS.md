@@ -511,3 +511,11 @@ Decision: `npm run decommission:readiness` treats cancelled `airtable.project_le
 Reason: A cancelled projection command is a terminal durable outbox state, but it is not evidence that the read-only Airtable visibility projection was delivered. Airtable retirement should require delivered projection work or separate reconciliation evidence that removes the cancelled command from the projection queue.
 
 Date: 2026-08-01
+
+## DEC-056: Historical N8n Delivery Status Outcomes Do Not Extend The Decommission Window
+
+Decision: `npm run decommission:readiness` blocks on unresolved n8n delivery-status inbox rows and on any n8n compatibility callback inside the configured stability window, but it does not add an unbounded blocker for older processed n8n delivery-status outcomes such as `failed` or unknown provider statuses.
+
+Reason: A processed n8n delivery-status callback is retained delivery/reporting evidence, not durable fallback authority by itself. Failed or unknown delivery outcomes remain visible through message state, delivery events, reports, and audit records; turning every historical negative delivery status into a decommission blocker would make fallback retirement depend on an unrelated customer-remediation policy rather than on whether n8n still owns ingress, scheduling, or side-effect delivery.
+
+Date: 2026-08-01

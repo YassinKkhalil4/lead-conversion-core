@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Continue MP-12 local hardening by auditing n8n compatibility delivery-status outcomes for fallback-removal readiness. Verify whether processed failed or delivery-unknown n8n status callbacks need an operator-resolution check distinct from recent n8n usage and unresolved inbox states; document the decision in `docs/transition/DECISIONS.md` and add a PostgreSQL regression if a readiness gap exists. If no additional local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
+Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, and historical n8n delivery-status outcomes.
 
 Files expected to change:
 
