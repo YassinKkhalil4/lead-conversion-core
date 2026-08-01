@@ -763,3 +763,14 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|decommission"` passed with 19 PostgreSQL decommission-readiness tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 179 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `19da1b0`: Detect n8n semantic scheduled authority.
+
+## 2026-08-01 Direct Lead Source Stability Gate
+
+- Implementation slice: Hardened `npm run decommission:readiness` so direct lead stability requires aged processed `website` `lead.created` and `facebook` `leadgen.created` evidence whenever `DIRECT_LEAD_INGRESS_ENABLED=true`.
+- Implementation slice: Added `directWebsiteLeadStableEventCount` and `directFacebookLeadStableEventCount` metrics plus regression coverage proving website-only lead evidence fails fallback-removal readiness while positive fixtures seed both sources.
+- Decision: Added DEC-074. The direct lead ingress flag exposes both website and Facebook routes, so one stable source cannot prove both routes are safe to use after fallback removal.
+- Documentation slice: Updated the decommission runbook and production cutover owner action with the two-source lead stability evidence rule.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|website and Facebook|decommission"` passed with 20 PostgreSQL readiness tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|website and Facebook|decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 180 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `f12d590`: Require website and Facebook lead stability.
