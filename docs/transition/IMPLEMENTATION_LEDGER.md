@@ -731,3 +731,13 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 16 PostgreSQL decommission-readiness tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 176 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `07dbe46`: Block decommission on recent legacy activity.
+
+## 2026-08-01 Active Legacy Config Versioning Decommission Gate
+
+- Implementation slice: Hardened `npm run decommission:readiness` with `unmigratedActiveLegacyConfigSnapshotCount`, counting active `edge_config_snapshots` rows that do not have a matching published immutable `configuration.versions` row.
+- Implementation slice: Added the Typebot-area `active_legacy_config_snapshots_migrated` check so active legacy-only conversation content cannot satisfy Typebot removal readiness merely because some unrelated active versioned configuration exists.
+- Decision: Added DEC-071. Active compatibility snapshots may remain only when they mirror published immutable configuration before Typebot removal.
+- Documentation slice: Updated the decommission runbook, production cutover owner action, status, and work queue with the active legacy-only config blocker.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 17 PostgreSQL decommission-readiness tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 177 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `7a686b4`: Require versioned active config for Typebot removal.

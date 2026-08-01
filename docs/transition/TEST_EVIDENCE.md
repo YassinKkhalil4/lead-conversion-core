@@ -1788,6 +1788,48 @@ Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
 
+## 2026-08-01 Active Legacy Config Versioning Decommission Gate
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the active legacy config snapshot decommission metric, check, and regression fixture.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL decommission run executed 17 tests and skipped 71 by filter, including a fixture where `versioned_config_active` passes while an active legacy-only config snapshot fails Typebot decommission.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 17 files and 177 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
 ## 2026-08-01 Recent Legacy Activity Decommission Gate
 
 Command: `npm ci`
