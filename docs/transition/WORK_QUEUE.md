@@ -30,7 +30,7 @@ Remaining: Docker image run and Docker-backed dump metadata/restore-smoke execut
 
 Status: locally_verified
 
-Deliverables: app/runtime/configuration/audit/migration schemas, per-table importer, raw records, reject capture, entity maps, relationship validation, collision reporting, dry-run/apply summaries, reconciliation report, projection readiness.
+Deliverables: app/runtime/configuration/audit/migration schemas, per-table importer, raw records, reject capture, entity maps, relationship validation, collision reporting, dry-run/apply summaries, reconciliation report with accepted-row business count/distribution checks, projection readiness.
 
 Dependencies: complete Airtable export for production reconciliation.
 

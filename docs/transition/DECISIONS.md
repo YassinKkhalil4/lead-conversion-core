@@ -575,3 +575,11 @@ Decision: Airtable reconciliation treats rejected source rows as failed reconcil
 Reason: A rejected row is not proof of successful migration and must be resolved before Airtable can be retired. At the same time, correctly rejected rows should not distort per-entity mapping checks by appearing as missing target rows.
 
 Date: 2026-08-01
+
+## DEC-064: Airtable Business Reconciliation Uses Accepted Source Mappings
+
+Decision: Airtable business reconciliation checks for lead status distribution, active lead counts, stop-follow-up counts, pending follow-ups, open/booked appointments, and imported message provider-ID uniqueness compare accepted source records joined through `migration.entity_map` to the corresponding PostgreSQL target rows.
+
+Reason: These checks must prove that imported Airtable rows landed in the correct business state without treating unrelated target rows as evidence. Rows that could not be mapped remain visible through reject and mapping failures instead of being silently inferred.
+
+Date: 2026-08-01

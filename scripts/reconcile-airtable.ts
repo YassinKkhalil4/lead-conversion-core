@@ -26,6 +26,23 @@ async function scalar(client: PoolClient, sql: string, values: unknown[] = []): 
   return Number(result.rows[0]?.count || 0);
 }
 
+async function groupedCounts(client: PoolClient, sql: string, values: unknown[] = []): Promise<Record<string, number>> {
+  const result = await client.query<{ key: string; count: string }>(sql, values);
+  return Object.fromEntries(result.rows.map((row) => [row.key, Number(row.count)]));
+}
+
+function countTotal(counts: Record<string, number>): number {
+  return Object.values(counts).reduce((sum, count) => sum + count, 0);
+}
+
+function countsMatch(expected: Record<string, number>, actual: Record<string, number>): boolean {
+  const keys = new Set([...Object.keys(expected), ...Object.keys(actual)]);
+  for (const key of keys) {
+    if ((expected[key] || 0) !== (actual[key] || 0)) return false;
+  }
+  return true;
+}
+
 async function mappedCountForRun(client: PoolClient, importRunId: string, sourceTable: string, targetTable: string): Promise<number> {
   return scalar(
     client,
@@ -64,6 +81,16 @@ async function acceptedRawCountForRun(client: PoolClient, importRunId: string, r
     rawCount,
     rejectedCount,
     acceptedCount: Math.max(rawCount - rejectedCount, 0),
+  };
+}
+
+function distributionCheck(checkKey: string, expected: Record<string, number>, actual: Record<string, number>): ReconciliationCheck {
+  return {
+    checkKey,
+    status: countsMatch(expected, actual) ? 'pass' : 'fail',
+    expectedCount: countTotal(expected),
+    actualCount: countTotal(actual),
+    details: { expected, actual },
   };
 }
 
@@ -188,6 +215,208 @@ export async function reconcileAirtableImport(input: {
       status: leadsWithoutContacts === 0 ? 'pass' : 'fail',
       expectedCount: 0,
       actualCount: leadsWithoutContacts,
+      details: {},
+    });
+
+    const sourceLeadStatusDistribution = await groupedCounts(
+      client,
+      `SELECT COALESCE(NULLIF(raw.fields_json->>'Status', ''), 'open') AS key,
+              count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.leads'
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+       GROUP BY key
+       ORDER BY key`,
+      [importRunId],
+    );
+    const targetLeadStatusDistribution = await groupedCounts(
+      client,
+      `SELECT l.status AS key,
+              count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.leads'
+       JOIN app.leads l ON l.lead_id=mapped.target_id
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+       GROUP BY l.status
+       ORDER BY l.status`,
+      [importRunId],
+    );
+    checks.push(distributionCheck('lead_status_distribution', sourceLeadStatusDistribution, targetLeadStatusDistribution));
+
+    const activeLeadSourceCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.leads'
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+         AND lower(COALESCE(NULLIF(raw.fields_json->>'Status', ''), 'open')) NOT IN ('closed','closed_lost','closed_won','lost')`,
+      [importRunId],
+    );
+    const activeLeadTargetCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.leads'
+       JOIN app.leads l ON l.lead_id=mapped.target_id
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+         AND lower(l.status) NOT IN ('closed','closed_lost','closed_won','lost')`,
+      [importRunId],
+    );
+    checks.push({
+      checkKey: 'active_leads_count',
+      status: activeLeadSourceCount === activeLeadTargetCount ? 'pass' : 'fail',
+      expectedCount: activeLeadSourceCount,
+      actualCount: activeLeadTargetCount,
+      details: { closedStatuses: ['closed', 'closed_lost', 'closed_won', 'lost'] },
+    });
+
+    const sourceStopFollowUpCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.leads'
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+         AND lower(COALESCE(raw.fields_json->>'Stop Follow-Up', '')) = 'true'`,
+      [importRunId],
+    );
+    const targetStopFollowUpCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.leads'
+       JOIN app.leads l ON l.lead_id=mapped.target_id
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+         AND l.stop_follow_up`,
+      [importRunId],
+    );
+    checks.push({
+      checkKey: 'stop_follow_up_count',
+      status: sourceStopFollowUpCount === targetStopFollowUpCount ? 'pass' : 'fail',
+      expectedCount: sourceStopFollowUpCount,
+      actualCount: targetStopFollowUpCount,
+      details: {},
+    });
+
+    const sourcePendingFollowupCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.followups'
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='FollowUps'
+         AND lower(COALESCE(NULLIF(raw.fields_json->>'Status', ''), 'scheduled')) IN ('pending','scheduled')`,
+      [importRunId],
+    );
+    const targetPendingFollowupCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.followups'
+       JOIN app.followups f ON f.followup_id=mapped.target_id
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='FollowUps'
+         AND lower(f.status) IN ('pending','scheduled')`,
+      [importRunId],
+    );
+    checks.push({
+      checkKey: 'pending_followups_count',
+      status: sourcePendingFollowupCount === targetPendingFollowupCount ? 'pass' : 'fail',
+      expectedCount: sourcePendingFollowupCount,
+      actualCount: targetPendingFollowupCount,
+      details: { countedStatuses: ['pending', 'scheduled'] },
+    });
+
+    const sourceOpenBookedAppointmentCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.appointments'
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Appointments'
+         AND lower(COALESCE(NULLIF(raw.fields_json->>'Status', ''), NULLIF(raw.fields_json->>'Appointment Status', ''), 'pending')) IN ('open','pending','booked','confirmed')`,
+      [importRunId],
+    );
+    const targetOpenBookedAppointmentCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.appointments'
+       JOIN app.appointments a ON a.appointment_id=mapped.target_id
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Appointments'
+         AND lower(a.status) IN ('open','pending','booked','confirmed')`,
+      [importRunId],
+    );
+    checks.push({
+      checkKey: 'open_booked_appointments_count',
+      status: sourceOpenBookedAppointmentCount === targetOpenBookedAppointmentCount ? 'pass' : 'fail',
+      expectedCount: sourceOpenBookedAppointmentCount,
+      actualCount: targetOpenBookedAppointmentCount,
+      details: { countedStatuses: ['open', 'pending', 'booked', 'confirmed'] },
+    });
+
+    const duplicateProviderMessageIds = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM (
+         SELECT client_id, provider_message_id
+         FROM app.messages
+         WHERE provider_message_id <> ''
+         GROUP BY client_id, provider_message_id
+         HAVING count(*) > 1
+       ) duplicates`,
+    );
+    checks.push({
+      checkKey: 'message_provider_id_uniqueness',
+      status: duplicateProviderMessageIds === 0 ? 'pass' : 'fail',
+      expectedCount: 0,
+      actualCount: duplicateProviderMessageIds,
       details: {},
     });
 

@@ -70,6 +70,13 @@ describePg('airtable importer with real PostgreSQL', () => {
     expect(psqlScalar("SELECT payload_json->'payload'->>'access_token' FROM audit.events WHERE event_type='lead_contacted'")).toBe('[REDACTED]');
     runScript('reconcile:airtable', ['--record-results']);
     expect(psqlScalar("SELECT status FROM migration.reconciliation_results WHERE check_key='events_mapped' ORDER BY created_at DESC LIMIT 1")).toBe('pass');
+    expect(psqlScalar("SELECT status FROM migration.reconciliation_results WHERE check_key='lead_status_distribution' ORDER BY created_at DESC LIMIT 1")).toBe('pass');
+    expect(psqlScalar("SELECT details_json->'expected'->>'New' FROM migration.reconciliation_results WHERE check_key='lead_status_distribution' ORDER BY created_at DESC LIMIT 1")).toBe('1');
+    expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='active_leads_count' ORDER BY created_at DESC LIMIT 1")).toBe('1:1');
+    expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='stop_follow_up_count' ORDER BY created_at DESC LIMIT 1")).toBe('0:0');
+    expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='pending_followups_count' ORDER BY created_at DESC LIMIT 1")).toBe('1:1');
+    expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='open_booked_appointments_count' ORDER BY created_at DESC LIMIT 1")).toBe('1:1');
+    expect(psqlScalar("SELECT actual_count FROM migration.reconciliation_results WHERE check_key='message_provider_id_uniqueness' ORDER BY created_at DESC LIMIT 1")).toBe('0');
   }, 30_000);
 
   it('records missing relationship rejects without creating target entities', () => {

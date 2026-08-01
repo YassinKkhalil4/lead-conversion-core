@@ -24,6 +24,7 @@ Current local tooling status:
 - Import dry-run reports manifest presence/errors, per-table load errors, and rejection reasons.
 - Apply mode stores raw records and rejected records under a migration import run.
 - Initial domain entity upserts are idempotent for clients, projects, salespeople, contacts, and leads.
-- `npm run reconcile:airtable -- --record-results` records checks for rejects, accepted-row mapped clients/projects/salespeople/leads/qualifications/scores/messages/followups/appointments/events, contact phone uniqueness, and lead-contact links.
+- `npm run reconcile:airtable -- --record-results` records checks for rejects, accepted-row mapped clients/projects/salespeople/leads/qualifications/scores/messages/followups/appointments/events, lead status distribution, active lead counts, stop-follow-up counts, pending follow-up counts, open/booked appointment counts, message provider-ID uniqueness, contact phone uniqueness, and lead-contact links.
 - Rejected Airtable rows fail reconciliation until resolved; mapped-count checks separately report raw, rejected, and accepted counts so correctly rejected rows do not masquerade as missing target rows.
+- Distribution and business-count checks are limited to accepted source rows joined through `migration.entity_map`; unresolved or rejected rows remain visible through reject checks instead of being silently inferred.
 - Full reconciliation remains blocked on complete Airtable export.
