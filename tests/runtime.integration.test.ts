@@ -35,6 +35,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     DIRECT_META_WEBHOOK_ENABLED: 'true',
     DIRECT_LEAD_INGRESS_ENABLED: 'true',
     RUNTIME_WORKER_ENABLED: 'true',
+    META_STATUS_PROCESSOR_ENABLED: 'true',
   };
 
   let db: typeof import('../src/db/pool.js');
@@ -75,6 +76,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     process.env.DIRECT_META_WEBHOOK_ENABLED = env.DIRECT_META_WEBHOOK_ENABLED;
     process.env.DIRECT_LEAD_INGRESS_ENABLED = env.DIRECT_LEAD_INGRESS_ENABLED;
     process.env.RUNTIME_WORKER_ENABLED = env.RUNTIME_WORKER_ENABLED;
+    process.env.META_STATUS_PROCESSOR_ENABLED = env.META_STATUS_PROCESSOR_ENABLED;
     db = await import('../src/db/pool.js');
     runtime = await import('../src/infrastructure/runtime.js');
     runtimeWorker = await import('../src/worker/runtime-worker.js');

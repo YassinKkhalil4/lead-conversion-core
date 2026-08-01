@@ -80,4 +80,4 @@ GET /ready
 GET /metrics
 ```
 
-`GET /ready` verifies PostgreSQL connectivity, all migration files on disk, and fresh heartbeats for every enabled worker kind. `OUTBOX_WORKER_ENABLED=true` requires an `outbox` heartbeat; `RUNTIME_WORKER_ENABLED=true` requires a `runtime` heartbeat.
+`GET /ready` verifies PostgreSQL connectivity, all migration files on disk, and fresh heartbeats for every enabled worker kind. `OUTBOX_WORKER_ENABLED=true` requires an `outbox` heartbeat; `RUNTIME_WORKER_ENABLED=true` requires a `runtime` heartbeat. Direct ingress route flags also require runtime worker configuration at startup, so a route cannot be enabled without the worker path that processes durable inbox receipts.

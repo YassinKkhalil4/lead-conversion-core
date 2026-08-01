@@ -11,7 +11,7 @@ Status: pending owner infrastructure setup.
 - Test Calendar
 - Network access for Meta callbacks
 - Caddy route for staging edge ingress
-- Explicit staging flags for direct ingress: `DIRECT_META_WEBHOOK_ENABLED=true` only for Meta callback tests and `DIRECT_LEAD_INGRESS_ENABLED=true` only for direct website/Facebook callback tests
+- Explicit staging flags for direct ingress: `DIRECT_META_WEBHOOK_ENABLED=true`, `RUNTIME_WORKER_ENABLED=true`, and `META_STATUS_PROCESSOR_ENABLED=true` only for Meta callback tests; `DIRECT_LEAD_INGRESS_ENABLED=true` and `RUNTIME_WORKER_ENABLED=true` only for direct website/Facebook callback tests
 - Encrypted backup target
 - Named operators authorized to run live commands
 

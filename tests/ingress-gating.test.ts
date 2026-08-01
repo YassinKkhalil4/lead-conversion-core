@@ -13,6 +13,8 @@ const baseEnv = {
   DATABASE_URL: 'postgresql://127.0.0.1:1/disabled_ingress_test',
   EDGE_SHARED_SECRET: 'test_shared_secret_123456',
   EDGE_INTERNAL_SECRET: 'test_internal_secret_123456',
+  RUNTIME_WORKER_ENABLED: 'false',
+  META_STATUS_PROCESSOR_ENABLED: 'false',
   META_APP_SECRET: 'test_meta_app_secret_123456',
   META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token_123456',
 };
@@ -83,6 +85,8 @@ describe('direct ingress route gates', () => {
       DIRECT_META_WEBHOOK_ENABLED: 'true',
       DIRECT_LEAD_INGRESS_ENABLED: 'false',
       N8N_COMPAT_ROUTES_ENABLED: 'false',
+      RUNTIME_WORKER_ENABLED: 'true',
+      META_STATUS_PROCESSOR_ENABLED: 'true',
     });
     try {
       const response = await app.inject({

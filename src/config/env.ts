@@ -66,6 +66,22 @@ const schema = baseSchema.superRefine((env, ctx) => {
   requireConfigured(env.DIRECT_META_WEBHOOK_ENABLED, 'META_WEBHOOK_VERIFY_TOKEN', 'META_WEBHOOK_VERIFY_TOKEN is required when DIRECT_META_WEBHOOK_ENABLED=true');
   requireConfigured(env.DIRECT_META_WEBHOOK_ENABLED, 'META_APP_SECRET', 'META_APP_SECRET is required when DIRECT_META_WEBHOOK_ENABLED=true');
 
+  if ((env.DIRECT_META_WEBHOOK_ENABLED || env.DIRECT_LEAD_INGRESS_ENABLED) && !env.RUNTIME_WORKER_ENABLED) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['RUNTIME_WORKER_ENABLED'],
+      message: 'RUNTIME_WORKER_ENABLED must be true when direct ingress is enabled',
+    });
+  }
+
+  if (env.DIRECT_META_WEBHOOK_ENABLED && !env.META_STATUS_PROCESSOR_ENABLED) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['META_STATUS_PROCESSOR_ENABLED'],
+      message: 'META_STATUS_PROCESSOR_ENABLED must be true when DIRECT_META_WEBHOOK_ENABLED=true',
+    });
+  }
+
   requireConfigured(env.DIRECT_META_SEND_ENABLED, 'META_WA_ACCESS_TOKEN', 'META_WA_ACCESS_TOKEN is required when DIRECT_META_SEND_ENABLED=true');
   requireConfigured(env.DIRECT_META_SEND_ENABLED, 'META_WA_PHONE_NUMBER_ID', 'META_WA_PHONE_NUMBER_ID is required when DIRECT_META_SEND_ENABLED=true');
 

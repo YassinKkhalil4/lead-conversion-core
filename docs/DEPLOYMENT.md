@@ -33,7 +33,7 @@ DEFAULT_CONVERSATION_ENGINE=legacy
 SHADOW_STATE_AUTHORITY=legacy
 ```
 
-Direct provider routes, real message sends, Google Calendar dispatch, runtime processing, and legacy active-turn compatibility are explicit cutover flags. Do not enable them only because credentials are present.
+Direct provider routes, real message sends, Google Calendar dispatch, runtime processing, and legacy active-turn compatibility are explicit cutover flags. Do not enable them only because credentials are present. Direct website/Facebook lead ingress requires `RUNTIME_WORKER_ENABLED=true`; direct Meta webhook ingress requires both `RUNTIME_WORKER_ENABLED=true` and `META_STATUS_PROCESSOR_ENABLED=true`.
 
 `/ready` must be reviewed after enabling a worker flag. It reports `workerHeartbeats`; an enabled worker kind without a fresh heartbeat makes readiness fail.
 

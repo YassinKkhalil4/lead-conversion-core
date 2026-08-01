@@ -56,12 +56,39 @@ describe('environment contract', () => {
 
   it('requires Meta webhook verification secrets before direct webhooks can be enabled', () => {
     expect(() => parseEnv({ ...baseEnv, DIRECT_META_WEBHOOK_ENABLED: 'true' })).toThrow(/META_WEBHOOK_VERIFY_TOKEN/);
-    expect(parseEnv({
+    expect(() => parseEnv({
       ...baseEnv,
       DIRECT_META_WEBHOOK_ENABLED: 'true',
       META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token',
       META_APP_SECRET: 'test_meta_app_secret',
+    })).toThrow(/RUNTIME_WORKER_ENABLED/);
+    expect(() => parseEnv({
+      ...baseEnv,
+      DIRECT_META_WEBHOOK_ENABLED: 'true',
+      RUNTIME_WORKER_ENABLED: 'true',
+      META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token',
+      META_APP_SECRET: 'test_meta_app_secret',
+    })).toThrow(/META_STATUS_PROCESSOR_ENABLED/);
+    expect(parseEnv({
+      ...baseEnv,
+      DIRECT_META_WEBHOOK_ENABLED: 'true',
+      RUNTIME_WORKER_ENABLED: 'true',
+      META_STATUS_PROCESSOR_ENABLED: 'true',
+      META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token',
+      META_APP_SECRET: 'test_meta_app_secret',
     }).DIRECT_META_WEBHOOK_ENABLED).toBe(true);
+  });
+
+  it('requires the runtime worker before direct lead ingress can be enabled', () => {
+    expect(() => parseEnv({ ...baseEnv, DIRECT_LEAD_INGRESS_ENABLED: 'true' })).toThrow(/RUNTIME_WORKER_ENABLED/);
+    expect(parseEnv({
+      ...baseEnv,
+      DIRECT_LEAD_INGRESS_ENABLED: 'true',
+      RUNTIME_WORKER_ENABLED: 'true',
+    })).toMatchObject({
+      DIRECT_LEAD_INGRESS_ENABLED: true,
+      RUNTIME_WORKER_ENABLED: true,
+    });
   });
 
   it('requires Meta send credentials before direct sends or active-turn compatibility can be enabled', () => {

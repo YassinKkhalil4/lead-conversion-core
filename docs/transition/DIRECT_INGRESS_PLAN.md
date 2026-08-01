@@ -13,8 +13,8 @@ Direct provider ingress is present in the modular monolith but disabled by defau
 
 Required flags:
 
-- `DIRECT_META_WEBHOOK_ENABLED=true` enables direct Meta challenge and signed webhook receipt.
-- `DIRECT_LEAD_INGRESS_ENABLED=true` enables direct website/Facebook lead ingress.
+- `DIRECT_META_WEBHOOK_ENABLED=true` enables direct Meta challenge and signed webhook receipt. It requires `RUNTIME_WORKER_ENABLED=true` and `META_STATUS_PROCESSOR_ENABLED=true`.
+- `DIRECT_LEAD_INGRESS_ENABLED=true` enables direct website/Facebook lead ingress. It requires `RUNTIME_WORKER_ENABLED=true`.
 - `ACTIVE_TURN_COMPAT_ENABLED=true` enables the legacy synchronous `/v1/turn` compatibility route; leave it false for normal durable direct-ingress cutover.
 - `N8N_COMPAT_ROUTES_ENABLED=true` keeps n8n fallback routes available.
 
@@ -25,8 +25,8 @@ Default state keeps all direct provider ingress disabled even when provider secr
 1. Keep production Caddy routes pointed at the current legacy target.
 2. Route a staging-only hostname or path to the Edge app.
 3. Enable only the direct route under test:
-   - Meta test: `DIRECT_META_WEBHOOK_ENABLED=true`
-   - Lead-source test: `DIRECT_LEAD_INGRESS_ENABLED=true`
+   - Meta test: `DIRECT_META_WEBHOOK_ENABLED=true`, `RUNTIME_WORKER_ENABLED=true`, `META_STATUS_PROCESSOR_ENABLED=true`
+   - Lead-source test: `DIRECT_LEAD_INGRESS_ENABLED=true`, `RUNTIME_WORKER_ENABLED=true`
 4. Keep `N8N_COMPAT_ROUTES_ENABLED=true` during staging.
 5. Run `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-pending-scheduled-jobs=0 --max-queue-age-seconds=300`.
 6. Verify `/health`, `/ready`, webhook challenge, signed webhook receipt, invalid signature rejection, and fallback route availability.
@@ -37,7 +37,7 @@ Default state keeps all direct provider ingress disabled even when provider secr
 Production route changes require explicit owner approval.
 
 1. Confirm all owner-action preflight items are complete.
-2. Enable the relevant direct-ingress flag in production configuration.
+2. Enable the relevant direct-ingress flag and required runtime worker flag in production configuration.
 3. Route only the approved callback path or canary source to Edge.
 4. Keep n8n and Typebot fallback infrastructure unchanged.
 5. Monitor `npm run cutover:readiness` output, provider callbacks, inbox/outbox age, delivery-unknown counts, dead letters, and runtime worker heartbeat.

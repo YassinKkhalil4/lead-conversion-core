@@ -383,3 +383,11 @@ Decision: Direct website and Facebook lead webhook routes authenticate, gate, st
 Reason: The target architecture separates durable receipt from business processing. Running lead intake in the webhook request could create customer state, outbox commands, and projection work before the external provider acknowledgement returned, and made deployment probes depend on synchronous validation instead of durable inbox evidence.
 
 Date: 2026-08-01
+
+## DEC-040: Direct Ingress Requires Runtime Worker Configuration
+
+Decision: Enabling direct website/Facebook lead ingress requires `RUNTIME_WORKER_ENABLED=true`. Enabling direct Meta webhook ingress requires `RUNTIME_WORKER_ENABLED=true` and `META_STATUS_PROCESSOR_ENABLED=true`. Startup validation rejects direct route flags without the worker path that can process the corresponding durable inbox receipts.
+
+Reason: A direct webhook route that can acknowledge durable receipt while no runtime worker is configured would create an unbounded pending inbox and false cutover confidence. Readiness still verifies fresh operational heartbeats, but startup validation should catch impossible direct-ingress configurations before traffic is routed.
+
+Date: 2026-08-01
