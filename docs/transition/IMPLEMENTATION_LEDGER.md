@@ -721,3 +721,13 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 15 PostgreSQL decommission-readiness tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 175 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3137324`: Measure decommission stability by completion time.
+
+## 2026-08-01 Recent Legacy Activity Decommission Gate
+
+- Implementation slice: Hardened `npm run decommission:readiness` with `recentLegacyConversationActivityCount`, counting legacy-owned conversations whose `created_at`, `updated_at`, or `last_inbound_at` falls inside the configured stability window.
+- Implementation slice: Added `no_recent_legacy_conversation_activity` checks to both n8n and Typebot decommission areas so old terminal legacy conversations updated recently cannot satisfy fallback-removal readiness.
+- Decision: Added DEC-070. Legacy fallback removal requires a quiet legacy activity window, not only no newly created or currently active legacy conversations.
+- Documentation slice: Updated the decommission runbook, production cutover owner action, status, and work queue with the recent legacy activity blocker.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 16 PostgreSQL decommission-readiness tests and 71 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 176 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `07dbe46`: Block decommission on recent legacy activity.
