@@ -1788,6 +1788,56 @@ Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
 
+## 2026-08-01 Airtable Reconciliation Check Contract Centralization
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the shared required reconciliation check-key module, reconciler contract assertion, and decommission readiness import/re-export.
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts`
+
+Result: passed. Focused importer/reconciler coverage ran 6 tests, proving the reconciler emits the centralized required check set under existing fixtures.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL decommission coverage ran 14 tests and skipped 70 by filter.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 17 files and 173 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
 ## 2026-08-01 Airtable Decommission Reconciliation Suite Enforcement
 
 Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`

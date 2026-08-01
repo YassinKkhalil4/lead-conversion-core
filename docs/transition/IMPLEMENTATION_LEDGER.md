@@ -678,3 +678,13 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 14 PostgreSQL decommission tests and 70 skipped by filter after the initial cleanup timeout did not repeat.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 173 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `66d3c46`: Require complete Airtable reconciliation for decommission.
+
+## 2026-08-01 Airtable Reconciliation Check Contract Centralization
+
+- Implementation slice: Moved the required Airtable reconciliation check-key list into a shared source module consumed by decommission readiness and re-exported for tests.
+- Implementation slice: Hardened `npm run reconcile:airtable` with a required-check contract assertion so future missing or extra emitted checks fail before results are recorded.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts` passed with 6 importer/reconciliation tests.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 14 PostgreSQL decommission tests and 70 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 173 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `51c1fc0`: Centralize Airtable reconciliation check contract.
