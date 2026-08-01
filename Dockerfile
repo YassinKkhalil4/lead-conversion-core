@@ -5,9 +5,9 @@ RUN npm ci --no-audit --no-fund
 
 FROM deps AS build
 COPY tsconfig.json ./
+COPY tsconfig.build.json ./
 COPY src ./src
 COPY scripts ./scripts
-COPY tests ./tests
 COPY config ./config
 COPY migrations ./migrations
 RUN npm run build

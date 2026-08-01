@@ -415,3 +415,11 @@ Decision: The production API container starts with `npm start` only. Database mi
 Reason: Configuration is versioned, audited, and separately published from executable code. Even an idempotent seed step mutates PostgreSQL from the API startup path and can blur deployment, rollback, and configuration authority during cutover.
 
 Date: 2026-08-01
+
+## DEC-044: Production Build Excludes Tests
+
+Decision: `npm run build` uses `tsconfig.build.json` to clean `dist` and compile only runtime source and scripts. `npm run lint` continues typechecking tests through the main `tsconfig.json`, and the Docker build stage no longer copies the test tree.
+
+Reason: Tests should remain strictly typechecked and runnable locally, but production build artifacts and images should contain deployable runtime code, operational scripts, config, and migrations rather than compiled test code.
+
+Date: 2026-08-01

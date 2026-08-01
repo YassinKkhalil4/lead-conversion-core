@@ -111,4 +111,16 @@ describe('shell scripts', () => {
     expect(compose).not.toContain('seed:prod && npm start');
     expect(compose).toContain('command: ["npm", "start"]');
   });
+
+  it('keeps production build output scoped to runtime code and scripts', () => {
+    const packageJson = readFileSync('package.json', 'utf8');
+    const dockerfile = readFileSync('Dockerfile', 'utf8');
+    const buildConfig = readFileSync('tsconfig.build.json', 'utf8');
+
+    expect(packageJson).toContain('"build": "rm -rf dist && tsc -p tsconfig.build.json"');
+    expect(dockerfile).toContain('COPY tsconfig.build.json ./');
+    expect(dockerfile).not.toContain('COPY tests ./tests');
+    expect(buildConfig).toContain('"include": ["src/**/*.ts", "scripts/**/*.ts"]');
+    expect(buildConfig).toContain('"exclude": ["node_modules", "dist", "tests"]');
+  });
 });

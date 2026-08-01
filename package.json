@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "start": "node dist/src/server.js",
     "worker": "node dist/src/worker-runner.js",
     "migrate": "tsx scripts/migrate.ts",
