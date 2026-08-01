@@ -424,3 +424,11 @@
 - Verification: `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 147 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Verification: `npm ci` and `npm run artifacts:scan` passed; `npm ci` installed 118 packages with 0 vulnerabilities and tracked artifact scan passed.
 - Commit `a5f11a8`: Kept message delivery status monotonic.
+
+## 2026-08-01 Decommission Business-Ingress Stability
+
+- Implementation slice: Tightened MP-12 decommission readiness so direct-ingress stability counts only processed direct business ingress events: Meta inbound messages and website/Facebook lead receipts. Direct provider status callbacks no longer satisfy fallback-removal stability evidence.
+- Decision: Added DEC-042. Delivery/status callbacks prove provider reporting but not Edge-owned customer/lead ingress stability.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 4 PostgreSQL decommission-readiness tests and 66 skipped by filter, including the status-callback regression case.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 148 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3b47a51`: Counted only business ingress for decommission stability.

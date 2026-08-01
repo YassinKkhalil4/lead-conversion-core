@@ -1399,3 +1399,13 @@ Result: passed. TypeScript lint passed; Vitest ran 16 files and 147 tests; build
 Command: `npm ci && npm run artifacts:scan`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed.
+
+## 2026-08-01 Decommission Business-Ingress Stability
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL run executed 4 decommission-readiness tests and skipped 66 by filter, including a regression case proving old processed Meta delivery-status callbacks do not count as direct-ingress stability evidence.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 148 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

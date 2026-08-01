@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Continue MP-12 local hardening by auditing the read-only cutover/decommission readiness paths, n8n compatibility fallback counters, and direct Meta/n8n inbox processing filters for any remaining locally testable defects. If no local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
+Exact next implementation task: Continue MP-12 local hardening by auditing the remaining read-only cutover/decommission readiness paths, n8n compatibility fallback counters, and direct Meta/n8n inbox processing filters for any remaining locally testable defects. If no local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
 
 Files expected to change:
 
@@ -53,6 +53,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `a5f11a8` (`Keep message delivery status monotonic`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `3b47a51` (`Count only business ingress for decommission stability`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes
