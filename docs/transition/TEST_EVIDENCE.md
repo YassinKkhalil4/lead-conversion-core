@@ -2259,3 +2259,55 @@ Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 me
 Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+## 2026-08-01 Published Active Configuration Decommission Gate
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the published-active configuration readiness query and details shape.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "draft version|website and Facebook|n8n semantic scheduled|decommission"`
+
+Result: failed. The new draft-config fixture failed both `versioned_config_active` and `active_legacy_config_snapshots_migrated` because legacy `edge_config_snapshots` were not cleared for that test.
+
+Resolution: added explicit truncation of legacy compatibility tables to the draft-config fixture so the test isolates published active configuration authority.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "draft version|website and Facebook|n8n semantic scheduled|decommission"`
+
+Result: passed after fixture cleanup. Focused PostgreSQL readiness coverage ran 21 tests and skipped 71 by filter.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 181 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

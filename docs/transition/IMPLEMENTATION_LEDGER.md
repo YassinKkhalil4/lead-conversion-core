@@ -774,3 +774,15 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|website and Facebook|decommission"` passed with 20 PostgreSQL readiness tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "n8n semantic scheduled|website and Facebook|decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 180 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `f12d590`: Require website and Facebook lead stability.
+
+## 2026-08-01 Published Active Configuration Decommission Gate
+
+- Implementation slice: Hardened `npm run decommission:readiness` so Typebot `versioned_config_active` counts only active pointers joined to `configuration.versions.status='published'`.
+- Implementation slice: Added PostgreSQL regression coverage proving an active pointer to a draft configuration version fails Typebot removal readiness.
+- Decision: Added DEC-075. Draft configuration is editable and cannot prove immutable runtime content authority for Typebot removal.
+- Documentation slice: Updated the decommission runbook and production cutover owner action with the published-active-version rule.
+- Verification failure: The first focused run `npx vitest run tests/runtime.integration.test.ts -t "draft version|website and Facebook|n8n semantic scheduled|decommission"` failed because the new draft-config fixture did not clear legacy `edge_config_snapshots`, so it failed both `versioned_config_active` and `active_legacy_config_snapshots_migrated`. Resolution: explicitly truncated the legacy compatibility tables in the fixture, then reran the focused suite successfully.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "draft version|website and Facebook|n8n semantic scheduled|decommission"` passed with 21 PostgreSQL readiness tests and 71 skipped by filter after fixture cleanup.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "draft version|website and Facebook|n8n semantic scheduled|decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `4b60e30`: Require published active config for Typebot removal.
