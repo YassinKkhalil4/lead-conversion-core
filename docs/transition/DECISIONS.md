@@ -439,3 +439,11 @@ Decision: n8n-compatible inbound callbacks for WhatsApp status acknowledgements,
 Reason: Compatibility callbacks are external event ingress during cutover. Unknown or stale relationships must be visible as durable runtime evidence and operator-visible worker outcomes, not lost as pre-receipt HTTP 404 responses.
 
 Date: 2026-08-01
+
+## DEC-047: Readiness CLI Arguments Fail Closed
+
+Decision: Cutover and decommission readiness CLI wrappers reject unknown arguments and malformed numeric threshold arguments before querying PostgreSQL.
+
+Reason: Operator readiness commands are promotion and decommission evidence. Silently ignoring a typoed threshold or owner-evidence flag can make an execution record look stricter than the command actually was.
+
+Date: 2026-08-01

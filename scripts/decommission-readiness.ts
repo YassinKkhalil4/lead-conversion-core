@@ -2,9 +2,22 @@ import { pathToFileURL } from 'node:url';
 import { closePool } from '../src/db/pool.js';
 import { DecommissionReadinessService, type DecommissionReadinessOptions } from '../src/services/decommission-readiness-service.js';
 
-function numberArg(argv: string[], name: string): number | undefined {
-  const value = argv.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
-  if (!value) return undefined;
+const numericArguments = new Set([
+  '--direct-stability-days',
+  '--min-completed-edge-qualifications',
+]);
+
+const booleanArguments = new Set([
+  '--owner-approved-n8n',
+  '--owner-approved-typebot',
+  '--owner-approved-airtable',
+  '--final-legacy-export-complete',
+  '--final-airtable-export-complete',
+  '--appointment-media-migrated',
+  '--airtable-projection-only-verified',
+]);
+
+function parseNumberArg(name: string, value: string): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`Invalid numeric argument: ${name}`);
   return parsed;
@@ -12,17 +25,26 @@ function numberArg(argv: string[], name: string): number | undefined {
 
 function parseArgs(argv: string[]): DecommissionReadinessOptions {
   const options: DecommissionReadinessOptions = {};
-  const directStabilityDays = numberArg(argv, '--direct-stability-days');
-  const minCompletedEdgeQualifications = numberArg(argv, '--min-completed-edge-qualifications');
-  if (directStabilityDays !== undefined) options.directStabilityDays = directStabilityDays;
-  if (minCompletedEdgeQualifications !== undefined) options.minCompletedEdgeQualifications = minCompletedEdgeQualifications;
-  if (argv.includes('--owner-approved-n8n')) options.ownerApprovedN8n = true;
-  if (argv.includes('--owner-approved-typebot')) options.ownerApprovedTypebot = true;
-  if (argv.includes('--owner-approved-airtable')) options.ownerApprovedAirtable = true;
-  if (argv.includes('--final-legacy-export-complete')) options.finalLegacyExportComplete = true;
-  if (argv.includes('--final-airtable-export-complete')) options.finalAirtableExportComplete = true;
-  if (argv.includes('--appointment-media-migrated')) options.appointmentMediaMigrated = true;
-  if (argv.includes('--airtable-projection-only-verified')) options.airtableProjectionOnlyVerified = true;
+  for (const arg of argv) {
+    const separator = arg.indexOf('=');
+    const name = separator >= 0 ? arg.slice(0, separator) : arg;
+    const value = separator >= 0 ? arg.slice(separator + 1) : '';
+    if (numericArguments.has(name)) {
+      if (separator < 0 || value === '') throw new Error(`Invalid numeric argument: ${name}`);
+      const parsed = parseNumberArg(name, value);
+      if (name === '--direct-stability-days') options.directStabilityDays = parsed;
+      if (name === '--min-completed-edge-qualifications') options.minCompletedEdgeQualifications = parsed;
+      continue;
+    }
+    if (!booleanArguments.has(name) || separator >= 0) throw new Error(`Unknown decommission readiness argument: ${arg}`);
+    if (name === '--owner-approved-n8n') options.ownerApprovedN8n = true;
+    if (name === '--owner-approved-typebot') options.ownerApprovedTypebot = true;
+    if (name === '--owner-approved-airtable') options.ownerApprovedAirtable = true;
+    if (name === '--final-legacy-export-complete') options.finalLegacyExportComplete = true;
+    if (name === '--final-airtable-export-complete') options.finalAirtableExportComplete = true;
+    if (name === '--appointment-media-migrated') options.appointmentMediaMigrated = true;
+    if (name === '--airtable-projection-only-verified') options.airtableProjectionOnlyVerified = true;
+  }
   return options;
 }
 

@@ -2,9 +2,15 @@ import { pathToFileURL } from 'node:url';
 import { closePool } from '../src/db/pool.js';
 import { CutoverReadinessService, type CutoverReadinessOptions } from '../src/services/cutover-readiness-service.js';
 
-function numberArg(argv: string[], name: string): number | undefined {
-  const value = argv.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
-  if (!value) return undefined;
+const numericArguments = new Set([
+  '--max-pending-inbox',
+  '--max-pending-outbox',
+  '--max-pending-scheduled-jobs',
+  '--max-queue-age-seconds',
+  '--max-worker-heartbeat-age-seconds',
+]);
+
+function parseNumberArg(name: string, value: string): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`Invalid numeric argument: ${name}`);
   return parsed;
@@ -12,16 +18,19 @@ function numberArg(argv: string[], name: string): number | undefined {
 
 function parseArgs(argv: string[]): CutoverReadinessOptions {
   const options: CutoverReadinessOptions = {};
-  const maxPendingInbox = numberArg(argv, '--max-pending-inbox');
-  const maxPendingOutbox = numberArg(argv, '--max-pending-outbox');
-  const maxPendingScheduledJobs = numberArg(argv, '--max-pending-scheduled-jobs');
-  const maxQueueAgeSeconds = numberArg(argv, '--max-queue-age-seconds');
-  const maxWorkerHeartbeatAgeSeconds = numberArg(argv, '--max-worker-heartbeat-age-seconds');
-  if (maxPendingInbox !== undefined) options.maxPendingInbox = maxPendingInbox;
-  if (maxPendingOutbox !== undefined) options.maxPendingOutbox = maxPendingOutbox;
-  if (maxPendingScheduledJobs !== undefined) options.maxPendingScheduledJobs = maxPendingScheduledJobs;
-  if (maxQueueAgeSeconds !== undefined) options.maxQueueAgeSeconds = maxQueueAgeSeconds;
-  if (maxWorkerHeartbeatAgeSeconds !== undefined) options.maxWorkerHeartbeatAgeSeconds = maxWorkerHeartbeatAgeSeconds;
+  for (const arg of argv) {
+    const separator = arg.indexOf('=');
+    const name = separator >= 0 ? arg.slice(0, separator) : arg;
+    const value = separator >= 0 ? arg.slice(separator + 1) : '';
+    if (!numericArguments.has(name)) throw new Error(`Unknown cutover readiness argument: ${arg}`);
+    if (separator < 0 || value === '') throw new Error(`Invalid numeric argument: ${name}`);
+    const parsed = parseNumberArg(name, value);
+    if (name === '--max-pending-inbox') options.maxPendingInbox = parsed;
+    if (name === '--max-pending-outbox') options.maxPendingOutbox = parsed;
+    if (name === '--max-pending-scheduled-jobs') options.maxPendingScheduledJobs = parsed;
+    if (name === '--max-queue-age-seconds') options.maxQueueAgeSeconds = parsed;
+    if (name === '--max-worker-heartbeat-age-seconds') options.maxWorkerHeartbeatAgeSeconds = parsed;
+  }
   return options;
 }
 

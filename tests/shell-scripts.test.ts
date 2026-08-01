@@ -5,6 +5,13 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('shell scripts', () => {
+  const cliEnv = {
+    ...process.env,
+    DATABASE_URL: 'postgresql://127.0.0.1:1/unused',
+    EDGE_SHARED_SECRET: 'test_shared_secret_123456',
+    EDGE_INTERNAL_SECRET: 'test_internal_secret_123456',
+  };
+
   it('parse with bash before operator use', () => {
     for (const script of [
       'scripts/generate-env.sh',
@@ -122,5 +129,27 @@ describe('shell scripts', () => {
     expect(dockerfile).not.toContain('COPY tests ./tests');
     expect(buildConfig).toContain('"include": ["src/**/*.ts", "scripts/**/*.ts"]');
     expect(buildConfig).toContain('"exclude": ["node_modules", "dist", "tests"]');
+  });
+
+  it('fails readiness CLI commands on unknown operator arguments before querying PostgreSQL', () => {
+    expect(() => execFileSync('npx', ['tsx', 'scripts/cutover-readiness.ts', '--max-pending-inbox-typo=0'], {
+      env: cliEnv,
+      stdio: 'pipe',
+    })).toThrow(/Unknown cutover readiness argument/);
+    expect(() => execFileSync('npx', ['tsx', 'scripts/decommission-readiness.ts', '--owner-approved-n8n-typo'], {
+      env: cliEnv,
+      stdio: 'pipe',
+    })).toThrow(/Unknown decommission readiness argument/);
+  });
+
+  it('fails readiness CLI commands on malformed numeric operator arguments before querying PostgreSQL', () => {
+    expect(() => execFileSync('npx', ['tsx', 'scripts/cutover-readiness.ts', '--max-pending-inbox'], {
+      env: cliEnv,
+      stdio: 'pipe',
+    })).toThrow(/Invalid numeric argument/);
+    expect(() => execFileSync('npx', ['tsx', 'scripts/decommission-readiness.ts', '--direct-stability-days='], {
+      env: cliEnv,
+      stdio: 'pipe',
+    })).toThrow(/Invalid numeric argument/);
   });
 });
