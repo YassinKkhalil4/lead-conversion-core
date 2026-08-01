@@ -644,3 +644,15 @@
 - Verification: `npm run lint` and `npm run build` passed before the first full gate; after the isolation fix, focused importer and decommission tests passed again.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 172 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `aa79503`: Harden Airtable reconciliation readiness.
+
+## 2026-08-01 Airtable Business Reconciliation Coverage
+
+- Implementation slice: Expanded `npm run reconcile:airtable` with accepted-source business checks for lead status distribution, active lead count, stop-follow-up count, pending follow-up count, open/booked appointment count, and imported message provider-ID uniqueness.
+- Implementation slice: Each business reconciliation check joins `migration.airtable_raw_records` through `migration.entity_map` to the target app table so only accepted imported rows are used as source-to-target evidence.
+- Decision: Added DEC-064. Business reconciliation uses accepted source mappings and leaves unmapped or rejected rows to reject/mapping checks.
+- Verification: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts` passed with 6 importer/reconciliation tests, including persisted business-count and lead-status-distribution reconciliation results.
+- Verification: `npm run lint` and `npm run build` passed.
+- Verification failure: The first full gate passed all 172 tests but failed in `tests/runtime.integration.test.ts` `afterAll` cleanup because the hook exceeded Vitest's 10 second timeout under load. Resolution: reran `npm test` successfully and then ran the remaining build/audit/smoke gate phases successfully; no code change was required because the failure occurred after all tests had passed and did not repeat.
+- Verification: `npm test` passed on rerun with 17 files and 172 tests.
+- Verification: `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `fb7a3fc`: Expand Airtable reconciliation coverage.

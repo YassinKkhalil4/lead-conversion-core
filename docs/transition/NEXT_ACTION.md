@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, non-pass Airtable reconciliation evidence, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, n8n fallback inbox worker wiring independent of direct Meta enablement, n8n compatibility runtime readiness enforcement, enabled/disabled n8n compatibility fallback deployment verification, and decommission blocking while n8n compatibility routes remain enabled.
+Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, non-pass Airtable reconciliation evidence, accepted-row Airtable business reconciliation coverage, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, n8n fallback inbox worker wiring independent of direct Meta enablement, n8n compatibility runtime readiness enforcement, enabled/disabled n8n compatibility fallback deployment verification, and decommission blocking while n8n compatibility routes remain enabled.
 
 Files expected to change:
 
@@ -66,6 +66,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `aa79503` (`Harden Airtable reconciliation readiness`), with focused importer/reconciliation tests, focused PostgreSQL decommission readiness tests, and the full local gate passing: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration`.
+Last verified commit: `fb7a3fc` (`Expand Airtable reconciliation coverage`), with focused importer/reconciliation tests, TypeScript lint/build, `npm test` passing on rerun, and the remaining local gate phases passing: `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration`.
 
 Git worktree clean when recorded: yes

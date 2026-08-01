@@ -1719,3 +1719,29 @@ Result: passed after narrowing cleanup. Focused importer coverage ran 6 tests.
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 172 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Airtable Business Reconciliation Coverage
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts`
+
+Result: passed. Focused importer coverage ran 6 tests, including persisted `lead_status_distribution`, `active_leads_count`, `stop_follow_up_count`, `pending_followups_count`, `open_booked_appointments_count`, and `message_provider_id_uniqueness` reconciliation results from the sanitized Airtable export.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the additional reconciliation SQL helpers and business-count checks.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed after the reconciliation coverage expansion.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: failed on the first run after `npm test` completed all assertions successfully. Vitest reported 17 files and 172 tests passed, then failed the `tests/runtime.integration.test.ts` `afterAll` cleanup hook for exceeding the 10000 ms hook timeout under full-suite load.
+
+Command: `npm test`
+
+Result: passed on rerun. Vitest ran 17 files and 172 tests successfully.
+
+Command: `npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. Build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
