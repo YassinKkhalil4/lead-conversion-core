@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Continue MP-12 by adding a read-only decommission readiness report for n8n, Typebot, and Airtable projection exit criteria. It should inspect PostgreSQL state for legacy-owned conversations, recent direct-ingress stability evidence, unresolved n8n compatibility usage, projection/dead-letter state, and missing owner approvals without deleting or disabling legacy systems. Add tests with disposable PostgreSQL data.
+Exact next implementation task: Run staging MP-12 verification once the owner supplies staging route access and provider/source credentials. Use `scripts/verify-deployment.sh` with explicit direct-ingress expectations, run `npm run cutover:readiness`, and run `npm run decommission:readiness` only as a read-only report. Do not remove n8n, Typebot, Airtable, MinIO, databases, volumes, or production routes without explicit owner approval.
 
 Files expected to change:
 
@@ -18,9 +18,6 @@ Files expected to change:
 - `docs/transition/DECOMMISSION_RUNBOOK.md`
 - `docs/owner-actions/06-staging-dns-and-access.md`
 - `docs/owner-actions/07-production-cutover.md`
-- `src/services/decommission-readiness-service.ts`
-- `scripts/decommission-readiness.ts`
-- `tests/runtime.integration.test.ts`
 
 Required verification:
 
@@ -35,7 +32,9 @@ Required verification:
 - `npm run build`
 - `npm audit --audit-level=moderate`
 - `npm run test:smoke`
-- Disposable PostgreSQL migration/import/reconciliation/runtime checks
+- `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled>`
+- `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-queue-age-seconds=300`
+- `npm run decommission:readiness` with only evidence-backed owner flags
 
 Known blockers:
 
@@ -44,7 +43,8 @@ Known blockers:
 - Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
 - Real website/Facebook lead source configuration is unavailable for live lead intake verification.
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
+- Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified implementation commit: f7f995d
+Last verified implementation commit: 73f5d96
 
 Git worktree clean when recorded: yes

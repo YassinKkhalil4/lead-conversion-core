@@ -42,3 +42,14 @@ Status: not approved for execution.
 3. Stop new edge ownership for affected path.
 4. Preserve PostgreSQL state for audit.
 5. Reconcile ambiguous requests before replay.
+
+## Legacy Decommission Approval
+
+Production cutover approval does not authorize fallback removal. Before removing n8n, Typebot, Airtable projection, MinIO, databases, volumes, or production routes:
+
+- Review `npm run decommission:readiness` for the production environment.
+- Provide final legacy export evidence.
+- Provide final Airtable export evidence.
+- Confirm Airtable has been projection-only for the agreed window.
+- Confirm appointment and media paths no longer depend on Typebot.
+- Explicitly approve each removal area: n8n, Typebot, and Airtable.

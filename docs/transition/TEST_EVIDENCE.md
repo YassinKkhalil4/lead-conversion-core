@@ -807,3 +807,39 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 9 files and 73 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL/API integration tested with sanitized fixtures. No live Meta, Typebot, n8n, Airtable, or salesperson-provider call was made.
+
+## 2026-08-01 MP-12 Decommission Readiness Report
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL tests ran 2 tests covering blocker reporting for legacy conversations, n8n scheduled/inbox authority, unresolved approvals, and a passing decommission report only with direct-ingress stability evidence, active versioned config, completed Edge qualification volume, stable Airtable reconciliation, final export flags, migration flags, and explicit owner approvals.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages and found 0 vulnerabilities.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 11 files and 111 tests.
+
+Command: `npm run build`
+
+Result: passed.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL read-only decommission reporting plus full npm gate. No DNS, Caddy, provider, n8n, Typebot, Airtable, MinIO, database, volume, or production route changes were made.

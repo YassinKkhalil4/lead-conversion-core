@@ -15,3 +15,5 @@ Status: draft, not approved for production execution.
 11. Confirm provider message ID and delivery status.
 12. Monitor inbox/outbox age, dead letters, delivery unknown, provider errors, and DB pool saturation.
 13. Roll back if thresholds in `docs/owner-actions/07-production-cutover.md` are met.
+
+Legacy fallback removal is a separate owner-approved step after cutover stability. Before any removal, run `npm run decommission:readiness` and review every n8n, Typebot, and Airtable check.

@@ -223,3 +223,11 @@ Decision: Deployment verification may probe direct Meta challenge and direct lea
 Reason: MP-12 needs repeatable route-state evidence before Caddy/DNS cutover. Synthetic route checks prove enabled/disabled behavior while preserving rollback paths and avoiding customer-facing side effects.
 
 Date: 2026-08-01
+
+## DEC-020: Decommission Readiness Is Approval-Gated
+
+Decision: Decommission readiness is implemented as a read-only PostgreSQL report with explicit owner-evidence flags for final exports, migrated appointment/media paths, projection-only Airtable operation, and per-area decommission approvals.
+
+Reason: n8n, Typebot, and Airtable removal is destructive and externally visible. The repository can prove local exit conditions and surface blockers, but it must not infer owner approval or delete fallback infrastructure from local metrics alone.
+
+Date: 2026-08-01

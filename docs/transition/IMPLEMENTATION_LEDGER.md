@@ -230,3 +230,10 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed; focused tests ran 3 tests including deployment-script verification against a local app listener.
 - Verification: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke` passed; Vitest ran 11 files and 109 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Commit `f7f995d`: Hardened deployment verification for direct ingress.
+- Implementation slice: Completed locally implementable MP-12 decommission readiness reporting with `DecommissionReadinessService` and `npm run decommission:readiness`. The report reads PostgreSQL state for legacy edge outbox work, n8n scheduled authority and inbox usage, recent/active legacy-owned conversations, direct-ingress stability evidence, active versioned configuration, completed Edge qualification volume, Airtable projection outbox stability, Airtable reconciliation state, final export flags, migration flags, and explicit owner approvals.
+- Decision: Decommission readiness is read-only and approval-gated; it does not delete, disable, replay, retry, or mutate legacy systems or durable runtime rows.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed; focused PostgreSQL tests ran 2 tests covering blocker reporting for legacy/n8n/missing approvals and a passing report only with local exit evidence plus explicit approval flags.
+- Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, and `npm run test:smoke` passed; Vitest ran 11 files and 111 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Deferred external verification: decommission approval remains pending final legacy export, final Airtable export, live/staging cutover evidence, and explicit owner approval for n8n, Typebot, and Airtable retirement.
+- Commit `73f5d96`: Added decommission readiness report.

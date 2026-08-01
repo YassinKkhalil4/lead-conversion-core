@@ -41,6 +41,7 @@ Production route changes require explicit owner approval.
 4. Keep n8n and Typebot fallback infrastructure unchanged.
 5. Monitor `npm run cutover:readiness` output, provider callbacks, inbox/outbox age, delivery-unknown counts, dead letters, and runtime worker heartbeat.
 6. Stop expanding canary traffic if any rollback threshold in `docs/owner-actions/07-production-cutover.md` is met.
+7. Use `npm run decommission:readiness` only after the canary window has produced enough direct-ingress evidence; do not treat a passing report as removal approval.
 
 ## Rollback
 
@@ -52,4 +53,4 @@ Production route changes require explicit owner approval.
 
 ## Decommission Hold
 
-No legacy infrastructure removal is authorized by this plan. n8n, Typebot, Airtable projection, MinIO, databases, volumes, and production artifacts stay in place until the owner approves decommission after the documented exit criteria are met.
+No legacy infrastructure removal is authorized by this plan. n8n, Typebot, Airtable projection, MinIO, databases, volumes, and production artifacts stay in place until the owner approves decommission after the documented exit criteria and `npm run decommission:readiness` checks are satisfied.

@@ -2,8 +2,40 @@
 
 Status: blocked on owner approval and exit criteria.
 
+## Read-Only Readiness Report
+
+Run this against the intended environment before any removal:
+
+```bash
+npm run decommission:readiness -- \
+  --direct-stability-days=14 \
+  --min-completed-edge-qualifications=100
+```
+
+Only add these flags when the matching evidence is complete and owner-approved:
+
+- `--final-legacy-export-complete`
+- `--final-airtable-export-complete`
+- `--appointment-media-migrated`
+- `--airtable-projection-only-verified`
+- `--owner-approved-n8n`
+- `--owner-approved-typebot`
+- `--owner-approved-airtable`
+
+The command is read-only. A passing report is a decommission precondition, not approval to delete or disable infrastructure.
+
+## Exit Criteria
+
 N8n removal requires no edge outbox target to n8n, no n8n scheduled authority, no new Typebot conversation, no active legacy conversation for 14 days, direct ingress stable for 14 days, final workflow/DB export, and explicit owner approval.
 
 Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval.
 
 Airtable removal requires projection-only operation for 30 days, no production reads, stable reconciliation, final export, operator tooling, and explicit owner approval.
+
+## Prohibited Without Separate Approval
+
+- Delete n8n, Typebot, Airtable, MinIO, PostgreSQL databases, volumes, or production artifacts.
+- Remove Caddy fallback routes.
+- Rotate credentials.
+- Mutate provider accounts.
+- Send real customer messages solely for decommission testing.

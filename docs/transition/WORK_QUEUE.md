@@ -144,7 +144,7 @@ Remaining: live Google Calendar availability/create/delete/duplicate-booking ver
 
 ## MP-12 Direct Ingress, Rollout, Decommission
 
-Status: implementing
+Status: staging_blocked
 
 Deliverables: direct callback compatibility, Caddy route plan, rollout overrides, decommission criteria/runbooks.
 
@@ -152,6 +152,6 @@ Dependencies: DNS/Caddy/production owner action.
 
 Verification gates: staging ingress, canary metrics, explicit owner approval for removals.
 
-Completed locally: direct Meta webhook route is disabled by default unless `DIRECT_META_WEBHOOK_ENABLED=true`; direct website/Facebook lead ingress is disabled by default unless `DIRECT_LEAD_INGRESS_ENABLED=true`; n8n compatibility routes remain independently gated by `N8N_COMPAT_ROUTES_ENABLED`; local app-injection tests prove disabled direct routes return 503 without provider calls while n8n compatibility remains available when explicitly enabled; `npm run cutover:readiness` provides a read-only PostgreSQL-backed readiness report for direct-route flags, n8n compatibility, pending/oldest inbox and outbox work, delivery-unknown counts, dead-letter counts, and runtime worker heartbeat age; `docs/transition/DIRECT_INGRESS_PLAN.md` documents staging and production canary route shapes, required flags, rollback, and decommission hold; `scripts/verify-deployment.sh` accepts `--base-url`, `--env-file`, direct ingress check flags, and skip flags so staging can verify direct Meta challenge and direct lead ingress enabled/disabled behavior without real customer messages.
+Completed locally: direct Meta webhook route is disabled by default unless `DIRECT_META_WEBHOOK_ENABLED=true`; direct website/Facebook lead ingress is disabled by default unless `DIRECT_LEAD_INGRESS_ENABLED=true`; n8n compatibility routes remain independently gated by `N8N_COMPAT_ROUTES_ENABLED`; local app-injection tests prove disabled direct routes return 503 without provider calls while n8n compatibility remains available when explicitly enabled; `npm run cutover:readiness` provides a read-only PostgreSQL-backed readiness report for direct-route flags, n8n compatibility, pending/oldest inbox and outbox work, delivery-unknown counts, dead-letter counts, and runtime worker heartbeat age; `docs/transition/DIRECT_INGRESS_PLAN.md` documents staging and production canary route shapes, required flags, rollback, and decommission hold; `scripts/verify-deployment.sh` accepts `--base-url`, `--env-file`, direct ingress check flags, and skip flags so staging can verify direct Meta challenge and direct lead ingress enabled/disabled behavior without real customer messages; `npm run decommission:readiness` provides a read-only PostgreSQL-backed exit report for n8n, Typebot, and Airtable projection retirement, including legacy conversation activity, direct-ingress stability evidence, unresolved n8n compatibility work, Airtable projection/reconciliation state, migrated content/config evidence, final export flags, and explicit owner approval flags.
 
-Remaining: decommission exit criteria evidence/reporting, staging ingress verification, production cutover owner approval, and all destructive fallback removals.
+Remaining: staging ingress verification, live provider/source verification, production cutover owner approval, final legacy/Airtable exports, owner approval flags for decommission readiness, and all destructive fallback removals.
