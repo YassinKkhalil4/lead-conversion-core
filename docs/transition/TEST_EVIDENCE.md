@@ -340,7 +340,53 @@ Result: passed.
 
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 120 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Log verification: request logs emitted during the full test run preserved route paths while redacting `hub.verify_token` in both `req.url` and `req.query`; `x-edge-secret`, `x-internal-secret`, and `x-hub-signature-256` headers were also redacted.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 14 files and 116 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Request Log Secret Redaction
+
+Command: `npx vitest run tests/logger.test.ts`
+
+Result: failed on the first run because importing the logger singleton required `DATABASE_URL`, `EDGE_SHARED_SECRET`, and `EDGE_INTERNAL_SECRET` before the test could execute.
+
+Command: `npm run lint`
+
+Result: failed on the first run because the raw Pino request serializer needed an explicit type boundary.
+
+Resolution: moved pure redaction helpers and request serialization into `src/config/log-redaction.ts`, imported the serializer from `src/config/logger.ts`, and tested serializer behavior without constructing the environment-backed logger singleton.
+
+Command: `npx vitest run tests/logger.test.ts`
+
+Result: passed. Focused tests ran 3 tests covering Meta `hub.verify_token` URL redaction, generic query credential redaction, authentication/signature header redaction, and the request serializer preserving route evidence while redacting secrets.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: failed for the redaction objective even though the command exited 0: request logs emitted during the test run showed Fastify/Pino serialized `req.query.hub.verify_token` with the test token value, and `req.url` was over-redacted to `**redacted**`.
+
+Resolution: added explicit query-object redaction in the request serializer and removed the broad Pino `req.url` redaction path so routes remain observable while sensitive query values are censored.
+
+Command: `npx vitest run tests/logger.test.ts`
+
+Result: failed on the first serializer-query assertion because the mock request did not include Fastify's parsed query object, so Pino serialized `query` as an empty string.
+
+Resolution: made query redaction tolerate non-object serializer values and updated the serializer test to include a parsed query object.
+
+Command: `npx vitest run tests/logger.test.ts`
+
+Result: passed. Focused tests ran 4 tests covering URL redaction, header redaction, query-object redaction, and the configured request serializer.
+
+Command: `npm run lint`
+
+Result: passed.
 
 Command: `npx vitest run tests/config-versioning.test.ts`
 

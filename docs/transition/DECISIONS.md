@@ -279,3 +279,11 @@ Decision: `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead
 Reason: MP-12 route-state verification should prove the direct lead routes are enabled and reach validation without creating authoritative `app.leads`, `app.contacts`, follow-up jobs, or outbound commands. Because direct lead ingress durably receipts before validation, any resulting ignored inbox rows are acceptable staging evidence and must not be treated as business leads.
 
 Date: 2026-08-01
+
+## DEC-027: Request Logs Redact Query Secrets
+
+Decision: Fastify/Pino request logging redacts sensitive query parameters, including Meta `hub.verify_token`, and authentication headers before logs are emitted.
+
+Reason: Direct webhook verification uses provider-defined query parameters and headers that can contain credential or signature material. Logs must preserve route and status evidence without printing reusable secrets.
+
+Date: 2026-08-01
