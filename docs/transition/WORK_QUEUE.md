@@ -18,13 +18,13 @@ Remaining: none except ongoing secret hygiene.
 
 Status: locally_verified
 
-Deliverables: lockfile, fixed compiled paths, one-shot migrator, migration checksums/advisory lock, readiness, worker heartbeat, backup/restore scripts, environment template, container topology.
+Deliverables: lockfile, fixed compiled paths, one-shot migrator, migration checksums/advisory lock, readiness, worker heartbeat, backup/restore scripts, PostgreSQL 16 dump inspect/restore-smoke wrappers, environment template, container topology.
 
 Dependencies: Docker daemon for image run and Docker-based dump inspection.
 
-Verification gates: serial npm gate, disposable PostgreSQL migration/idempotency/checksum/concurrency, backup/restore, readiness, heartbeat, environment contract, static Compose config.
+Verification gates: serial npm gate, disposable PostgreSQL migration/idempotency/checksum/concurrency, backup/restore, readiness, heartbeat, environment contract, static Compose config, shell syntax checks.
 
-Remaining: Docker image run and dump metadata inspection when daemon is available.
+Remaining: Docker image run and Docker-backed dump metadata/restore-smoke execution when daemon is available.
 
 ## MP-03 PostgreSQL Core And Airtable Migration
 

@@ -995,3 +995,31 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 13 files and 114 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 Verification level: local PostgreSQL readiness reporting, runbook review, full npm gate, and smoke scripts. No live provider, n8n, Typebot, Airtable, DNS, Caddy, or production route change was made.
+
+## 2026-08-01 PostgreSQL Dump Restore-Smoke Tooling
+
+Command: `docker info`
+
+Result: failed because the Docker client could not connect to `unix:///var/run/docker.sock`; the daemon is not available in this environment.
+
+Command: `DUMP_PATH=/Users/yassinkhalil/Downloads/automation-20260729-220630/public/databases/conversation-edge-postgres.dump npm run dump:inspect`
+
+Result: failed at Docker daemon connection before inspecting the dump. The evidence archive was not modified.
+
+Command: `DUMP_PATH=/Users/yassinkhalil/Downloads/automation-20260729-220630/public/databases/conversation-edge-postgres.dump npm run dump:restore-smoke`
+
+Result: failed at Docker daemon connection before restore execution. The evidence archive was not modified.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed. The shell parser test ran `bash -n` across generated-env, deployment verification, shadow-sequence, backup/restore, and PostgreSQL dump inspect/restore-smoke scripts.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 14 files and 115 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Verification level: local script syntax, full npm gate, and smoke scripts. Docker-backed PostgreSQL 16 dump metadata and restore-smoke execution remain blocked by daemon availability.
