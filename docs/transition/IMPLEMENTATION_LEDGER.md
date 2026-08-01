@@ -357,3 +357,12 @@
 - Verification: `npm run lint` passed.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 139 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3bde28a`: Dead-lettered invalid scheduled jobs immediately.
+
+## 2026-08-01 Recurring Daily Report Materialization
+
+- Implementation slice: Hardened MP-10 daily reporting recurrence so successful `report.daily` execution now marks the current report sent, enqueues the durable `operator.daily_report` outbox command, and schedules exactly the next semantic daily report/job in the same PostgreSQL transaction. The next occurrence preserves the client-local report clock time in the configured timezone, including daylight-saving UTC offset changes.
+- Decision: Added DEC-035. Recurrence metadata is not treated as a durable scheduling authority by itself; workers materialize one next occurrence at completion using semantic job identity for idempotency.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "daily report"` passed with 4 PostgreSQL daily-report tests and 59 skipped by filter, including the Europe/Berlin DST materialization case.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 140 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `7bc8748`: Materialized recurring daily report jobs.

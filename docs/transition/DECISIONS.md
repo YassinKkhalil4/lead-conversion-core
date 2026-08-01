@@ -343,3 +343,11 @@ Decision: Runtime scheduled-job processors may return a permanent `dead_lettered
 Reason: A malformed job payload is not a transient provider or database failure. Retrying it wastes worker capacity and delays operator-visible evidence, while direct dead-lettering preserves the original payload and attempt history for investigation.
 
 Date: 2026-08-01
+
+## DEC-035: Recurring Daily Reports Materialize One Occurrence At A Time
+
+Decision: A successful `report.daily` worker transaction marks the current report sent, enqueues the operator report outbox command, and schedules exactly the next semantic daily report/job for the client in the same PostgreSQL transaction. The next due time preserves the client-local clock time in the configured timezone, so UTC due times shift across daylight-saving transitions.
+
+Reason: `runtime.scheduled_jobs.recurrence_json` is configuration metadata, not a durable scheduling authority by itself. Materializing one next occurrence at completion keeps recurrence restart-safe and idempotent without in-process timers, duplicate daily jobs, or an unbounded pre-generated queue.
+
+Date: 2026-08-01
