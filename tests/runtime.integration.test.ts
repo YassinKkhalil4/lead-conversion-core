@@ -873,6 +873,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       deadLetterCount: 0,
     });
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_target_selected: 'pass',
       direct_meta_webhook_flag: 'pass',
       direct_meta_inbox_processor: 'pass',
       direct_lead_ingress_flag: 'pass',
@@ -886,6 +887,43 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       delivery_unknown: 'pass',
       dead_letters: 'pass',
       runtime_worker_heartbeat: 'pass',
+    });
+  });
+
+  it('fails cutover readiness when no direct ingress route family is selected', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'cutover-fallback-only',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","salesperson.command_received"],"inboxProviders":["n8n"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new cutoverReadiness.CutoverReadinessService(() => ({
+      ...configEnv.getEnv(),
+      DIRECT_META_WEBHOOK_ENABLED: false,
+      DIRECT_LEAD_INGRESS_ENABLED: false,
+      N8N_COMPAT_ROUTES_ENABLED: true,
+      RUNTIME_WORKER_ENABLED: true,
+    })).report();
+    expect(report.ok).toBe(false);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      direct_ingress_target_selected: 'fail',
+      direct_meta_webhook_flag: 'warn',
+      direct_lead_ingress_flag: 'warn',
+      n8n_compatibility_flag: 'pass',
+      n8n_compatibility_inbox_processor: 'pass',
+      runtime_worker_heartbeat: 'pass',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'direct_ingress_target_selected')?.details).toMatchObject({
+      directMetaWebhookEnabled: false,
+      directLeadIngressEnabled: false,
+      requiredForCutover: true,
     });
   });
 

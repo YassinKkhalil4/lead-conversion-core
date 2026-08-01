@@ -1,4 +1,5 @@
 import { getEnv } from '../config/env.js';
+import type { Env } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { workerHeartbeatOperationalState } from './worker-heartbeat-readiness.js';
 
@@ -51,8 +52,10 @@ function backlogStatus(count: number, oldestAgeSeconds: number | null, maxCount:
 }
 
 export class CutoverReadinessService {
+  constructor(private readonly envProvider: () => Env = getEnv) {}
+
   async report(options: CutoverReadinessOptions = {}): Promise<CutoverReadinessReport> {
-    const env = getEnv();
+    const env = this.envProvider();
     const maxPendingInbox = options.maxPendingInbox ?? 0;
     const maxPendingOutbox = options.maxPendingOutbox ?? 0;
     const maxPendingScheduledJobs = options.maxPendingScheduledJobs ?? 0;
@@ -134,8 +137,18 @@ export class CutoverReadinessService {
       || env.DIRECT_META_WEBHOOK_ENABLED
       || env.DIRECT_LEAD_INGRESS_ENABLED
       || env.N8N_COMPAT_ROUTES_ENABLED;
+    const directIngressTargetSelected = env.DIRECT_META_WEBHOOK_ENABLED || env.DIRECT_LEAD_INGRESS_ENABLED;
 
     const checks: ReadinessCheck[] = [
+      {
+        checkKey: 'direct_ingress_target_selected',
+        status: directIngressTargetSelected ? 'pass' : 'fail',
+        details: {
+          directMetaWebhookEnabled: env.DIRECT_META_WEBHOOK_ENABLED,
+          directLeadIngressEnabled: env.DIRECT_LEAD_INGRESS_ENABLED,
+          requiredForCutover: true,
+        },
+      },
       {
         checkKey: 'direct_meta_webhook_flag',
         status: env.DIRECT_META_WEBHOOK_ENABLED ? 'pass' : 'warn',

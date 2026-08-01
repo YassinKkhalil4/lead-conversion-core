@@ -599,3 +599,11 @@ Decision: `npm run decommission:readiness` requires every currently required Air
 Reason: Airtable removal cannot be justified by a single passing reconciliation row or an incomplete subset of checks. Final decommission readiness must prove the full local reconciliation suite was run and passed before owner approval can be meaningful.
 
 Date: 2026-08-01
+
+## DEC-067: Cutover Readiness Requires A Direct Ingress Target
+
+Decision: `npm run cutover:readiness` fails unless at least one direct-ingress route family is selected through `DIRECT_META_WEBHOOK_ENABLED=true` or `DIRECT_LEAD_INGRESS_ENABLED=true`.
+
+Reason: n8n compatibility and empty queues are useful fallback and operational evidence, but they do not prove Edge is ready to receive direct provider traffic. Operators must enable the approved direct route and required runtime worker flags before using cutover readiness as route-change evidence.
+
+Date: 2026-08-01
