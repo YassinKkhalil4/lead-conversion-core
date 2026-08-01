@@ -1245,3 +1245,27 @@ Result: passed for production/operator code review purposes. Remaining hits were
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 130 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Runtime Retry Jitter
+
+Command: `npx vitest run tests/runtime-backoff.test.ts`
+
+Result: failed before tests executed because importing `src/infrastructure/runtime.ts` initializes the repository DB pool and required `DATABASE_URL`, `EDGE_SHARED_SECRET`, and `EDGE_INTERNAL_SECRET`.
+
+Resolution: changed the focused test to set dummy local environment values before dynamically importing the runtime helper.
+
+Command: `npx vitest run tests/runtime-backoff.test.ts`
+
+Result: passed. Focused unit tests ran 3 tests covering jittered backoff ranges, provider retry hint cap behavior, and extreme attempt bounds.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "retry delays|retryable inbox|outbox retry"`
+
+Result: passed. Focused PostgreSQL run executed 2 tests and skipped 59 by filter, covering retryable inbox scheduling plus outbox retry delay/dead-letter behavior.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 133 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

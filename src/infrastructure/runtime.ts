@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { pool } from '../db/pool.js';
 
@@ -31,8 +31,8 @@ export function retryDelaySeconds(attemptCount: number, retryAfterSeconds?: numb
   if (retryAfterSeconds !== undefined && retryAfterSeconds >= 0) return Math.min(retryAfterSeconds, 3600);
   const boundedAttempt = Math.max(1, Math.min(attemptCount, 10));
   const base = Math.min(3600, 2 ** boundedAttempt);
-  const jitter = Math.min(30, boundedAttempt * 3);
-  return base + jitter;
+  const jitter = Math.min(30, base);
+  return Math.min(3600, base + randomInt(0, jitter + 1));
 }
 
 export interface ClaimedInboxEvent {

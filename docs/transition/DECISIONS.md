@@ -319,3 +319,11 @@ Decision: `scripts/generate-env.sh` writes generated local database and service 
 Reason: Even locally generated secrets are reusable credentials once written to `.env`. Passing them through child-process arguments exposes them to process-listing and command-capture tooling, while private temporary files preserve the one-command developer setup path without printing or exporting secret values.
 
 Date: 2026-08-01
+
+## DEC-032: Runtime Retries Use Bounded Jitter
+
+Decision: Runtime inbox, outbox, and scheduled-job retries use bounded exponential backoff with random jitter when no provider retry hint is supplied; provider `Retry-After` hints remain exact inputs capped at one hour.
+
+Reason: Deterministic retry spacing can concentrate recovered worker traffic after provider or database incidents. Jitter reduces retry herd behavior while preserving the existing upper bound and honoring explicit provider rate-limit guidance.
+
+Date: 2026-08-01
