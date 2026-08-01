@@ -43,6 +43,5 @@ Implemented locally:
 Pending:
 
 - Complete owner export
-- Full mappings for questions/options/conversation messages
-- Versioned configuration publication from imported question/message records is deferred to MP-06
+- Full real-export reconciliation for questions/options/conversation messages
 - Count and linked-record reconciliation against real export
