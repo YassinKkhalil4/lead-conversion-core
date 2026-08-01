@@ -239,3 +239,10 @@
 - Commit `73f5d96`: Added decommission readiness report.
 - Commit `d761c47`: Recorded MP12 decommission readiness state.
 - Verification failure: `docker info` still cannot connect to `unix:///var/run/docker.sock`, so Docker-based PostgreSQL dump metadata inspection and restore tests remain blocked by local daemon availability. Resolution: leave MP-02 Docker/dump verification recorded as pending; no evidence archive files were modified.
+- Implementation slice: Completed the locally implementable MP-03 Events import gap. `scripts/import-airtable.ts` now imports verified Airtable `Events` fields into append-only `audit.events` rows with migration actor metadata, source event identity, optional client/lead linkage, secret-like payload redaction, idempotent same-hash reruns, and reject capture for unresolved linked client/lead records or invalid payload JSON.
+- Implementation slice: Tightened Airtable reconciliation mapped-count checks so they compare the selected import run's raw records against matching entity-map rows, instead of counting all historical mappings across runs. Reconciliation now includes `events_mapped`.
+- Decision: Historical Airtable events are audit evidence, not mutable business state; changed source events append a new audit row and update the entity map rather than mutating prior audit rows.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts` passed; focused importer tests ran 5 tests covering dry-run Events presence, idempotent Events import, audit payload redaction, events reconciliation, missing relationship rejection, and transaction rollback.
+- Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, and `npm run test:smoke` passed; Vitest ran 11 files and 111 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
+- Commit `75e4c1b`: Imported Airtable events into audit log.

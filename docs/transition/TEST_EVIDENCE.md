@@ -855,3 +855,39 @@ Command: `find /Users/yassinkhalil/Downloads/automation-20260729-220630/public -
 Result: located PostgreSQL dump artifacts in the read-only evidence archive, including Typebot, n8n, and conversation-edge dumps. They were not modified.
 
 Verification level: Docker-based PostgreSQL 16 dump metadata inspection remains blocked by local daemon availability.
+
+## 2026-08-01 MP-03 Airtable Events Import And Scoped Reconciliation
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts`
+
+Result: passed. Focused tests ran 5 tests covering dry-run Events loading, idempotent Events import into append-only `audit.events`, secret-like payload redaction, `events_mapped` reconciliation results, missing linked lead rejection, and rollback after mid-transaction failure.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages and found 0 vulnerabilities.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 11 files and 111 tests.
+
+Command: `npm run build`
+
+Result: passed.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local PostgreSQL importer/reconciliation integration plus full npm gate. No real Airtable export, external account, provider, or production data was accessed.

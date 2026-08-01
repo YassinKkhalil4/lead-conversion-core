@@ -231,3 +231,11 @@ Decision: Decommission readiness is implemented as a read-only PostgreSQL report
 Reason: n8n, Typebot, and Airtable removal is destructive and externally visible. The repository can prove local exit conditions and surface blockers, but it must not infer owner approval or delete fallback infrastructure from local metrics alone.
 
 Date: 2026-08-01
+
+## DEC-021: Historical Airtable Events Import Into Audit
+
+Decision: Import Airtable `Events` rows as historical `audit.events` records with actor type `migration`, preserve source identity in `migration.entity_map`, redact secret-like keys from the audit payload summary, and append a new audit row only when a previously mapped source event changes.
+
+Reason: The existing n8n audit workflow proves the Events field contract, but `audit.events` is append-only and must not become a mutable duplicate authority. Reconciliation must verify source-to-target mapping while preserving audit immutability and secret hygiene.
+
+Date: 2026-08-01
