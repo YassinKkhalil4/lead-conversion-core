@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getEnv } from '../config/env.js';
 import { metricsRegistry } from '../config/metrics.js';
 import { pool } from '../db/pool.js';
+import { workerHeartbeatOperationalState, type WorkerKind } from '../services/worker-heartbeat-readiness.js';
 
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/health', async () => ({ ok: true }));
@@ -29,25 +30,31 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
         worker_name: string;
         worker_kind: string;
         heartbeat_at: Date;
+        metadata_json: Record<string, unknown>;
       }>(
-        `SELECT DISTINCT ON (worker_kind) worker_name, worker_kind, heartbeat_at
+        `SELECT DISTINCT ON (worker_kind) worker_name, worker_kind, heartbeat_at, metadata_json
          FROM runtime.worker_heartbeats
          WHERE worker_kind IN ('outbox','runtime')
          ORDER BY worker_kind, heartbeat_at DESC`,
-      ).catch(() => ({ rows: [] as Array<{ worker_name: string; worker_kind: string; heartbeat_at: Date }> }));
+      ).catch(() => ({ rows: [] as Array<{ worker_name: string; worker_kind: string; heartbeat_at: Date; metadata_json: Record<string, unknown> }> }));
       const requiredWorkers = [
-        { workerKind: 'outbox', required: env.OUTBOX_WORKER_ENABLED },
-        { workerKind: 'runtime', required: env.RUNTIME_WORKER_ENABLED },
+        { workerKind: 'outbox' as const, required: env.OUTBOX_WORKER_ENABLED },
+        { workerKind: 'runtime' as const, required: env.RUNTIME_WORKER_ENABLED },
       ];
       const workerHeartbeats = requiredWorkers.map((requiredWorker) => {
         const heartbeat = workers.rows.find((row) => row.worker_kind === requiredWorker.workerKind) || null;
         const heartbeatAgeMs = heartbeat ? Date.now() - new Date(heartbeat.heartbeat_at).getTime() : null;
+        const operationalState = heartbeat
+          ? workerHeartbeatOperationalState(requiredWorker.workerKind as WorkerKind, heartbeat.metadata_json)
+          : { operational: false, metadata: {} };
         return {
           ...requiredWorker,
           latestWorkerName: heartbeat?.worker_name || null,
           latestHeartbeatAt: heartbeat?.heartbeat_at || null,
           heartbeatAgeMs,
-          ready: !requiredWorker.required || (heartbeatAgeMs !== null && heartbeatAgeMs <= 120_000),
+          operational: operationalState.operational,
+          metadata: operationalState.metadata,
+          ready: !requiredWorker.required || (heartbeatAgeMs !== null && heartbeatAgeMs <= 120_000 && operationalState.operational),
         };
       });
       const workerReady = workerHeartbeats.every((heartbeat) => heartbeat.ready);

@@ -80,7 +80,28 @@ describePg('readiness worker requirements with real PostgreSQL', () => {
     await db.pool.query(
       `INSERT INTO runtime.worker_heartbeats
         (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
-       VALUES ('runtime-ready-test', 'runtime', 1, now(), now(), '{}'::jsonb)`,
+       VALUES ('runtime-ready-test-disabled', 'runtime', 1, now(), now(), '{"enabled":false,"jobProcessorConfigured":true}'::jsonb)`,
+    );
+    const disabledHeartbeat = await app.inject({ method: 'GET', url: '/ready' });
+    expect(disabledHeartbeat.statusCode).toBe(503);
+    expect(disabledHeartbeat.json()).toMatchObject({
+      ok: false,
+      workerHeartbeats: [
+        { workerKind: 'outbox', required: false, ready: true },
+        {
+          workerKind: 'runtime',
+          required: true,
+          ready: false,
+          latestWorkerName: 'runtime-ready-test-disabled',
+          operational: false,
+        },
+      ],
+    });
+
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES ('runtime-ready-test', 'runtime', 1, now(), now(), '{"enabled":true,"jobProcessorConfigured":true}'::jsonb)`,
     );
     const ready = await app.inject({ method: 'GET', url: '/ready' });
     expect(ready.statusCode).toBe(200);
@@ -88,7 +109,7 @@ describePg('readiness worker requirements with real PostgreSQL', () => {
       ok: true,
       workerHeartbeats: [
         { workerKind: 'outbox', required: false, ready: true },
-        { workerKind: 'runtime', required: true, ready: true, latestWorkerName: 'runtime-ready-test' },
+        { workerKind: 'runtime', required: true, ready: true, latestWorkerName: 'runtime-ready-test', operational: true },
       ],
     });
   });

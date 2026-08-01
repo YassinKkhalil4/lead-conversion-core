@@ -34,6 +34,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     N8N_COMPAT_ROUTES_ENABLED: 'true',
     DIRECT_META_WEBHOOK_ENABLED: 'true',
     DIRECT_LEAD_INGRESS_ENABLED: 'true',
+    RUNTIME_WORKER_ENABLED: 'true',
   };
 
   let db: typeof import('../src/db/pool.js');
@@ -72,6 +73,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     process.env.N8N_COMPAT_ROUTES_ENABLED = env.N8N_COMPAT_ROUTES_ENABLED;
     process.env.DIRECT_META_WEBHOOK_ENABLED = env.DIRECT_META_WEBHOOK_ENABLED;
     process.env.DIRECT_LEAD_INGRESS_ENABLED = env.DIRECT_LEAD_INGRESS_ENABLED;
+    process.env.RUNTIME_WORKER_ENABLED = env.RUNTIME_WORKER_ENABLED;
     db = await import('../src/db/pool.js');
     runtime = await import('../src/infrastructure/runtime.js');
     runtimeWorker = await import('../src/worker/runtime-worker.js');
@@ -791,7 +793,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     await db.pool.query(
       `INSERT INTO runtime.worker_heartbeats
         (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
-       VALUES ('cutover-readiness-test', 'runtime', 1, now(), now(), '{}'::jsonb)`,
+       VALUES ('cutover-readiness-test', 'runtime', 1, now(), now(), '{"enabled":true,"jobProcessorConfigured":true}'::jsonb)`,
     );
     const report = await new cutoverReadiness.CutoverReadinessService().report();
     expect(report.ok).toBe(true);
@@ -819,6 +821,29 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       delivery_unknown: 'pass',
       dead_letters: 'pass',
       runtime_worker_heartbeat: 'pass',
+    });
+  });
+
+  it('fails cutover readiness when the latest runtime heartbeat is fresh but disabled', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES ('cutover-disabled-runtime', 'runtime', 1, now(), now(), '{"enabled":false,"jobProcessorConfigured":true}'::jsonb)`,
+    );
+
+    const report = await new cutoverReadiness.CutoverReadinessService().report();
+    expect(report.ok).toBe(false);
+    expect(report.workerHeartbeat).toMatchObject({
+      latestWorkerName: 'cutover-disabled-runtime',
+      operational: false,
+    });
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      runtime_worker_heartbeat: 'fail',
+    });
+    expect(report.checks.find((check) => check.checkKey === 'runtime_worker_heartbeat')?.details).toMatchObject({
+      latestWorkerName: 'cutover-disabled-runtime',
+      operational: false,
+      metadata: { enabled: false, jobProcessorConfigured: true },
     });
   });
 

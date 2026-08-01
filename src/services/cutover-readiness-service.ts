@@ -1,5 +1,6 @@
 import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
+import { workerHeartbeatOperationalState } from './worker-heartbeat-readiness.js';
 
 export interface ReadinessCheck {
   checkKey: string;
@@ -30,6 +31,7 @@ export interface CutoverReadinessReport {
   workerHeartbeat: {
     latestWorkerName: string;
     heartbeatAgeSeconds: number | null;
+    operational: boolean;
   };
   checks: ReadinessCheck[];
 }
@@ -89,10 +91,11 @@ export class CutoverReadinessService {
          FROM runtime.dead_letters
          WHERE replayed_at IS NULL`,
       ),
-      pool.query<{ worker_name: string; heartbeat_age_seconds: number | null }>(
+      pool.query<{ worker_name: string; heartbeat_age_seconds: number | null; metadata_json: Record<string, unknown> }>(
         `SELECT
            worker_name,
-           EXTRACT(EPOCH FROM now() - heartbeat_at)::int AS heartbeat_age_seconds
+           EXTRACT(EPOCH FROM now() - heartbeat_at)::int AS heartbeat_age_seconds,
+           metadata_json
          FROM runtime.worker_heartbeats
          WHERE worker_kind='runtime'
          ORDER BY heartbeat_at DESC
@@ -106,6 +109,9 @@ export class CutoverReadinessService {
     const deadLetterCount = deadLetters.rows[0]?.count || 0;
     const heartbeatRow = heartbeat.rows[0] || null;
     const heartbeatAgeSeconds = heartbeatRow?.heartbeat_age_seconds ?? null;
+    const runtimeOperationalState = heartbeatRow
+      ? workerHeartbeatOperationalState('runtime', heartbeatRow.metadata_json)
+      : { operational: false, metadata: {} };
 
     const checks: ReadinessCheck[] = [
       {
@@ -155,10 +161,16 @@ export class CutoverReadinessService {
       },
       {
         checkKey: 'runtime_worker_heartbeat',
-        status: heartbeatAgeSeconds !== null && heartbeatAgeSeconds <= maxWorkerHeartbeatAgeSeconds
+        status: heartbeatAgeSeconds !== null && heartbeatAgeSeconds <= maxWorkerHeartbeatAgeSeconds && runtimeOperationalState.operational
           ? 'pass'
           : env.RUNTIME_WORKER_ENABLED ? 'fail' : 'warn',
-        details: { latestWorkerName: heartbeatRow?.worker_name || '', heartbeatAgeSeconds, maxWorkerHeartbeatAgeSeconds },
+        details: {
+          latestWorkerName: heartbeatRow?.worker_name || '',
+          heartbeatAgeSeconds,
+          maxWorkerHeartbeatAgeSeconds,
+          operational: runtimeOperationalState.operational,
+          metadata: runtimeOperationalState.metadata,
+        },
       },
     ];
 
@@ -185,6 +197,7 @@ export class CutoverReadinessService {
       workerHeartbeat: {
         latestWorkerName: heartbeatRow?.worker_name || '',
         heartbeatAgeSeconds,
+        operational: runtimeOperationalState.operational,
       },
       checks,
     };
