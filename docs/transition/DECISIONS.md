@@ -210,7 +210,7 @@ Date: 2026-07-30
 
 ## DEC-018: Cutover Readiness Is Read-Only
 
-Decision: The MP-12 cutover readiness command reports direct-route flags, fallback compatibility, queue backlog, delivery-unknowns, dead letters, and runtime heartbeat age without claiming, retrying, replaying, cancelling, or mutating any durable runtime row.
+Decision: The MP-12 cutover readiness command reports direct-route flags, fallback compatibility, inbox/outbox/due scheduled-job backlog, delivery-unknowns, dead letters, and runtime heartbeat age without claiming, retrying, replaying, cancelling, or mutating any durable runtime row.
 
 Reason: Cutover checks must be safe to run repeatedly in staging and production. Operational repair actions belong to explicit reconciliation/replay commands with separate operator intent.
 
@@ -357,5 +357,13 @@ Date: 2026-08-01
 Decision: `npm run decommission:readiness` counts only aged direct `runtime.inbox_events` with `status='processed'` as direct-ingress stability evidence. Ignored direct-ingress validation probes remain useful route-check evidence, but they do not satisfy fallback-removal stability criteria.
 
 Reason: Staging route validation intentionally uses invalid payloads that can produce ignored durable receipts without creating business state. Counting those receipts as stability evidence would allow synthetic probes to justify n8n/Typebot/Airtable decommission, contradicting the requirement not to claim production readiness from synthetic fixtures.
+
+Date: 2026-08-01
+
+## DEC-037: Cutover Readiness Includes Due Scheduled Jobs
+
+Decision: `npm run cutover:readiness` treats due or processing `runtime.scheduled_jobs` as runtime backlog alongside inbox and outbox work. Future scheduled jobs are not counted as pending cutover backlog.
+
+Reason: Scheduled jobs are part of the durable PostgreSQL runtime authority. Route cutover should not proceed with abandoned due follow-up, SLA, report, or appointment work, but legitimate future schedules must not block direct-ingress readiness.
 
 Date: 2026-08-01

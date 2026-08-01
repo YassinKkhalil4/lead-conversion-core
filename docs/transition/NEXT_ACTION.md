@@ -33,7 +33,7 @@ Required verification:
 - `npm audit --audit-level=moderate`
 - `npm run test:smoke`
 - `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled>`
-- `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-queue-age-seconds=300`
+- `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-pending-scheduled-jobs=0 --max-queue-age-seconds=300`
 - `npm run decommission:readiness` with only evidence-backed owner flags
 
 Known blockers:
@@ -45,6 +45,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `2fb9221` (`Require processed direct ingress for decommission stability`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `d931368` (`Include scheduled jobs in cutover readiness`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes

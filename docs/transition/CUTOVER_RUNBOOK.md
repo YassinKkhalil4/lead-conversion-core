@@ -7,7 +7,7 @@ Status: draft, not approved for production execution.
 3. Confirm queues drained or within accepted thresholds.
 4. Confirm provider credentials rotated and configured.
 5. Confirm staging journey evidence is complete.
-6. Run `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-queue-age-seconds=300` and review all `fail` checks before changing routes.
+6. Run `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-pending-scheduled-jobs=0 --max-queue-age-seconds=300` and review all `fail` checks before changing routes.
 7. Enable the relevant direct-ingress flag in staging or production configuration only after owner approval: `DIRECT_META_WEBHOOK_ENABLED=true` for Meta callbacks and `DIRECT_LEAD_INGRESS_ENABLED=true` for direct website/Facebook lead callbacks.
 8. Keep `ACTIVE_TURN_COMPAT_ENABLED=false` during direct-ingress cutover unless the owner deliberately authorizes the legacy synchronous compatibility path for rollback testing.
 9. Apply rollout flag or Caddy path route change.

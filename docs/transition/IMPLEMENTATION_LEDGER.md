@@ -375,3 +375,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 3 PostgreSQL decommission-readiness tests and 61 skipped by filter, including the ignored-probe regression case.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 141 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `2fb9221`: Required processed direct ingress for decommission stability.
+
+## 2026-08-01 Cutover Scheduled-Job Backlog
+
+- Implementation slice: Hardened MP-12 cutover readiness so the read-only report includes due or processing `runtime.scheduled_jobs` as backlog alongside inbox and outbox work. Future scheduled jobs remain allowed and do not count against the pending scheduled-job threshold.
+- Decision: Added DEC-037. Scheduled jobs are durable runtime authority and must be visible in route-cutover readiness without blocking on legitimate future work.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness"` passed with 2 PostgreSQL cutover-readiness tests and 62 skipped by filter, including due scheduled-job backlog failure while a future scheduled job was ignored.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 141 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `d931368`: Included scheduled jobs in cutover readiness.
