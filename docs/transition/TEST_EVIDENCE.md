@@ -1371,3 +1371,17 @@ Result: passed. Focused PostgreSQL and route-gating run executed 10 tests and sk
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 145 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Direct Ingress Runtime Worker Contract
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/health-readiness.integration.test.ts tests/runtime.integration.test.ts -t "environment contract|direct ingress|readiness|cutover readiness"`
+
+Result: passed. Focused contract, route-gating, readiness, and PostgreSQL run executed 18 tests and skipped 63 by filter, covering startup rejection for direct ingress without `RUNTIME_WORKER_ENABLED`, startup rejection for direct Meta without `META_STATUS_PROCESSOR_ENABLED`, direct route tests using the required worker flags, `/ready` runtime heartbeat behavior, and cutover readiness processor metadata checks.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 146 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

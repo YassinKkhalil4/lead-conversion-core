@@ -405,3 +405,13 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts tests/runtime.integration.test.ts -t "configured inbox event types|direct lead|website lead|Facebook lead|cutover readiness|durably records invalid"` passed with 10 tests and 63 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 145 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `9cc10e1`: Processed direct lead ingress through runtime inbox.
+
+## 2026-08-01 Direct Ingress Runtime Worker Contract
+
+- Implementation slice: Hardened startup validation so direct website/Facebook lead ingress cannot be enabled unless `RUNTIME_WORKER_ENABLED=true`, and direct Meta webhook ingress cannot be enabled unless both `RUNTIME_WORKER_ENABLED=true` and `META_STATUS_PROCESSOR_ENABLED=true`.
+- Decision: Added DEC-040. Direct route flags must be coupled to the durable runtime worker path that processes their inbox receipts; `/ready` still verifies fresh operational heartbeat evidence after startup.
+- Documentation: Updated deployment, API, direct-ingress plan, cutover runbook, staging owner action, status, and work queue docs to show the required route/worker flag pairings.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/health-readiness.integration.test.ts tests/runtime.integration.test.ts -t "environment contract|direct ingress|readiness|cutover readiness"` passed with 18 tests and 63 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 146 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `a0c61a5`: Required runtime worker for direct ingress flags.
