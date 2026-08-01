@@ -609,3 +609,13 @@
 - Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/runtime-worker-wiring.test.ts tests/runtime.integration.test.ts -t "environment contract|direct ingress|runtime worker wiring|cutover readiness|n8n-compatible"` passed with 27 tests and 71 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 168 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `06c8c7f`: Require runtime readiness for n8n compatibility.
+
+## 2026-08-01 N8n Fallback Deployment Verification
+
+- Implementation slice: Hardened `scripts/verify-deployment.sh` with `--check-n8n-compat` and `--expect-n8n-compat=<enabled|disabled>` so staging verification can prove n8n compatibility fallback availability or intentional unavailability through an authenticated, non-customer inbound-message probe.
+- Implementation slice: The verifier writes `EDGE_INTERNAL_SECRET` to a private temporary curl header file, keeps sourced environment values shell-local, and expects durable `ok=true` acknowledgement when n8n compatibility is enabled or HTTP 503 after internal authentication when disabled.
+- Documentation slice: Updated DEC-061, the direct ingress plan, staging owner actions, risk register, status, work queue, and next-action records with the n8n fallback verifier contract.
+- Verification: `bash -n scripts/verify-deployment.sh` passed.
+- Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 8 tests, including enabled and disabled n8n fallback verifier child-process coverage plus static secret-argument checks.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 170 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `5e2101c`: Verify n8n fallback route availability.
