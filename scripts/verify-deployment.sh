@@ -67,13 +67,14 @@ tmp_body="$(mktemp)"
 tmp_edge_header="$(mktemp)"
 tmp_meta_curl_config="$(mktemp)"
 tmp_meta_post_config="$(mktemp)"
+tmp_meta_unsigned_post_config="$(mktemp)"
 tmp_meta_probe_body="$(mktemp)"
 tmp_meta_secret_file="$(mktemp)"
 cleanup() {
-  rm -f "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
+  rm -f "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_unsigned_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
 }
 trap cleanup EXIT
-chmod 600 "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
+chmod 600 "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_unsigned_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
 
 status_request() {
   curl -sS -o "$tmp_body" -w "%{http_code}" "$@"
@@ -102,6 +103,18 @@ write_signed_meta_probe_config() {
     printf 'request = "POST"\n'
     printf 'header = "Content-Type: application/json"\n'
     printf 'header = "X-Hub-Signature-256: %s"\n' "$(curl_config_escape "$signature")"
+    printf 'data-binary = "@%s"\n' "$(curl_config_escape "$body_file")"
+  } > "$file"
+}
+
+write_unsigned_meta_probe_config() {
+  local file="$1"
+  local url="$2"
+  local body_file="$3"
+  {
+    printf 'url = "%s"\n' "$(curl_config_escape "$url")"
+    printf 'request = "POST"\n'
+    printf 'header = "Content-Type: application/json"\n'
     printf 'data-binary = "@%s"\n' "$(curl_config_escape "$body_file")"
   } > "$file"
 }
@@ -177,6 +190,12 @@ PY
       cat "$tmp_body" >&2 || true
       exit 1
     fi
+    echo "ok"
+
+    write_unsigned_meta_probe_config "$tmp_meta_unsigned_post_config" "$BASE/webhooks/meta/whatsapp" "$tmp_meta_probe_body"
+    echo "Direct Meta unsigned webhook rejection:"
+    status="$(status_request --config "$tmp_meta_unsigned_post_config")"
+    assert_status "$status" "401" "Direct Meta unsigned webhook rejection"
     echo "ok"
   fi
 fi

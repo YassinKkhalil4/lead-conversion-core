@@ -231,6 +231,7 @@ describe('direct ingress route gates', () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-direct-meta.'));
     let challengeVerified = false;
     let signedProbeVerified = false;
+    let unsignedProbeRejected = false;
     const server = createServer((request, response) => {
       if (request.method === 'GET' && request.url === '/health') {
         response.writeHead(200, { 'content-type': 'application/json' });
@@ -257,6 +258,7 @@ describe('direct ingress route gates', () => {
         request.on('end', () => {
           const expected = `sha256=${createHmac('sha256', 'test_meta_app_secret_123456').update(body).digest('hex')}`;
           if (request.headers['x-hub-signature-256'] !== expected) {
+            unsignedProbeRejected = request.headers['x-hub-signature-256'] === undefined && body.includes('verify-deployment-phone-number');
             response.writeHead(401, { 'content-type': 'application/json' });
             response.end('{"ok":false,"error":"invalid_signature"}');
             return;
@@ -298,8 +300,10 @@ describe('direct ingress route gates', () => {
 
       expect(stdout).toContain('Direct Meta challenge (enabled):');
       expect(stdout).toContain('Direct Meta signed webhook (enabled):');
+      expect(stdout).toContain('Direct Meta unsigned webhook rejection:');
       expect(challengeVerified).toBe(true);
       expect(signedProbeVerified).toBe(true);
+      expect(unsignedProbeRejected).toBe(true);
     } finally {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
@@ -318,6 +322,7 @@ describe('direct ingress route gates', () => {
     expect(script).not.toContain('status_request "$BASE/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=$META_WEBHOOK_VERIFY_TOKEN');
     expect(script).toContain('status_request --config "$tmp_meta_curl_config"');
     expect(script).toContain('status_request --config "$tmp_meta_post_config"');
+    expect(script).toContain('status_request --config "$tmp_meta_unsigned_post_config"');
     expect(script).not.toContain('python3 - "$META_APP_SECRET"');
   });
 });
