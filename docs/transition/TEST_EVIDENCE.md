@@ -340,6 +340,10 @@ Result: passed.
 
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
+Result: passed from commit `d57f153`. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 124 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 15 files and 121 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 Verified commit: `5f78182`
