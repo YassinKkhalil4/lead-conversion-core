@@ -327,6 +327,46 @@ export async function reconcileAirtableImport(input: {
       details: {},
     });
 
+    const sourceOptOutCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.contacts'
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+         AND (
+           lower(COALESCE(raw.fields_json->>'Opted Out', '')) IN ('true','yes','1')
+           OR lower(COALESCE(raw.fields_json->>'Consent Status', '')) IN ('opted_out','opted out','unsubscribed','withdrawn','revoked','no_consent')
+         )`,
+      [importRunId],
+    );
+    const targetOptOutCount = await scalar(
+      client,
+      `SELECT count(*)::text AS count
+       FROM migration.airtable_raw_records raw
+       JOIN migration.entity_map mapped
+         ON mapped.source_system='airtable'
+        AND mapped.source_table=raw.table_name
+        AND mapped.source_record_id=raw.record_id
+        AND mapped.target_table='app.contacts'
+       JOIN app.contacts c ON c.contact_id=mapped.target_id
+       WHERE raw.import_run_id=$1
+         AND raw.table_name='Leads'
+         AND c.opted_out`,
+      [importRunId],
+    );
+    checks.push({
+      checkKey: 'opt_out_count',
+      status: sourceOptOutCount === targetOptOutCount ? 'pass' : 'fail',
+      expectedCount: sourceOptOutCount,
+      actualCount: targetOptOutCount,
+      details: { consentStatuses: ['opted_out', 'opted out', 'unsubscribed', 'withdrawn', 'revoked', 'no_consent'] },
+    });
+
     const sourcePendingFollowupCount = await scalar(
       client,
       `SELECT count(*)::text AS count

@@ -198,6 +198,13 @@ function phoneLooksUsable(raw: string): boolean {
   return /^\+20\d{10}$/.test(normalized) || /^\+\d{8,15}$/.test(normalized);
 }
 
+function optedOutField(fields: AirtableFields): boolean {
+  const explicit = stringField(fields, 'Opted Out').toLocaleLowerCase();
+  const consent = stringField(fields, 'Consent Status').toLocaleLowerCase();
+  return ['true', 'yes', '1'].includes(explicit)
+    || ['opted_out', 'opted out', 'unsubscribed', 'withdrawn', 'revoked', 'no_consent'].includes(consent);
+}
+
 function collisionSources(record: AirtableRecord, tableName: string): Array<{ field: 'phone' | 'email'; normalizedValue: string }> {
   const sources: Array<{ field: 'phone' | 'email'; normalizedValue: string }> = [];
   if (tableName === 'Leads') {
@@ -693,13 +700,15 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
       const phoneE164 = normalizePhone(phoneRaw);
       const contact = await client.query<{ contact_id: string }>(
         `INSERT INTO app.contacts
-          (client_id, legacy_airtable_id, name, phone_raw, phone_e164, email, consent_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+          (client_id, legacy_airtable_id, name, phone_raw, phone_e164, email, consent_status, opted_out, opt_out_reason)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (client_id, phone_e164) DO UPDATE SET
           name=COALESCE(NULLIF(EXCLUDED.name, ''), app.contacts.name),
           phone_raw=COALESCE(NULLIF(EXCLUDED.phone_raw, ''), app.contacts.phone_raw),
           email=COALESCE(NULLIF(EXCLUDED.email, ''), app.contacts.email),
           consent_status=COALESCE(NULLIF(EXCLUDED.consent_status, ''), app.contacts.consent_status),
+          opted_out=EXCLUDED.opted_out,
+          opt_out_reason=EXCLUDED.opt_out_reason,
           updated_at=now()
          RETURNING contact_id`,
         [
@@ -710,6 +719,8 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
           phoneE164,
           stringField(record.fields, 'Email'),
           stringField(record.fields, 'Consent Status') || 'unknown',
+          optedOutField(record.fields),
+          stringField(record.fields, 'Opt-Out Reason'),
         ],
       );
       const contactId = contact.rows[0]?.contact_id;

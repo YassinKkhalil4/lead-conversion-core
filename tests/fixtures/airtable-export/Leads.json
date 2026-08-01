@@ -7,7 +7,9 @@
       "Phone Raw": "01000000002",
       "Client": ["recCLIENT001"],
       "Project Linked": ["recPROJECT001"],
-      "Status": "New"
+      "Status": "New",
+      "Consent Status": "opted_out",
+      "Opt-Out Reason": "customer_requested"
     }
   }
 ]

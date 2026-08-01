@@ -59,6 +59,7 @@ describePg('airtable importer with real PostgreSQL', () => {
     runScript('import:airtable', ['--input=tests/fixtures/airtable-export', '--apply']);
     expect(psqlScalar('SELECT count(*) FROM app.clients')).toBe('1');
     expect(psqlScalar('SELECT count(*) FROM app.contacts')).toBe('1');
+    expect(psqlScalar('SELECT opted_out::text || \':\' || opt_out_reason FROM app.contacts')).toBe('true:customer_requested');
     expect(psqlScalar('SELECT count(*) FROM app.leads')).toBe('1');
     expect(psqlScalar('SELECT count(*) FROM app.qualification_sessions')).toBe('1');
     expect(psqlScalar('SELECT count(*) FROM app.score_runs')).toBe('1');
@@ -74,6 +75,7 @@ describePg('airtable importer with real PostgreSQL', () => {
     expect(psqlScalar("SELECT details_json->'expected'->>'New' FROM migration.reconciliation_results WHERE check_key='lead_status_distribution' ORDER BY created_at DESC LIMIT 1")).toBe('1');
     expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='active_leads_count' ORDER BY created_at DESC LIMIT 1")).toBe('1:1');
     expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='stop_follow_up_count' ORDER BY created_at DESC LIMIT 1")).toBe('0:0');
+    expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='opt_out_count' ORDER BY created_at DESC LIMIT 1")).toBe('1:1');
     expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='pending_followups_count' ORDER BY created_at DESC LIMIT 1")).toBe('1:1');
     expect(psqlScalar("SELECT expected_count || ':' || actual_count FROM migration.reconciliation_results WHERE check_key='open_booked_appointments_count' ORDER BY created_at DESC LIMIT 1")).toBe('1:1');
     expect(psqlScalar("SELECT actual_count FROM migration.reconciliation_results WHERE check_key='message_provider_id_uniqueness' ORDER BY created_at DESC LIMIT 1")).toBe('0');

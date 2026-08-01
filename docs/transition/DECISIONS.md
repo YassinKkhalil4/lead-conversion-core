@@ -583,3 +583,11 @@ Decision: Airtable business reconciliation checks for lead status distribution, 
 Reason: These checks must prove that imported Airtable rows landed in the correct business state without treating unrelated target rows as evidence. Rows that could not be mapped remain visible through reject and mapping failures instead of being silently inferred.
 
 Date: 2026-08-01
+
+## DEC-065: Airtable Contact Opt-Out Preservation
+
+Decision: The Airtable importer preserves contact opt-out state from accepted Lead rows when `Consent Status` is `opted_out`, `opted out`, `unsubscribed`, `withdrawn`, `revoked`, or `no_consent`, or when `Opted Out` is `true`, `yes`, or `1`. Reconciliation compares accepted source opt-out counts to imported `app.contacts.opted_out` rows.
+
+Reason: Opt-out state is durable business state, not display-only metadata. The importer already preserves the raw consent status text; setting the boolean prevents follow-up and messaging workflows from losing suppression state during the PostgreSQL authority transition.
+
+Date: 2026-08-01
