@@ -431,3 +431,11 @@ Decision: Signed Meta webhook payloads that contain no supported status or inbou
 Reason: Durable receipt should acknowledge valid provider delivery without synchronous business processing, but unsupported signed payloads must not remain permanently pending. Explicit worker-owned ignore handling preserves receipt evidence and keeps inbox backlog/readiness meaningful.
 
 Date: 2026-08-01
+
+## DEC-046: N8n Callback Routes Receipt Before Relationship Resolution
+
+Decision: n8n-compatible inbound callbacks for WhatsApp status acknowledgements, inbound WhatsApp messages, and salesperson commands authenticate, validate event shape, and write the durable inbox receipt before resolving client relationships. Worker processors own missing-message, missing-channel, and missing-client outcomes. The n8n-compatible outbound send route still resolves the client synchronously because it is an internal request to create a new side effect, not an inbound event receipt.
+
+Reason: Compatibility callbacks are external event ingress during cutover. Unknown or stale relationships must be visible as durable runtime evidence and operator-visible worker outcomes, not lost as pre-receipt HTTP 404 responses.
+
+Date: 2026-08-01

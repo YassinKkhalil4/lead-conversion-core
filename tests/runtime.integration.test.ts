@@ -3587,9 +3587,9 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         payload,
       });
       expect(first.statusCode).toBe(200);
-      expect(first.json()).toMatchObject({ ok: true, received: 1, duplicate: false, clientId: seeded.clientId });
+      expect(first.json()).toMatchObject({ ok: true, received: 1, duplicate: false });
       expect(duplicate.statusCode).toBe(200);
-      expect(duplicate.json()).toMatchObject({ ok: true, received: 1, duplicate: true, clientId: seeded.clientId });
+      expect(duplicate.json()).toMatchObject({ ok: true, received: 1, duplicate: true });
       expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE provider='n8n' AND event_type='whatsapp.message_received'")).rows[0]?.count).toBe('1');
 
       const processor = new metaInbox.MetaInboxProcessor();
@@ -3611,6 +3611,80 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='inbound' AND provider_message_id='n8n-inbound-mp08-001'")).rows[0]?.count).toBe('1');
       expect((await db.pool.query("SELECT count(*) FROM app.messages WHERE direction='outbound' AND state='queued'")).rows[0]?.count).toBe('1');
       expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'")).rows[0]?.count).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('durably receives n8n-compatible callbacks before client relationship resolution', async () => {
+    const app = await appModule.buildApp();
+    try {
+      const status = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/messages/whatsapp/status',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientRecordId: 'recN8NUNKNOWNCLIENT',
+          providerMessageId: 'wamid.n8n.unknown.status',
+          status: 'delivered',
+          providerTimestamp: '2026-07-30T03:30:00.000Z',
+          sourceEventId: 'n8n-status-unknown-client-001',
+        },
+      });
+      expect(status.statusCode).toBe(200);
+      expect(status.json()).toMatchObject({ ok: true, received: 1, duplicate: false });
+
+      const inbound = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/messages/whatsapp/inbound',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientRecordId: 'recN8NUNKNOWNCLIENT',
+          sourceEventId: 'n8n-inbound-unknown-client-001',
+          phoneNumberId: 'phone-number-id-unknown-client',
+          phoneNormalized: '+201000000006',
+          messageType: 'text',
+          messageText: 'Hello',
+        },
+      });
+      expect(inbound.statusCode).toBe(200);
+      expect(inbound.json()).toMatchObject({ ok: true, received: 1, duplicate: false });
+
+      const command = await app.inject({
+        method: 'POST',
+        url: '/compat/n8n/salesperson/commands',
+        headers: { 'x-internal-secret': env.EDGE_INTERNAL_SECRET },
+        payload: {
+          clientRecordId: 'recN8NUNKNOWNCLIENT',
+          salespersonPhoneE164: '+201000000007',
+          messageText: 'ack',
+          commandIntent: 'acknowledge',
+          sourceEventId: 'n8n-command-unknown-client-001',
+        },
+      });
+      expect(command.statusCode).toBe(200);
+      expect(command.json()).toMatchObject({ ok: true, received: 1, duplicate: false });
+
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE provider='n8n' AND event_type='whatsapp.message_status'")).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE provider='n8n' AND event_type='whatsapp.message_received'")).rows[0]?.count).toBe('1');
+      expect((await db.pool.query("SELECT count(*) FROM runtime.inbox_events WHERE provider='n8n' AND event_type='salesperson.command_received'")).rows[0]?.count).toBe('1');
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const worker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await worker.tick()).toBe(3);
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE event_type='whatsapp.message_status'")).rows[0]?.status).toBe('retryable');
+      expect((await db.pool.query("SELECT status, ignored_reason FROM runtime.inbox_events WHERE event_type='whatsapp.message_received'")).rows[0]).toMatchObject({
+        status: 'ignored',
+        ignored_reason: 'channel_not_edge_enabled',
+      });
+      expect((await db.pool.query("SELECT status, outcome_reason FROM app.salesperson_commands WHERE external_event_id='n8n-command-unknown-client-001'")).rows[0]).toMatchObject({
+        status: 'rejected',
+        outcome_reason: 'client_not_found',
+      });
+      expect((await db.pool.query("SELECT status FROM runtime.inbox_events WHERE event_type='salesperson.command_received'")).rows[0]?.status).toBe('processed');
     } finally {
       await app.close();
     }

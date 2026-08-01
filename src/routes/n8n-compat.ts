@@ -181,10 +181,10 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const body = parsed.data;
-    const clientId = await resolveClientId(clientIdentity(body));
     const eventKey = statusEventKey(body);
     const payload = {
       webhookType: 'whatsapp.message_status',
+      ...clientIdentity(body),
       eventKey,
       providerMessageId: body.providerMessageId,
       providerStatus: body.status,
@@ -203,7 +203,7 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
       signatureValid: true,
       aggregateKey: body.providerMessageId,
     });
-    return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId, clientId };
+    return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId };
   });
 
   app.post('/compat/n8n/messages/whatsapp/inbound', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -215,7 +215,6 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const body = parsed.data;
-    const clientId = await resolveClientId(clientIdentity(body));
     const from = body.fromE164 || body.phoneNormalized || '';
     if (!from) {
       reply.code(400);
@@ -225,6 +224,7 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
     const metaMessageId = body.metaMessageId || body.sourceEventId || eventKey;
     const payload = {
       webhookType: 'whatsapp.message_received',
+      ...clientIdentity(body),
       phoneNumberId: body.phoneNumberId,
       metaMessageId,
       from,
@@ -246,7 +246,7 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
       signatureValid: true,
       aggregateKey: from,
     });
-    return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId, clientId };
+    return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId };
   });
 
   app.post('/compat/n8n/salesperson/commands', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -258,7 +258,6 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const body = parsed.data;
-    const clientId = await resolveClientId(clientIdentity(body));
     const from = body.fromE164 || body.salespersonPhoneE164 || '';
     if (!from) {
       reply.code(400);
@@ -267,8 +266,7 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
     const eventKey = salespersonCommandEventKey(body);
     const payload = {
       webhookType: 'salesperson.command_received',
-      clientId,
-      clientRecordId: body.clientRecordId,
+      ...clientIdentity(body),
       leadId: body.leadId,
       assignmentId: body.assignmentId,
       fromE164: from,
@@ -289,6 +287,6 @@ export async function n8nCompatRoutes(app: FastifyInstance): Promise<void> {
       signatureValid: true,
       aggregateKey: body.leadId || body.assignmentId || from,
     });
-    return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId, clientId };
+    return { ok: true, received: 1, duplicate: receipt.duplicate, inboxEventId: receipt.inboxEventId };
   });
 }
