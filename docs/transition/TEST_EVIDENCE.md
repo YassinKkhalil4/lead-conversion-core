@@ -1787,3 +1787,65 @@ Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 me
 Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+## 2026-08-01 Airtable Decommission Reconciliation Suite Enforcement
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: failed on the first broad focused run after several decommission tests passed. Vitest reported a PostgreSQL `beforeEach` cleanup hook timeout. Resolution: isolated the new and touched tests, then reran the broad decommission-focused run successfully; no test coverage was disabled or weakened.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "non-pass Airtable"`
+
+Result: passed. The non-pass reconciliation fixture still fails `airtable_reconciliation_stable`.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "incomplete Airtable"`
+
+Result: passed. A single passing `rejected_records` reconciliation result now fails `airtable_reconciliation_stable` and reports missing required check keys.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "passes decommission readiness"`
+
+Result: passed. The positive decommission fixture now inserts the complete required Airtable reconciliation suite before `airtable_reconciliation_stable` can pass.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "cancelled Airtable projection"`
+
+Result: passed. The cancelled projection fixture still fails projection stability while complete reconciliation evidence passes.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed on rerun. Focused PostgreSQL decommission coverage ran 14 tests and skipped 70 by filter.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the decommission readiness required-key checks and test helper.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 17 files and 173 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

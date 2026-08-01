@@ -666,3 +666,15 @@
 - Verification: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts` passed with 6 importer/reconciliation tests, including imported opt-out reason and persisted `opt_out_count` evidence.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 172 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `051d7dc`: Preserve Airtable opt-out state.
+
+## 2026-08-01 Airtable Decommission Reconciliation Suite Enforcement
+
+- Implementation slice: Hardened `npm run decommission:readiness` so `airtable_reconciliation_stable` requires every required Airtable reconciliation check key to have recorded evidence.
+- Implementation slice: Preserved the existing fail-closed behavior that any non-`pass` reconciliation result blocks Airtable removal readiness.
+- Implementation slice: Added PostgreSQL integration coverage proving incomplete reconciliation evidence fails decommission readiness and that complete required reconciliation evidence is needed for the positive Airtable decommission fixture.
+- Decision: Added DEC-066. Airtable decommission requires the complete reconciliation suite, not a single passing row or partial evidence set.
+- Verification failure: The first broad focused run `npx vitest run tests/runtime.integration.test.ts -t "decommission"` hit a PostgreSQL cleanup hook timeout after several tests. Resolution: isolated the new and touched tests successfully, then reran the broad decommission-focused run successfully; no code weakening was required.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "non-pass Airtable"`, `npx vitest run tests/runtime.integration.test.ts -t "incomplete Airtable"`, `npx vitest run tests/runtime.integration.test.ts -t "passes decommission readiness"`, and `npx vitest run tests/runtime.integration.test.ts -t "cancelled Airtable projection"` passed individually.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 14 PostgreSQL decommission tests and 70 skipped by filter after the initial cleanup timeout did not repeat.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 173 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `66d3c46`: Require complete Airtable reconciliation for decommission.
