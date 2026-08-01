@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Run staging MP-12 verification once the owner supplies staging route access and provider/source credentials. Enable only the approved direct route plus its required runtime worker flags, use `scripts/verify-deployment.sh` with explicit direct-ingress expectations, confirm `npm run cutover:readiness` shows direct-inbox processor metadata for any enabled direct route, and run `npm run decommission:readiness` only as a read-only report. Do not remove n8n, Typebot, Airtable, MinIO, databases, volumes, or production routes without explicit owner approval.
+Exact next implementation task: Continue MP-12 local hardening by auditing the read-only cutover/decommission readiness paths, n8n compatibility fallback counters, and direct Meta/n8n inbox processing filters for any remaining locally testable defects. If no local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
 
 Files expected to change:
 
@@ -18,6 +18,12 @@ Files expected to change:
 - `docs/transition/DECOMMISSION_RUNBOOK.md`
 - `docs/owner-actions/06-staging-dns-and-access.md`
 - `docs/owner-actions/07-production-cutover.md`
+- `src/services/cutover-readiness-service.ts`
+- `src/services/decommission-readiness-service.ts`
+- `src/routes/n8n-compat.ts`
+- `src/services/meta-status-webhook-service.ts`
+- `src/services/meta-inbox-processor.ts`
+- `tests/runtime.integration.test.ts`
 
 Required verification:
 
@@ -32,7 +38,9 @@ Required verification:
 - `npm run build`
 - `npm audit --audit-level=moderate`
 - `npm run test:smoke`
-- `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled>`
+- `npm run artifacts:scan`
+- Focused PostgreSQL/API tests for any changed readiness or inbox path
+- `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled>` when staging owner inputs are available
 - `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-pending-scheduled-jobs=0 --max-queue-age-seconds=300`
 - `npm run decommission:readiness` with only evidence-backed owner flags
 
@@ -45,6 +53,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `a0c61a5` (`Require runtime worker for direct ingress flags`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `a5f11a8` (`Keep message delivery status monotonic`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes

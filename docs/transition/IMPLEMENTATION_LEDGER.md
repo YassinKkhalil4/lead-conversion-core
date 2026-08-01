@@ -415,3 +415,12 @@
 - Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/health-readiness.integration.test.ts tests/runtime.integration.test.ts -t "environment contract|direct ingress|readiness|cutover readiness"` passed with 18 tests and 63 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 146 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `a0c61a5`: Required runtime worker for direct ingress flags.
+
+## 2026-08-01 Monotonic WhatsApp Delivery Status
+
+- Implementation slice: Hardened Meta/n8n WhatsApp delivery-status processing so every distinct provider status event is still persisted, while `app.messages.state` only advances by lifecycle precedence and cannot regress when older provider webhooks arrive later.
+- Decision: Added DEC-041. Provider webhook arrival order is not authoritative for current message delivery state; the event trail remains authoritative evidence for reconciliation.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "delivery state|Meta status"` passed with 2 PostgreSQL tests and 67 skipped by filter, covering duplicate durable Meta status receipt plus the out-of-order `read` then `sent` regression case.
+- Verification: `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 147 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Verification: `npm ci` and `npm run artifacts:scan` passed; `npm ci` installed 118 packages with 0 vulnerabilities and tracked artifact scan passed.
+- Commit `a5f11a8`: Kept message delivery status monotonic.

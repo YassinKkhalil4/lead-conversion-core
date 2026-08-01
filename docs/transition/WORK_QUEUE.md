@@ -54,11 +54,13 @@ Remaining: provider-specific dispatchers and business processors are intentional
 
 Status: staging_blocked
 
-Deliverables: internal message request API, Meta adapter, templates, window policy, status events, delivery unknown handling, n8n compatibility route.
+Deliverables: internal message request API, Meta adapter, templates, window policy, status events with monotonic current-state advancement, delivery unknown handling, n8n compatibility route.
 
 Dependencies: Meta credentials/templates for live verification.
 
 Verification gates: contract fixtures for payloads/status/errors/timeouts; durable outbox dispatcher integration; live staging pending owner action.
+
+Completed locally: signed Meta delivery-status webhooks and authenticated n8n-compatible status callbacks durably receipt into `runtime.inbox_events`, process through the runtime worker, persist distinct provider delivery events, and advance the current `app.messages.state` monotonically so out-of-order older statuses cannot regress reporting state.
 
 Remaining: live staging verification pending owner action for rotated credentials, approved templates, callback URL, status webhook subscription, and test recipient.
 

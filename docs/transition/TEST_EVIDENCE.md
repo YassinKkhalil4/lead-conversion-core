@@ -1385,3 +1385,17 @@ Result: passed. Focused contract, route-gating, readiness, and PostgreSQL run ex
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 146 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Monotonic WhatsApp Delivery Status
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "delivery state|Meta status"`
+
+Result: passed. Focused PostgreSQL run executed 2 Meta status tests and skipped 67 by filter, covering duplicate durable Meta status receipt and an out-of-order status sequence where `read` remains the current `app.messages.state` after a later older `sent` event while both provider events remain recorded.
+
+Command: `npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. TypeScript lint passed; Vitest ran 16 files and 147 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Command: `npm ci && npm run artifacts:scan`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed.
