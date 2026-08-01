@@ -146,7 +146,7 @@ export class DecommissionReadinessService {
          WHERE provider IN ('meta','website','facebook')
            AND event_type = ANY($2::text[])
            AND status='processed'
-           AND created_at <= now() - make_interval(days => $1)`,
+           AND completed_at <= now() - make_interval(days => $1)`,
         [directStabilityDays, directIngressBusinessEventTypes],
       ),
       scalar(
@@ -155,7 +155,7 @@ export class DecommissionReadinessService {
          WHERE provider='meta'
            AND event_type='whatsapp.message_received'
            AND status='processed'
-           AND created_at <= now() - make_interval(days => $1)`,
+           AND completed_at <= now() - make_interval(days => $1)`,
         [directStabilityDays],
       ),
       scalar(
@@ -164,7 +164,7 @@ export class DecommissionReadinessService {
          WHERE provider IN ('website','facebook')
            AND event_type IN ('lead.created','leadgen.created')
            AND status='processed'
-           AND created_at <= now() - make_interval(days => $1)`,
+           AND completed_at <= now() - make_interval(days => $1)`,
         [directStabilityDays],
       ),
       scalar(
@@ -309,6 +309,7 @@ export class DecommissionReadinessService {
           directLeadIngressEnabled: env.DIRECT_LEAD_INGRESS_ENABLED,
           unresolvedCount: directIngressUnresolvedCount,
           requiredDays: directStabilityDays,
+          measuredAt: 'completed_at',
         },
       },
       {

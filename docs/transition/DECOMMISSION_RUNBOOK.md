@@ -31,7 +31,7 @@ N8n removal requires `N8N_COMPAT_ROUTES_ENABLED=false`, no open, parked, or dead
 
 Direct-ingress stability requires the current environment to have direct ingress enabled with a fresh operational runtime worker heartbeat whose metadata includes the enabled direct-ingress providers and event types. Old processed direct-ingress rows are not sufficient when the current route or worker state no longer proves Edge-owned durable processing.
 
-Stability evidence must match the currently enabled direct-ingress route family. Enabled direct Meta ingress needs aged processed Meta inbound-message evidence. Enabled direct lead ingress needs aged processed website or Facebook lead evidence. Ignored probes and provider delivery-status callbacks do not satisfy this requirement.
+Stability evidence must match the currently enabled direct-ingress route family. Enabled direct Meta ingress needs aged processed Meta inbound-message evidence. Enabled direct lead ingress needs aged processed website or Facebook lead evidence. The stability window is measured from successful processing completion (`runtime.inbox_events.completed_at`), not durable receipt time (`created_at`). Ignored probes and provider delivery-status callbacks do not satisfy this requirement.
 
 Processed n8n delivery-status callbacks older than the stability window remain delivery/reporting evidence. They do not extend the n8n decommission window unless their durable inbox row is unresolved, dead-lettered, or recent enough to fail `no_recent_n8n_compat_usage`.
 

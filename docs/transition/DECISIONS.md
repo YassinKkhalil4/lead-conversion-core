@@ -615,3 +615,11 @@ Decision: `npm run cutover:readiness` fails when any `runtime.outbox_commands` r
 Reason: A terminal external-effect failure is unresolved operational state that can affect customer messaging, calendar side effects, reporting, or fallback reconciliation. Cutover readiness should not depend on secondary dead-letter evidence alone when the authoritative outbox row already records a terminal failure.
 
 Date: 2026-08-01
+
+## DEC-069: Decommission Stability Uses Processing Completion Time
+
+Decision: `npm run decommission:readiness` measures direct-ingress stability from `runtime.inbox_events.completed_at`, not from receipt `created_at`, for processed direct Meta inbound-message and website/Facebook lead events.
+
+Reason: Durable receipt proves the event was safely acknowledged, but fallback removal requires proof that Edge-owned processing has been stable for the full window. An old receipt that only completed processing recently must not justify n8n/Typebot decommission.
+
+Date: 2026-08-01
