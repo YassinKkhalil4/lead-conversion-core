@@ -26,6 +26,9 @@ Files expected to change:
 - `tests/runtime.integration.test.ts`
 - `docker-compose.yml`
 - `tests/shell-scripts.test.ts`
+- `Dockerfile`
+- `package.json`
+- `tsconfig.build.json`
 
 Required verification:
 
@@ -55,6 +58,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `73c61e3` (`Remove API startup configuration seed`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `78e1370` (`Exclude tests from production build output`), with the full local gate passing before commit and only persistent state docs changed afterward.
 
 Git worktree clean when recorded: yes

@@ -1423,3 +1423,13 @@ Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tra
 Command: `EDGE_POSTGRES_PASSWORD=dummy LEAD_CORE_ENV_FILE=/dev/null docker-compose -f docker-compose.yml config`
 
 Result: passed. The standalone `docker-compose` config render succeeded for the updated Compose file.
+
+## 2026-08-01 Runtime-Only Production Build Output
+
+Command: `npx vitest run tests/shell-scripts.test.ts && npm run build && test ! -d dist/tests`
+
+Result: passed. Focused deployment/shell run executed 8 tests, production build completed through `tsconfig.build.json`, and `dist/tests` was absent after build.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 150 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

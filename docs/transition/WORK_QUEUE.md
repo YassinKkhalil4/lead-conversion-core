@@ -18,7 +18,7 @@ Remaining: none except ongoing secret hygiene.
 
 Status: locally_verified
 
-Deliverables: lockfile, fixed compiled paths, one-shot migrator, migration checksums/advisory lock, readiness, operational worker heartbeat checks, backup/restore scripts with private libpq service-file connection handling, PostgreSQL 16 dump inspect/restore-smoke wrappers, environment template, enabled-integration credential validation, generated env rendering that avoids secret-bearing process arguments, container topology with API/worker startup free of migrations and configuration seeding.
+Deliverables: lockfile, fixed compiled paths, runtime-only production build output, one-shot migrator, migration checksums/advisory lock, readiness, operational worker heartbeat checks, backup/restore scripts with private libpq service-file connection handling, PostgreSQL 16 dump inspect/restore-smoke wrappers, environment template, enabled-integration credential validation, generated env rendering that avoids secret-bearing process arguments, container topology with API/worker startup free of migrations and configuration seeding.
 
 Dependencies: Docker daemon for image run and Docker-based dump inspection.
 

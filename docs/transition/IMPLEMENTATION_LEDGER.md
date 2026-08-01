@@ -441,3 +441,12 @@
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 149 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Verification: `EDGE_POSTGRES_PASSWORD=dummy LEAD_CORE_ENV_FILE=/dev/null docker-compose -f docker-compose.yml config` passed.
 - Commit `73c61e3`: Removed API startup configuration seed.
+
+## 2026-08-01 Runtime-Only Production Build Output
+
+- Implementation slice: Added `tsconfig.build.json`, changed `npm run build` to clean `dist` and compile only `src` plus `scripts`, and removed `COPY tests ./tests` from the Docker build stage. `npm run lint` continues to typecheck tests through the main `tsconfig.json`.
+- Decision: Added DEC-044. Production artifacts and images should contain runtime code and operational scripts, not compiled tests.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 8 deployment/shell tests.
+- Verification: `npm run build && test ! -d dist/tests` passed, proving the build output no longer contains compiled tests.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 150 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `78e1370`: Excluded tests from production build output.
