@@ -619,3 +619,15 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 8 tests, including enabled and disabled n8n fallback verifier child-process coverage plus static secret-argument checks.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 170 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `5e2101c`: Verify n8n fallback route availability.
+
+## 2026-08-01 N8n Compatibility Routes Block Decommission
+
+- Implementation slice: Hardened `npm run decommission:readiness` so n8n readiness fails while `N8N_COMPAT_ROUTES_ENABLED=true`, even when no recent/unresolved n8n inbox rows remain and direct-ingress stability plus runtime-worker checks pass.
+- Implementation slice: Exported readiness CLI parser functions and changed the shell-script parser tests to import them directly after dummy env setup, preserving fail-closed argument validation without `npx tsx` startup timing as a test dependency.
+- Decision: Added DEC-062. An enabled n8n compatibility route is still fallback ingress authority and must block n8n removal readiness.
+- Documentation slice: Updated the decommission runbook, production cutover owner action, status, and work queue with `n8n_compatibility_routes_disabled`.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 12 PostgreSQL tests and 70 skipped by filter.
+- Verification: First full gate failed in `tests/shell-scripts.test.ts` because two readiness CLI parser tests used `npx tsx` child processes and exceeded the 5000 ms test timeout before assertions completed. The test harness was fixed by directly importing exported parser functions.
+- Verification: `npx vitest run tests/shell-scripts.test.ts`, `npm run lint`, and `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed after the parser test harness fix.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 170 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `0072a47`: Require n8n compatibility routes off for decommission.

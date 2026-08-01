@@ -1653,3 +1653,31 @@ Result: passed. Focused route/deployment-script run executed 8 tests. The new ve
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 170 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 N8n Compatibility Route Decommission Blocker
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed. Focused PostgreSQL decommission run executed 12 tests and skipped 70 by filter. The passing decommission fixture now first proves `N8N_COMPAT_ROUTES_ENABLED=true` fails `n8n_compatibility_routes_disabled` even when direct-ingress stability, direct-ingress current enablement, and worker-operational checks pass; the same fixture passes only when the env provider returns `N8N_COMPAT_ROUTES_ENABLED=false`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript accepted the decommission readiness check, CLI parser exports, and test updates.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: failed. The full gate reached `npm test`, but `tests/shell-scripts.test.ts` timed out two readiness CLI argument tests. The failing tests spawned `npx tsx` child processes to assert parser failures before PostgreSQL queries; on this run the process startup exceeded Vitest's 5000 ms per-test timeout before assertions completed.
+
+Resolution: Exported `parseArgs` from `scripts/cutover-readiness.ts` and `scripts/decommission-readiness.ts`, then changed the shell-script tests to dynamically import those parsers after setting dummy env values. This preserves the no-PostgreSQL-query parser invariant without making the test depend on `npx` startup time.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed. Focused shell-script run executed 10 tests, including direct parser checks for unknown and malformed readiness arguments.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "decommission"`
+
+Result: passed after the parser test harness fix. Focused PostgreSQL decommission run executed 12 tests and skipped 70 by filter.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 17 files and 170 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
