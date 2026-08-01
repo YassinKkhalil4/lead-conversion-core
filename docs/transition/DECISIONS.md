@@ -495,3 +495,11 @@ Decision: `npm run decommission:readiness` counts rejected n8n salesperson comma
 Reason: Inbox processing proves durable receipt handling, but a rejected command proves compatibility traffic failed business-authority validation. Fallback removal should not hide those command outcomes before operator reconciliation.
 
 Date: 2026-08-01
+
+## DEC-054: Parked Legacy Edge Outbox Rows Block Decommission
+
+Decision: `npm run decommission:readiness` treats legacy `edge_outbox.status='parked'` rows as unresolved n8n compatibility work alongside pending, processing, failed, and dead-lettered rows.
+
+Reason: Parked outbox rows are retained shadow-rollout side-effect records, not delivered or explicitly cancelled effects. Fallback removal should require an operator-visible disposition for those rows before n8n compatibility infrastructure is retired.
+
+Date: 2026-08-01

@@ -107,7 +107,7 @@ export class DecommissionReadinessService {
       airtableReconciliationFailureCount,
       heartbeat,
     ] = await Promise.all([
-      scalar("SELECT count(*)::int AS count FROM edge_outbox WHERE status IN ('pending','processing','failed','dead_lettered')"),
+      scalar("SELECT count(*)::int AS count FROM edge_outbox WHERE status IN ('pending','processing','failed','parked','dead_lettered')"),
       scalar(
         `SELECT count(*)::int AS count
          FROM runtime.scheduled_jobs

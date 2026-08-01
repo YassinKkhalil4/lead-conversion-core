@@ -1175,6 +1175,63 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('treats parked legacy edge outbox rows as unresolved decommission work', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO edge_config_snapshots (config_version, industry, config_json)
+       VALUES ('decommission-parked-config', 'real_estate', '{}'::jsonb)`,
+    );
+    const conversation = await db.pool.query<{ conversation_id: string }>(
+      `INSERT INTO edge_conversations
+        (client_record_id, phone_normalized, lead_record_id, config_version, status, conversation_engine, state_authority, created_at)
+       VALUES ('recDECOMPARKEDCLIENT', '+201011111114', 'recDECOMPARKEDLEAD', 'decommission-parked-config', 'completed', 'edge', 'edge', now() - interval '15 days')
+       RETURNING conversation_id`,
+    );
+    const conversationId = conversation.rows[0]?.conversation_id;
+    if (!conversationId) throw new Error('decommission_parked_conversation_not_created');
+    await db.pool.query(
+      `INSERT INTO edge_outbox (conversation_id, event_type, idempotency_key, payload_json, status)
+       VALUES ($1, 'qualification.answer_recorded', 'decommission-edge-outbox-parked', '{}'::jsonb, 'parked')`,
+      [conversationId],
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at)
+       VALUES
+        ('meta', 'whatsapp.message_received', 'decommission-parked-meta-stable', '+201022222229', '{}'::jsonb, 'processed', now() - interval '15 days'),
+        ('website', 'lead.created', 'decommission-parked-lead-stable', 'website-lead-decommission', '{}'::jsonb, 'processed', now() - interval '15 days')`,
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'decommission-parked-runtime-ready',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored","lead.created","leadgen.created"],"inboxProviders":["meta","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService().report({
+      ownerApprovedN8n: true,
+      finalLegacyExportComplete: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.metrics.legacyEdgeOutboxOpenCount).toBe(1);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      legacy_edge_outbox_drained: 'fail',
+      no_recent_n8n_compat_usage: 'pass',
+      no_new_legacy_conversations: 'pass',
+      no_active_legacy_conversations: 'pass',
+      direct_ingress_stable: 'pass',
+      direct_ingress_worker_operational: 'pass',
+    });
+  });
+
   it('does not treat direct provider status callbacks as decommission ingress stability evidence', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query(
