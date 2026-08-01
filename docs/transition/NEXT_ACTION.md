@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Continue MP-12 local hardening by auditing the remaining read-only cutover/decommission readiness paths, n8n compatibility fallback counters, and direct Meta/n8n inbox processing filters for any remaining locally testable defects. If no local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
+Exact next implementation task: Continue MP-12 local hardening by auditing the remaining read-only cutover/decommission readiness paths, n8n compatibility fallback counters, direct Meta/n8n inbox processing filters, and deployment verification scripts for any remaining locally testable defects. If no local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
 
 Files expected to change:
 
@@ -59,6 +59,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `b1786da` (`Ignore unsupported Meta webhooks through runtime worker`), with the full local gate passing before commit and only persistent state docs changed afterward.
+Last verified commit: `146ebf6` (`Receipt n8n callbacks before relationship resolution`), with focused n8n-compatible PostgreSQL/API tests and the full local gate passing before persistent state docs were updated.
 
 Git worktree clean when recorded: yes

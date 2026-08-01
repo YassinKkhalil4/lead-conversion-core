@@ -459,3 +459,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "unsupported signed Meta|Meta status|cutover readiness"` passed with 7 PostgreSQL/API tests and 65 skipped by filter, covering signed unsupported Meta receipt, worker ignore processing, and cutover readiness failure when ignored-webhook metadata is missing.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 152 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `b1786da`: Ignored unsupported Meta webhooks through runtime worker.
+
+## 2026-08-01 N8n Callback Durable Receipt Before Relationship Resolution
+
+- Implementation slice: Hardened n8n-compatible inbound callback routes for WhatsApp status acknowledgements, inbound WhatsApp messages, and salesperson commands so they authenticate, validate request shape, write `runtime.inbox_events`, and acknowledge durable receipt before resolving client relationships.
+- Implementation slice: Preserved the submitted client identity fields in raw inbox payloads so runtime workers can produce durable missing-message, missing-channel, or missing-client outcomes without dropping unknown-client callbacks at the HTTP edge.
+- Decision: Added DEC-046. n8n compatibility callbacks are external event ingress during cutover; worker processors own relationship failures after durable receipt. The n8n-compatible outbound send route still resolves client identity synchronously because it requests a new outbound effect.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "n8n-compatible"` passed with 4 PostgreSQL/API tests and 69 skipped by filter, covering n8n send/status/inbound compatibility and unknown-client status/inbound/command durable receipts with worker-owned retry/ignore/rejected outcomes.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 153 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `146ebf6`: Receipt n8n callbacks before relationship resolution.
