@@ -22,7 +22,7 @@ Options:
   --skip-ready                    Skip /ready check.
   --skip-shadow                   Skip /v1/shadow/evaluate check.
   --check-direct-meta             Verify direct Meta challenge behavior.
-  --check-direct-lead             Verify direct website lead route behavior with a non-business validation probe.
+  --check-direct-lead             Verify direct website and Facebook lead route behavior with non-business validation probes.
   --expect-direct-meta=MODE       MODE is enabled or disabled. Defaults from DIRECT_META_WEBHOOK_ENABLED.
   --expect-direct-lead=MODE       MODE is enabled or disabled. Defaults from DIRECT_LEAD_INGRESS_ENABLED.
 USAGE
@@ -123,7 +123,7 @@ if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then
     exit 1
   fi
   echo "Direct website lead ingress ($EXPECT_DIRECT_LEAD):"
-  event="verify-direct-lead-invalid-$(date +%s)"
+  event="verify-direct-website-lead-invalid-$(date +%s)"
   status="$(status_request \
     -H "X-Edge-Secret: $EDGE_SHARED_SECRET" \
     -H 'Content-Type: application/json' \
@@ -145,6 +145,32 @@ if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then
     fi
   else
     assert_status "$status" "503" "Disabled direct website lead ingress"
+  fi
+  echo "ok"
+
+  echo "Direct Facebook lead ingress ($EXPECT_DIRECT_LEAD):"
+  event="verify-direct-facebook-lead-invalid-$(date +%s)"
+  status="$(status_request \
+    -H "X-Edge-Secret: $EDGE_SHARED_SECRET" \
+    -H 'Content-Type: application/json' \
+    -d "{
+      \"leadgen_id\":\"$event\",
+      \"clientKey\":\"verify-deployment\"
+    }" \
+    "$BASE/webhooks/leads/facebook")"
+  if [[ "$EXPECT_DIRECT_LEAD" == "enabled" ]]; then
+    if [[ "$status" != "400" ]]; then
+      echo "Direct Facebook lead ingress failed: expected enabled route validation HTTP 400, got $status" >&2
+      cat "$tmp_body" >&2 || true
+      exit 1
+    fi
+    if ! grep -q "invalid_lead_payload" "$tmp_body"; then
+      echo "Direct Facebook lead ingress failed: validation response did not include invalid_lead_payload" >&2
+      cat "$tmp_body" >&2 || true
+      exit 1
+    fi
+  else
+    assert_status "$status" "503" "Disabled direct Facebook lead ingress"
   fi
   echo "ok"
 fi

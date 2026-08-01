@@ -132,6 +132,7 @@ describe('direct ingress route gates', () => {
       });
       expect(stdout).toContain('Direct Meta challenge (disabled):');
       expect(stdout).toContain('Direct website lead ingress (disabled):');
+      expect(stdout).toContain('Direct Facebook lead ingress (disabled):');
     } finally {
       await app.close();
       rmSync(root, { recursive: true, force: true });
@@ -140,7 +141,7 @@ describe('direct ingress route gates', () => {
 
   it('verifies enabled direct lead ingress with a validation probe instead of creating a lead', async () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-direct-lead.'));
-    const seenBodies: string[] = [];
+    const seenBodies = new Map<string, string>();
     const server = createServer((request, response) => {
       if (request.method === 'GET' && request.url === '/health') {
         response.writeHead(200, { 'content-type': 'application/json' });
@@ -153,7 +154,19 @@ describe('direct ingress route gates', () => {
           body += String(chunk);
         });
         request.on('end', () => {
-          seenBodies.push(body);
+          seenBodies.set('website', body);
+          response.writeHead(400, { 'content-type': 'application/json' });
+          response.end('{"ok":false,"error":"invalid_lead_payload"}');
+        });
+        return;
+      }
+      if (request.method === 'POST' && request.url === '/webhooks/leads/facebook') {
+        let body = '';
+        request.on('data', (chunk) => {
+          body += String(chunk);
+        });
+        request.on('end', () => {
+          seenBodies.set('facebook', body);
           response.writeHead(400, { 'content-type': 'application/json' });
           response.end('{"ok":false,"error":"invalid_lead_payload"}');
         });
@@ -187,14 +200,20 @@ describe('direct ingress route gates', () => {
       });
 
       expect(stdout).toContain('Direct website lead ingress (enabled):');
-      expect(seenBodies).toHaveLength(1);
-      const [seenBody] = seenBodies;
-      if (!seenBody) throw new Error('direct_lead_probe_body_missing');
-      const payload = JSON.parse(seenBody) as Record<string, unknown>;
-      expect(payload.eventId).toMatch(/^verify-direct-lead-invalid-/);
-      expect(payload.clientKey).toBe('verify-deployment');
-      expect(payload).not.toHaveProperty('phone');
-      expect(payload).not.toHaveProperty('name');
+      expect(stdout).toContain('Direct Facebook lead ingress (enabled):');
+      const websiteBody = seenBodies.get('website');
+      const facebookBody = seenBodies.get('facebook');
+      if (!websiteBody) throw new Error('direct_website_lead_probe_body_missing');
+      if (!facebookBody) throw new Error('direct_facebook_lead_probe_body_missing');
+      const websitePayload = JSON.parse(websiteBody) as Record<string, unknown>;
+      expect(websitePayload.eventId).toMatch(/^verify-direct-website-lead-invalid-/);
+      expect(websitePayload.clientKey).toBe('verify-deployment');
+      expect(websitePayload).not.toHaveProperty('phone');
+      expect(websitePayload).not.toHaveProperty('name');
+      const facebookPayload = JSON.parse(facebookBody) as Record<string, unknown>;
+      expect(facebookPayload.leadgen_id).toMatch(/^verify-direct-facebook-lead-invalid-/);
+      expect(facebookPayload.clientKey).toBe('verify-deployment');
+      expect(facebookPayload).not.toHaveProperty('field_data');
     } finally {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

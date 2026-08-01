@@ -1100,7 +1100,7 @@ Result: passed.
 
 Command: `npx vitest run tests/ingress-gating.test.ts`
 
-Result: passed. Focused app/deployment-script tests ran 4 tests, including an enabled direct-lead deployment probe that sends only `eventId` and `clientKey`, expects an `invalid_lead_payload` response, and verifies no phone/name business lead payload is sent by the verifier.
+Result: passed. Focused app/deployment-script tests ran 4 tests, including enabled direct-lead deployment probes that send only `eventId`/`clientKey` for website and `leadgen_id`/`clientKey` for Facebook, expect `invalid_lead_payload` responses, and verify no phone/name/field-data business lead payload is sent by the verifier.
 
 Command: `npm run lint`
 

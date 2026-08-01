@@ -11,7 +11,7 @@ Status: draft, not approved for production execution.
 7. Enable the relevant direct-ingress flag in staging or production configuration only after owner approval: `DIRECT_META_WEBHOOK_ENABLED=true` for Meta callbacks and `DIRECT_LEAD_INGRESS_ENABLED=true` for direct website/Facebook lead callbacks.
 8. Keep `ACTIVE_TURN_COMPAT_ENABLED=false` during direct-ingress cutover unless the owner deliberately authorizes the legacy synchronous compatibility path for rollback testing.
 9. Apply rollout flag or Caddy path route change.
-10. Verify webhook challenge/signature. For direct lead ingress, use the deployment verifier's invalid validation probe first; it should reach route validation without creating an authoritative lead or outbound command.
+10. Verify webhook challenge/signature. For direct website/Facebook lead ingress, use the deployment verifier's invalid validation probes first; they should reach route validation without creating an authoritative lead or outbound command.
 11. Send a real test message.
 12. Confirm provider message ID and delivery status.
 13. Monitor inbox/outbox age, dead letters, delivery unknown, provider errors, and DB pool saturation.

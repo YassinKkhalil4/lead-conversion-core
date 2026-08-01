@@ -272,10 +272,10 @@ Reason: The legacy active-turn route is intentionally preserved as a rollback sw
 
 Date: 2026-08-01
 
-## DEC-026: Direct Lead Deployment Probe Avoids Business Lead Creation
+## DEC-026: Direct Lead Deployment Probes Avoid Business Lead Creation
 
-Decision: `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead=enabled` uses a deliberately invalid website lead payload and expects `invalid_lead_payload` instead of posting a complete synthetic lead.
+Decision: `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead=enabled` uses deliberately invalid website and Facebook lead payloads and expects `invalid_lead_payload` instead of posting complete synthetic leads.
 
-Reason: MP-12 route-state verification should prove the direct lead route is enabled and reaches validation without creating authoritative `app.leads`, `app.contacts`, follow-up jobs, or outbound commands. Because direct lead ingress durably receipts before validation, the resulting ignored inbox row is acceptable staging evidence and must not be treated as a business lead.
+Reason: MP-12 route-state verification should prove the direct lead routes are enabled and reach validation without creating authoritative `app.leads`, `app.contacts`, follow-up jobs, or outbound commands. Because direct lead ingress durably receipts before validation, any resulting ignored inbox rows are acceptable staging evidence and must not be treated as business leads.
 
 Date: 2026-08-01
