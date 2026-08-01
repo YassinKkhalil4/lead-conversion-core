@@ -522,7 +522,7 @@ Date: 2026-08-01
 
 ## DEC-057: Direct Meta Deployment Verification Includes Signature Rejection
 
-Decision: `scripts/verify-deployment.sh --check-direct-meta --expect-direct-meta=enabled` verifies direct Meta challenge handling, signed durable receipt, and unsigned POST rejection.
+Decision: `scripts/verify-deployment.sh --check-direct-meta` verifies direct Meta challenge and POST behavior for the expected route state. When enabled, it proves challenge handling, signed durable receipt, and unsigned POST rejection. When disabled, it proves both challenge and POST return unavailable.
 
 Reason: A deployment can accept signed Meta probes while still accidentally accepting unsigned provider traffic if signature enforcement regresses. The staging verifier should prove both the positive and negative signature paths before route changes are treated as verified.
 

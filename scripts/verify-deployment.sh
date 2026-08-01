@@ -161,14 +161,15 @@ if [[ "$CHECK_DIRECT_META" == "true" ]]; then
   fi
   echo "ok"
 
+  cat > "$tmp_meta_probe_body" <<JSON
+{"object":"whatsapp_business_account","entry":[{"id":"verify-deployment-waba","changes":[{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"phone_number_id":"verify-deployment-phone-number"}}}]}]}
+JSON
+
   if [[ "$EXPECT_DIRECT_META" == "enabled" ]]; then
     if [[ -z "${META_APP_SECRET:-}" ]]; then
       echo "META_APP_SECRET is required for enabled --check-direct-meta signed webhook verification" >&2
       exit 1
     fi
-    cat > "$tmp_meta_probe_body" <<JSON
-{"object":"whatsapp_business_account","entry":[{"id":"verify-deployment-waba","changes":[{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"phone_number_id":"verify-deployment-phone-number"}}}]}]}
-JSON
     printf '%s' "$META_APP_SECRET" > "$tmp_meta_secret_file"
     signature="$(python3 - "$tmp_meta_secret_file" "$tmp_meta_probe_body" <<'PY'
 import hashlib
@@ -196,6 +197,12 @@ PY
     echo "Direct Meta unsigned webhook rejection:"
     status="$(status_request --config "$tmp_meta_unsigned_post_config")"
     assert_status "$status" "401" "Direct Meta unsigned webhook rejection"
+    echo "ok"
+  else
+    write_unsigned_meta_probe_config "$tmp_meta_unsigned_post_config" "$BASE/webhooks/meta/whatsapp" "$tmp_meta_probe_body"
+    echo "Direct Meta disabled webhook POST:"
+    status="$(status_request --config "$tmp_meta_unsigned_post_config")"
+    assert_status "$status" "503" "Disabled direct Meta webhook POST"
     echo "ok"
   fi
 fi

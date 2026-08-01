@@ -46,6 +46,14 @@ describe('direct ingress route gates', () => {
       expect(meta.statusCode).toBe(503);
       expect(meta.json()).toEqual({ ok: false, error: 'direct_meta_webhook_disabled' });
 
+      const metaPost = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        payload: { object: 'whatsapp_business_account' },
+      });
+      expect(metaPost.statusCode).toBe(503);
+      expect(metaPost.json()).toEqual({ ok: false, error: 'direct_meta_webhook_disabled' });
+
       const lead = await app.inject({
         method: 'POST',
         url: '/webhooks/leads/website',
@@ -136,6 +144,7 @@ describe('direct ingress route gates', () => {
         timeout: 10_000,
       });
       expect(stdout).toContain('Direct Meta challenge (disabled):');
+      expect(stdout).toContain('Direct Meta disabled webhook POST:');
       expect(stdout).toContain('Direct website lead ingress (disabled):');
       expect(stdout).toContain('Direct Facebook lead ingress (disabled):');
     } finally {
