@@ -511,3 +511,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 9 PostgreSQL tests and 69 skipped by filter, including an aged n8n dead-letter regression that does not rely on recent-usage blocking.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 160 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3ec9096`: Block decommission on n8n inbox dead letters.
+
+## 2026-08-01 Signed Direct Meta Deployment Probe
+
+- Implementation slice: Hardened `scripts/verify-deployment.sh --check-direct-meta --expect-direct-meta=enabled` so it verifies both Meta challenge handling and a signed non-customer webhook POST that should be durably receipted through the ignored-webhook path.
+- Implementation slice: The verifier computes the Meta HMAC from private temporary files and sends the signed POST through a private curl config file so the app secret and signature are not placed in curl command arguments.
+- Decision: Added DEC-052. Direct Meta deployment verification must prove signature handling and durable POST receipt, not only challenge URL reachability.
+- Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including a local HTTP server that validates the verifier's HMAC header for the signed non-customer Meta probe.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 161 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `f5f4847`: Verify signed direct Meta deployment probes.

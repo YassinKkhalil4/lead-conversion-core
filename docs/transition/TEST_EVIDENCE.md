@@ -1503,3 +1503,13 @@ Result: passed. Focused PostgreSQL run executed 9 tests and skipped 69 by filter
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 160 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Signed Direct Meta Deployment Probe
+
+Command: `npx vitest run tests/ingress-gating.test.ts`
+
+Result: passed. Focused route/deployment-script run executed 6 tests, including enabled direct Meta verification against a local HTTP server. The server validated the Meta challenge, recomputed the HMAC for the verifier's signed non-customer webhook payload, and returned durable receipt acknowledgement.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 161 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
