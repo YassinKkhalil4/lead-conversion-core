@@ -1563,3 +1563,17 @@ Result: passed. Focused route/deployment-script run executed 6 tests. The disabl
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 164 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Staging Verifier Documentation Alignment
+
+Command: `bash -n scripts/verify-deployment.sh`
+
+Result: passed. The deployment verifier script remains syntactically valid after help text alignment.
+
+Command: `npx vitest run tests/ingress-gating.test.ts`
+
+Result: passed. Focused route/deployment-script run executed 6 tests covering direct Meta enabled and disabled verifier behavior plus direct lead route probes.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 164 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

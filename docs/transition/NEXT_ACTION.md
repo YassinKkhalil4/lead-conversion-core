@@ -59,6 +59,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `9f05998` (`Verify disabled direct Meta POST`), with focused ingress-gating tests and the full local gate passing before persistent state docs were updated.
+Last verified commit: `c7d6f87` (`Align staging verifier documentation`), with verifier syntax, focused ingress-gating tests, and the full local gate passing before persistent state docs were updated.
 
 Git worktree clean when recorded: yes

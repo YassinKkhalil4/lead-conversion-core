@@ -568,3 +568,12 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including disabled direct Meta GET and POST returning unavailable plus deployment verifier output for the disabled POST check.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `9f05998`: Verify disabled direct Meta POST.
+
+## 2026-08-01 Staging Verifier Documentation Alignment
+
+- Documentation slice: Aligned `scripts/verify-deployment.sh --help`, `docs/owner-actions/06-staging-dns-and-access.md`, and `docs/transition/RISKS.md` with the current direct Meta verifier contract.
+- Documentation slice: Owner staging instructions now state that direct Meta verification covers challenge and POST behavior for both enabled and disabled route states, including signed durable receipt, unsigned rejection, and disabled POST unavailability.
+- Verification: `bash -n scripts/verify-deployment.sh` passed.
+- Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `c7d6f87`: Align staging verifier documentation.
