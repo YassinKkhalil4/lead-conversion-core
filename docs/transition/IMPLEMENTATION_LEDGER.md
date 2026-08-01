@@ -536,3 +536,11 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 11 PostgreSQL tests and 69 skipped by filter, including a parked legacy `edge_outbox` row that fails `legacy_edge_outbox_drained` while direct-ingress and legacy-conversation checks pass.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 163 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `486e7ee`: Block decommission on parked edge outbox.
+
+## 2026-08-01 Cancelled Airtable Projection Commands Block Decommission
+
+- Implementation slice: Hardened `npm run decommission:readiness` so cancelled `airtable.project_lead_visibility` durable outbox commands count as incomplete Airtable projection evidence.
+- Decision: Added DEC-055. A cancelled projection command is terminal durable state, but it is not delivered projection evidence and must not be treated as Airtable-retirement readiness.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 12 PostgreSQL tests and 69 skipped by filter, including a cancelled Airtable projection command that fails `airtable_projection_outbox_stable` while owner flags and reconciliation evidence pass.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `6378f7d`: Block Airtable decommission on cancelled projections.
