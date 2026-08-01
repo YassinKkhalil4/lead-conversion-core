@@ -6,11 +6,11 @@ Last updated: 2026-08-01
 
 Status: locally_verified
 
-Deliverables: clean repository, strict ignore rules, sanitized fixtures, owner-action docs, source inventory, duplicate-tree decision.
+Deliverables: clean repository, strict ignore rules, tracked-artifact scan, sanitized fixtures, owner-action docs, source inventory, duplicate-tree decision.
 
 Dependencies: none.
 
-Verification gates: clean artifact scan, `npm ci`, lint, tests, build, audit, smoke.
+Verification gates: `npm run artifacts:scan`, `npm ci`, lint, tests, build, audit, smoke.
 
 Remaining: none except ongoing secret hygiene.
 

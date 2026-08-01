@@ -1023,3 +1023,29 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 14 files and 115 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 Verification level: local script syntax, full npm gate, and smoke scripts. Docker-backed PostgreSQL 16 dump metadata and restore-smoke execution remain blocked by daemon availability.
+
+## 2026-08-01 Tracked Artifact Scan
+
+Command: `npm run artifacts:scan`
+
+Result: failed on first run because the scanner flagged the intentional tracked `.env.example`.
+
+Resolution: `.env.example` is now explicitly allowed while `.env` and `.env.*` remain blocked.
+
+Command: `npm run artifacts:scan`
+
+Result: passed and printed `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed. The shell parser test now includes `scripts/ops/scan-tracked-artifacts.sh`.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 14 files and 115 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Verification level: tracked-file artifact hygiene, local script syntax, full npm gate, and smoke scripts.

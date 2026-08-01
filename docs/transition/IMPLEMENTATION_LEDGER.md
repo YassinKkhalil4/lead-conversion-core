@@ -281,3 +281,9 @@
 - Verification: `npm run lint` and `npx vitest run tests/shell-scripts.test.ts` passed after dump tooling implementation.
 - Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 14 files and 115 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `91a8b5c`: Added PostgreSQL dump restore smoke tooling.
+- Implementation slice: Added `npm run artifacts:scan` backed by `scripts/ops/scan-tracked-artifacts.sh` to fail if ignored runtime directories, dump/archive files, credential-like JSON, resolved Compose output, imports, exports, or local env files are tracked. `.env.example` is explicitly allowed.
+- Verification failure: Initial `npm run artifacts:scan` flagged the intentional tracked `.env.example`. Resolution: added an explicit `.env.example` allow-list while keeping `.env` and `.env.*` blocked.
+- Verification: `npm run artifacts:scan` passed after the allow-list fix and printed `tracked_artifact_scan=pass`.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed; the parser test now includes the artifact scan script.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 14 files and 115 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3ea0f22`: Added tracked artifact scan.
