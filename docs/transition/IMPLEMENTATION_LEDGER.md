@@ -237,3 +237,5 @@
 - Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, and `npm run test:smoke` passed; Vitest ran 11 files and 111 tests, audit found 0 vulnerabilities, and smoke returned `ok=true`.
 - Deferred external verification: decommission approval remains pending final legacy export, final Airtable export, live/staging cutover evidence, and explicit owner approval for n8n, Typebot, and Airtable retirement.
 - Commit `73f5d96`: Added decommission readiness report.
+- Commit `d761c47`: Recorded MP12 decommission readiness state.
+- Verification failure: `docker info` still cannot connect to `unix:///var/run/docker.sock`, so Docker-based PostgreSQL dump metadata inspection and restore tests remain blocked by local daemon availability. Resolution: leave MP-02 Docker/dump verification recorded as pending; no evidence archive files were modified.

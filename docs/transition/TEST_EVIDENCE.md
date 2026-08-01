@@ -843,3 +843,15 @@ Command: `npm run test:smoke`
 Result: passed. Smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
 
 Verification level: local PostgreSQL read-only decommission reporting plus full npm gate. No DNS, Caddy, provider, n8n, Typebot, Airtable, MinIO, database, volume, or production route changes were made.
+
+## 2026-08-01 Docker Dump Inspection Recheck
+
+Command: `docker info`
+
+Result: failed because the Docker client could not connect to `unix:///var/run/docker.sock`; the daemon is not available in this environment.
+
+Command: `find /Users/yassinkhalil/Downloads/automation-20260729-220630/public -type f \( -name '*.dump' -o -name '*.sql' -o -name '*.backup' -o -name '*.tar' \) -print`
+
+Result: located PostgreSQL dump artifacts in the read-only evidence archive, including Typebot, n8n, and conversation-edge dumps. They were not modified.
+
+Verification level: Docker-based PostgreSQL 16 dump metadata inspection remains blocked by local daemon availability.
