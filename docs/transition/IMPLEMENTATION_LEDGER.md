@@ -297,3 +297,5 @@
 - Verification failure: Initial TypeScript lint failed because the new test parsed `seenBodies[0]` without proving it existed. Resolution: destructured and explicitly checked the captured body before parsing.
 - Verification: `bash -n scripts/verify-deployment.sh`, `npx vitest run tests/ingress-gating.test.ts`, and `npm run lint` passed; focused route-gating tests now run 4 tests, including enabled website and Facebook direct-lead validation probe coverage.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 14 files and 116 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `c07ac06`: Hardened direct lead deployment probe for the website route.
+- Commit `a399fa3`: Extended direct lead deployment probing to the Facebook route.
