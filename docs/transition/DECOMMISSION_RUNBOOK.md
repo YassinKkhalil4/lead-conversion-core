@@ -41,7 +41,7 @@ Processed n8n delivery-status callbacks older than the stability window remain d
 
 Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval.
 
-Airtable removal requires projection-only operation for 30 days, no production reads, no pending, failed, cancelled, dead-lettered, or ambiguous projection commands, stable reconciliation, final export, operator tooling, and explicit owner approval.
+Airtable removal requires projection-only operation for 30 days, no production reads, no pending, failed, cancelled, dead-lettered, or ambiguous projection commands, stable reconciliation, final export, operator tooling, and explicit owner approval. Stable reconciliation means the required Airtable reconciliation suite has recorded every required check key and every recorded reconciliation result is `pass`; a partial passing subset is not enough.
 
 ## Prohibited Without Separate Approval
 

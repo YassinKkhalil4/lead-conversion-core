@@ -72,6 +72,29 @@ function areaReady(checks: DecommissionCheck[], area: DecommissionCheck['area'])
 
 const directIngressBusinessEventTypes = ['whatsapp.message_received', 'lead.created', 'leadgen.created'];
 
+export const REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS = [
+  'rejected_records',
+  'clients_mapped',
+  'projects_mapped',
+  'salespeople_mapped',
+  'leads_mapped',
+  'qualifications_mapped',
+  'scores_mapped',
+  'messages_mapped',
+  'followups_mapped',
+  'appointments_mapped',
+  'events_mapped',
+  'contact_phone_uniqueness',
+  'lead_contact_links',
+  'lead_status_distribution',
+  'active_leads_count',
+  'stop_follow_up_count',
+  'opt_out_count',
+  'pending_followups_count',
+  'open_booked_appointments_count',
+  'message_provider_id_uniqueness',
+] as const;
+
 async function scalar(sql: string, values: unknown[] = []): Promise<number> {
   const result = await pool.query<{ count: number }>(sql, values);
   return result.rows[0]?.count || 0;
@@ -105,6 +128,7 @@ export class DecommissionReadinessService {
       airtableProjectionBlockedCount,
       airtableReconciliationResultCount,
       airtableReconciliationFailureCount,
+      airtableRequiredReconciliationKeys,
       heartbeat,
     ] = await Promise.all([
       scalar("SELECT count(*)::int AS count FROM edge_outbox WHERE status IN ('pending','processing','failed','parked','dead_lettered')"),
@@ -186,6 +210,12 @@ export class DecommissionReadinessService {
       ),
       scalar('SELECT count(*)::int AS count FROM migration.reconciliation_results'),
       scalar("SELECT count(*)::int AS count FROM migration.reconciliation_results WHERE status <> 'pass'"),
+      pool.query<{ check_key: string }>(
+        `SELECT DISTINCT check_key
+         FROM migration.reconciliation_results
+         WHERE check_key = ANY($1::text[])`,
+        [REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS],
+      ),
       pool.query<{ worker_name: string; heartbeat_age_seconds: number | null; metadata_json: Record<string, unknown> }>(
         `SELECT
            worker_name,
@@ -225,6 +255,12 @@ export class DecommissionReadinessService {
     const directIngressStable = directIngressUnresolvedCount === 0
       && (!env.DIRECT_META_WEBHOOK_ENABLED || directMetaStableEventCount > 0)
       && (!env.DIRECT_LEAD_INGRESS_ENABLED || directLeadStableEventCount > 0);
+    const presentAirtableReconciliationKeys = new Set(airtableRequiredReconciliationKeys.rows.map((row) => row.check_key));
+    const missingAirtableReconciliationKeys = REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS
+      .filter((checkKey) => !presentAirtableReconciliationKeys.has(checkKey));
+    const airtableReconciliationStable = airtableReconciliationResultCount > 0
+      && airtableReconciliationFailureCount === 0
+      && missingAirtableReconciliationKeys.length === 0;
 
     const checks: DecommissionCheck[] = [
       {
@@ -377,8 +413,13 @@ export class DecommissionReadinessService {
       {
         area: 'airtable',
         checkKey: 'airtable_reconciliation_stable',
-        status: passFail(airtableReconciliationResultCount > 0 && airtableReconciliationFailureCount === 0),
-        details: { resultCount: airtableReconciliationResultCount, nonPassCount: airtableReconciliationFailureCount },
+        status: passFail(airtableReconciliationStable),
+        details: {
+          resultCount: airtableReconciliationResultCount,
+          nonPassCount: airtableReconciliationFailureCount,
+          requiredCheckKeys: [...REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS],
+          missingCheckKeys: missingAirtableReconciliationKeys,
+        },
       },
       {
         area: 'airtable',

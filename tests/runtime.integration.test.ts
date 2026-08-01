@@ -195,6 +195,15 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     return outboxId;
   }
 
+  async function insertPassingAirtableReconciliationResults(): Promise<void> {
+    await db.pool.query(
+      `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
+       SELECT required.check_key, 'pass', 1, 1, '{}'::jsonb
+       FROM unnest($1::text[]) AS required(check_key)`,
+      [Array.from(decommissionReadiness.REQUIRED_AIRTABLE_RECONCILIATION_CHECK_KEYS)],
+    );
+  }
+
   function metaStatusPayload(
     providerMessageId = 'wamid.status.delivered',
     status = 'delivered',
@@ -1460,6 +1469,33 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(reconciliationCheck?.details).toMatchObject({ resultCount: 1, nonPassCount: 1 });
   });
 
+  it('treats incomplete Airtable reconciliation evidence as unstable for decommission', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query('TRUNCATE migration.reconciliation_results RESTART IDENTITY');
+    await db.pool.query(
+      `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
+       VALUES ('rejected_records', 'pass', 0, 0, '{}'::jsonb)`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => ({
+      ...configEnv.getEnv(),
+      N8N_COMPAT_ROUTES_ENABLED: false,
+    })).report({
+      ownerApprovedAirtable: true,
+      finalAirtableExportComplete: true,
+      airtableProjectionOnlyVerified: true,
+      minCompletedEdgeQualifications: 0,
+    });
+    const reconciliationCheck = report.checks.find((check) => check.checkKey === 'airtable_reconciliation_stable');
+    expect(reconciliationCheck?.status).toBe('fail');
+    expect(reconciliationCheck?.details).toMatchObject({
+      resultCount: 1,
+      nonPassCount: 0,
+    });
+    expect(reconciliationCheck?.details.missingCheckKeys).toContain('clients_mapped');
+    expect(reconciliationCheck?.details.missingCheckKeys).toContain('message_provider_id_uniqueness');
+  });
+
   it('passes decommission readiness only with local exit evidence and explicit owner acknowledgements', async () => {
     await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
     await db.pool.query('TRUNCATE migration.reconciliation_results RESTART IDENTITY');
@@ -1511,10 +1547,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
        FROM generate_series(1, 100)`,
       [leadId],
     );
-    await db.pool.query(
-      `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
-       VALUES ('decommission-fixture', 'pass', 1, 1, '{}'::jsonb)`,
-    );
+    await insertPassingAirtableReconciliationResults();
     await db.pool.query(
       `INSERT INTO runtime.worker_heartbeats
         (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
@@ -1586,10 +1619,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
         'cancelled'
        )`,
     );
-    await db.pool.query(
-      `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
-       VALUES ('decommission-cancelled-projection', 'pass', 1, 1, '{}'::jsonb)`,
-    );
+    await insertPassingAirtableReconciliationResults();
 
     const report = await new decommissionReadiness.DecommissionReadinessService().report({
       ownerApprovedAirtable: true,

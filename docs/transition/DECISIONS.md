@@ -591,3 +591,11 @@ Decision: The Airtable importer preserves contact opt-out state from accepted Le
 Reason: Opt-out state is durable business state, not display-only metadata. The importer already preserves the raw consent status text; setting the boolean prevents follow-up and messaging workflows from losing suppression state during the PostgreSQL authority transition.
 
 Date: 2026-08-01
+
+## DEC-066: Airtable Decommission Requires Complete Reconciliation Suite
+
+Decision: `npm run decommission:readiness` requires every currently required Airtable reconciliation check key to have recorded evidence, and it still fails if any recorded reconciliation result is not `pass`.
+
+Reason: Airtable removal cannot be justified by a single passing reconciliation row or an incomplete subset of checks. Final decommission readiness must prove the full local reconciliation suite was run and passed before owner approval can be meaningful.
+
+Date: 2026-08-01
