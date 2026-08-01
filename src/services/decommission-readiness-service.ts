@@ -46,6 +46,7 @@ export interface DecommissionReadinessReport {
     n8nInboxRecentCount: number;
     n8nRejectedSalespersonCommandCount: number;
     newLegacyConversationCount: number;
+    recentLegacyConversationActivityCount: number;
     activeLegacyConversationCount: number;
     directIngressStableEventCount: number;
     directMetaStableEventCount: number;
@@ -98,6 +99,7 @@ export class DecommissionReadinessService {
       n8nInboxRecentCount,
       n8nRejectedSalespersonCommandCount,
       newLegacyConversationCount,
+      recentLegacyConversationActivityCount,
       activeLegacyConversationCount,
       directIngressStableEventCount,
       directMetaStableEventCount,
@@ -132,6 +134,13 @@ export class DecommissionReadinessService {
          FROM edge_conversations
          WHERE (conversation_engine='legacy' OR state_authority='legacy')
            AND created_at >= now() - make_interval(days => $1)`,
+        [directStabilityDays],
+      ),
+      scalar(
+        `SELECT count(*)::int AS count
+         FROM edge_conversations
+         WHERE (conversation_engine='legacy' OR state_authority='legacy')
+           AND GREATEST(created_at, updated_at, COALESCE(last_inbound_at, created_at)) >= now() - make_interval(days => $1)`,
         [directStabilityDays],
       ),
       scalar(
@@ -281,6 +290,12 @@ export class DecommissionReadinessService {
       },
       {
         area: 'n8n',
+        checkKey: 'no_recent_legacy_conversation_activity',
+        status: passFail(recentLegacyConversationActivityCount === 0),
+        details: { count: recentLegacyConversationActivityCount, windowDays: directStabilityDays },
+      },
+      {
+        area: 'n8n',
         checkKey: 'no_active_legacy_conversations',
         status: passFail(activeLegacyConversationCount === 0),
         details: { count: activeLegacyConversationCount },
@@ -354,6 +369,12 @@ export class DecommissionReadinessService {
         checkKey: 'no_resumable_legacy_sessions',
         status: passFail(activeLegacyConversationCount === 0),
         details: { count: activeLegacyConversationCount },
+      },
+      {
+        area: 'typebot',
+        checkKey: 'no_recent_legacy_conversation_activity',
+        status: passFail(recentLegacyConversationActivityCount === 0),
+        details: { count: recentLegacyConversationActivityCount, windowDays: directStabilityDays },
       },
       {
         area: 'typebot',
@@ -435,6 +456,7 @@ export class DecommissionReadinessService {
         n8nRejectedSalespersonCommandCount,
         newLegacyConversationCount,
         activeLegacyConversationCount,
+        recentLegacyConversationActivityCount,
         directIngressStableEventCount,
         directMetaStableEventCount,
         directLeadStableEventCount,

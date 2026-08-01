@@ -51,6 +51,7 @@ Production cutover approval does not authorize fallback removal. Before removing
 - Review `npm run decommission:readiness -- --direct-stability-days=14 --min-completed-edge-qualifications=100 --max-worker-heartbeat-age-seconds=120` for the production environment.
 - Confirm `N8N_COMPAT_ROUTES_ENABLED=false` before treating n8n fallback as removable.
 - Confirm direct-ingress stability evidence is aged from successful processing completion, not only old durable receipt timestamps.
+- Confirm there has been no legacy-owned conversation activity inside the stability window, including old terminal conversations updated recently.
 - Provide final legacy export evidence.
 - Provide final Airtable export evidence.
 - Confirm Airtable has been projection-only for the agreed window.

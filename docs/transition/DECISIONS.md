@@ -623,3 +623,11 @@ Decision: `npm run decommission:readiness` measures direct-ingress stability fro
 Reason: Durable receipt proves the event was safely acknowledged, but fallback removal requires proof that Edge-owned processing has been stable for the full window. An old receipt that only completed processing recently must not justify n8n/Typebot decommission.
 
 Date: 2026-08-01
+
+## DEC-070: Recent Legacy Conversation Activity Blocks Decommission
+
+Decision: `npm run decommission:readiness` fails n8n and Typebot readiness when a legacy-owned conversation has recent activity inside the stability window, measured from `GREATEST(created_at, updated_at, last_inbound_at)`.
+
+Reason: A legacy conversation can be older than the window and no longer resumable while still having been handled recently by legacy/Typebot authority. Fallback removal should require a quiet legacy window, not only absence of newly created or currently active legacy conversations.
+
+Date: 2026-08-01

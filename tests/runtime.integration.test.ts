@@ -1145,6 +1145,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       n8nInboxUnresolvedCount: 1,
       n8nInboxRecentCount: 1,
       newLegacyConversationCount: 1,
+      recentLegacyConversationActivityCount: 1,
       activeLegacyConversationCount: 1,
     });
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
@@ -1153,11 +1154,83 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       no_unresolved_n8n_inbox: 'fail',
       no_recent_n8n_compat_usage: 'fail',
       no_new_legacy_conversations: 'fail',
+      no_recent_legacy_conversation_activity: 'fail',
       no_active_legacy_conversations: 'fail',
       active_turn_compat_disabled: 'pass',
       owner_approved_n8n_decommission: 'fail',
       owner_approved_typebot_decommission: 'fail',
       owner_approved_airtable_decommission: 'fail',
+    });
+  });
+
+  it('does not allow decommission readiness after recent activity on old terminal legacy conversations', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO edge_config_snapshots (config_version, industry, config_json)
+       VALUES ('decommission-recent-legacy-activity-config', 'real_estate', '{}'::jsonb)`,
+    );
+    await db.pool.query(
+      `INSERT INTO edge_conversations
+        (client_record_id, phone_normalized, lead_record_id, config_version, status, conversation_engine, state_authority, created_at, updated_at, last_inbound_at)
+       VALUES (
+        'recDECOMRECENTLEGACY',
+        '+201011111115',
+        'recDECOMRECENTLEGACYLEAD',
+        'decommission-recent-legacy-activity-config',
+        'completed',
+        'legacy',
+        'legacy',
+        now() - interval '30 days',
+        now(),
+        now()
+       )`,
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.inbox_events
+        (provider, event_type, dedupe_key, aggregate_key, payload_json, status, created_at, completed_at)
+       VALUES
+        ('meta', 'whatsapp.message_received', 'decommission-recent-legacy-activity-meta-stable', '+201022222231', '{}'::jsonb, 'processed', now() - interval '15 days', now() - interval '15 days'),
+        ('website', 'lead.created', 'decommission-recent-legacy-activity-lead-stable', 'website-lead-recent-legacy-activity', '{}'::jsonb, 'processed', now() - interval '15 days', now() - interval '15 days')`,
+    );
+    await db.pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES (
+        'decommission-recent-legacy-activity-runtime-ready',
+        'runtime',
+        1,
+        now(),
+        now(),
+        '{"enabled":true,"inboxProcessorConfigured":true,"inboxEventTypes":["whatsapp.message_status","whatsapp.message_received","whatsapp.webhook_ignored","lead.created","leadgen.created"],"inboxProviders":["meta","website","facebook"],"jobProcessorConfigured":true}'::jsonb
+       )`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService(() => ({
+      ...configEnv.getEnv(),
+      N8N_COMPAT_ROUTES_ENABLED: false,
+    })).report({
+      ownerApprovedN8n: true,
+      ownerApprovedTypebot: true,
+      finalLegacyExportComplete: true,
+      appointmentMediaMigrated: true,
+      directStabilityDays: 14,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.metrics).toMatchObject({
+      newLegacyConversationCount: 0,
+      activeLegacyConversationCount: 0,
+      recentLegacyConversationActivityCount: 1,
+    });
+    const checks = report.checks.filter((check) => check.checkKey === 'no_recent_legacy_conversation_activity');
+    expect(checks).toHaveLength(2);
+    expect(checks.map((check) => `${check.area}:${check.status}`).sort()).toEqual(['n8n:fail', 'typebot:fail']);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      no_new_legacy_conversations: 'pass',
+      no_active_legacy_conversations: 'pass',
+      no_resumable_legacy_sessions: 'pass',
+      direct_ingress_stable: 'pass',
+      direct_ingress_worker_operational: 'pass',
     });
   });
 
