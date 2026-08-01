@@ -26,6 +26,7 @@
     "decommission:readiness:prod": "node dist/scripts/decommission-readiness.js",
     "dump:inspect": "scripts/ops/inspect-dump-metadata.sh",
     "dump:restore-smoke": "scripts/ops/restore-dump-smoke.sh",
+    "artifacts:scan": "scripts/ops/scan-tracked-artifacts.sh",
     "sync-config": "tsx scripts/sync-config.ts",
     "config": "tsx scripts/config.ts",
     "config:prod": "node dist/scripts/config.js",

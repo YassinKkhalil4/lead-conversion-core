@@ -71,7 +71,7 @@ Move lead conversion authority from Airtable, n8n, Typebot, and canary Conversat
 ## MP-01 Exit Criteria
 
 - Clean canonical repository exists.
-- No known secret-bearing artifact is tracked.
+- No known secret-bearing artifact is tracked; verify with `npm run artifacts:scan`.
 - Required Airtable export is documented.
 - Current behavior fixtures exist.
 - No production behavior changed.
