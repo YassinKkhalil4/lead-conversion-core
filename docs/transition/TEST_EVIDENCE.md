@@ -1577,3 +1577,27 @@ Result: passed. Focused route/deployment-script run executed 6 tests covering di
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 164 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Disabled Direct Ingress Verification Without Secrets
+
+Command: `bash -n scripts/verify-deployment.sh`
+
+Result: passed. The deployment verifier script remained syntactically valid after enabled-only credential requirements and disabled direct-lead header handling were added.
+
+Command: `npx vitest run tests/ingress-gating.test.ts`
+
+Result: failed. The disabled direct-ingress verifier test reached the local route checks but exited with `direct_lead_auth_header[@]: unbound variable`, caused by empty Bash array expansion under `set -u` on the macOS Bash used by the test runner.
+
+Resolution: Replaced the empty-array argument expansion with a conditional `lead_status_request` helper that includes the private header file only when `EDGE_SHARED_SECRET` is present.
+
+Command: `bash -n scripts/verify-deployment.sh`
+
+Result: passed after the shell portability fix.
+
+Command: `npx vitest run tests/ingress-gating.test.ts`
+
+Result: passed. Focused route/deployment-script run executed 6 tests. The disabled direct-ingress test now runs the verifier child process with a minimal environment and no Meta token, app secret, edge shared secret, or internal secret; direct Meta challenge/POST and website/Facebook lead routes all return HTTP 503.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && test ! -d dist/tests && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 164 tests; build passed; `dist/tests` was absent; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.

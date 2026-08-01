@@ -577,3 +577,14 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `c7d6f87`: Align staging verifier documentation.
+
+## 2026-08-01 Disabled Direct Ingress Verification Without Secrets
+
+- Implementation slice: Hardened direct lead ingress route gating so disabled website/Facebook routes return HTTP 503 before `EDGE_SHARED_SECRET` validation, matching direct Meta disabled behavior and the documented unavailable route state.
+- Implementation slice: Hardened `scripts/verify-deployment.sh` so disabled direct Meta checks can use a non-secret placeholder challenge token and disabled direct lead checks can run without `EDGE_SHARED_SECRET` when shadow verification is skipped; enabled checks still require the real credentials they verify.
+- Decision: Added DEC-058. Disabled direct-ingress verification should not be blocked by missing rotated provider credentials or internal route secrets, while enabled verification still proves auth/signature behavior.
+- Verification: First focused run of `npx vitest run tests/ingress-gating.test.ts` failed because an empty Bash array expansion under `set -u` broke disabled lead verification on macOS Bash; fixed by replacing the array with a conditional `lead_status_request` helper.
+- Verification: `bash -n scripts/verify-deployment.sh` passed.
+- Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including a child process with a minimal environment proving disabled direct-route verification does not inherit or require Meta/edge secrets.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 164 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `158b802`: Allow disabled ingress verification without secrets.

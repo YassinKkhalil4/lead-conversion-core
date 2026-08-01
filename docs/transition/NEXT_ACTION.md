@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, historical n8n delivery-status outcomes, and direct Meta enabled/disabled deployment verification.
+Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, rejected n8n commands, cancelled Airtable projections, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, and disabled direct-ingress verifier credential independence.
 
 Files expected to change:
 
@@ -13,23 +13,11 @@ Files expected to change:
 - `docs/transition/NEXT_ACTION.md`
 - `docs/transition/IMPLEMENTATION_LEDGER.md`
 - `docs/transition/TEST_EVIDENCE.md`
-- `docs/transition/CUTOVER_RUNBOOK.md`
 - `docs/transition/DIRECT_INGRESS_PLAN.md`
-- `docs/transition/DECOMMISSION_RUNBOOK.md`
 - `docs/owner-actions/06-staging-dns-and-access.md`
 - `docs/owner-actions/07-production-cutover.md`
-- `src/services/cutover-readiness-service.ts`
-- `src/services/decommission-readiness-service.ts`
-- `src/routes/n8n-compat.ts`
-- `src/services/meta-status-webhook-service.ts`
-- `src/services/meta-inbox-processor.ts`
-- `src/worker-runner.ts`
-- `tests/runtime.integration.test.ts`
-- `docker-compose.yml`
-- `tests/shell-scripts.test.ts`
-- `Dockerfile`
-- `package.json`
-- `tsconfig.build.json`
+- `scripts/verify-deployment.sh`
+- `tests/ingress-gating.test.ts`
 
 Required verification:
 
@@ -59,6 +47,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `c7d6f87` (`Align staging verifier documentation`), with verifier syntax, focused ingress-gating tests, and the full local gate passing before persistent state docs were updated.
+Last verified commit: `158b802` (`Allow disabled ingress verification without secrets`), with verifier syntax, focused ingress-gating tests, and the full local gate passing before persistent state docs were updated.
 
 Git worktree clean when recorded: yes
