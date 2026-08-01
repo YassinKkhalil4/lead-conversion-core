@@ -256,3 +256,9 @@
 - Verification: `EDGE_POSTGRES_PASSWORD=dummy LEAD_CORE_ENV_FILE=/dev/null docker-compose -f docker-compose.yml config` passed and rendered `lead-core-runtime-worker` with `WORKER_KIND=runtime`.
 - Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 13 files and 113 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `b8114c6`: Hardened deployment env and worker readiness.
+- Implementation slice: Disabled the legacy synchronous `/v1/turn` active-turn compatibility route by default behind `ACTIVE_TURN_COMPAT_ENABLED=false`, added the flag to the validated environment contract/template, and documented that direct Meta ingress must use the durable inbox path unless legacy compatibility is deliberately enabled.
+- Decision: Legacy active-turn compatibility remains available only as an explicit rollback/compatibility switch because it predates the durable outbox path and sends through the old synchronous Meta path.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts` passed; focused tests ran 4 tests covering env-template/schema alignment, direct ingress gates, n8n compatibility separation, deployment-script disabled route probes, and disabled `/v1/turn` behavior.
+- Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 13 files and 113 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `de1d36b`: Gated legacy active turn compatibility.

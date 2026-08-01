@@ -943,3 +943,19 @@ Command: `npm run test:integration`
 Result: passed. Integration smoke returned `ok=true`, checked 12 stop conditions, raw fallback notes, structural parity, and the same config version.
 
 Verification level: local env-contract, static Compose config, PostgreSQL readiness integration, full npm gate, and smoke scripts. No Docker image was built because the Docker daemon remains unavailable.
+
+## 2026-08-01 Legacy Active-Turn Compatibility Gate
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts`
+
+Result: passed. Focused tests ran 4 tests covering `.env.example` alignment with validated runtime variables, direct ingress route gates, n8n compatibility separation, deployment-script disabled route probes, and disabled `/v1/turn` returning `active_turn_compat_disabled`.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 13 files and 113 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Verification level: local env-contract, Fastify route gating, full npm gate, and smoke scripts. No live provider, DNS, Caddy, n8n, Typebot, Airtable, or production route change was made.
