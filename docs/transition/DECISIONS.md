@@ -271,3 +271,11 @@ Decision: Cutover readiness fails when `ACTIVE_TURN_COMPAT_ENABLED=true`, and de
 Reason: The legacy active-turn route is intentionally preserved as a rollback switch, but it must not be invisible in cutover evidence. Operator reports should prevent accidental promotion or decommission while the old synchronous send path is enabled.
 
 Date: 2026-08-01
+
+## DEC-026: Direct Lead Deployment Probe Avoids Business Lead Creation
+
+Decision: `scripts/verify-deployment.sh --check-direct-lead --expect-direct-lead=enabled` uses a deliberately invalid website lead payload and expects `invalid_lead_payload` instead of posting a complete synthetic lead.
+
+Reason: MP-12 route-state verification should prove the direct lead route is enabled and reaches validation without creating authoritative `app.leads`, `app.contacts`, follow-up jobs, or outbound commands. Because direct lead ingress durably receipts before validation, the resulting ignored inbox row is acceptable staging evidence and must not be treated as a business lead.
+
+Date: 2026-08-01

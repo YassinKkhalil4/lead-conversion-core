@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -133,6 +134,71 @@ describe('direct ingress route gates', () => {
       expect(stdout).toContain('Direct website lead ingress (disabled):');
     } finally {
       await app.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('verifies enabled direct lead ingress with a validation probe instead of creating a lead', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-direct-lead.'));
+    const seenBodies: string[] = [];
+    const server = createServer((request, response) => {
+      if (request.method === 'GET' && request.url === '/health') {
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end('{"ok":true}');
+        return;
+      }
+      if (request.method === 'POST' && request.url === '/webhooks/leads/website') {
+        let body = '';
+        request.on('data', (chunk) => {
+          body += String(chunk);
+        });
+        request.on('end', () => {
+          seenBodies.push(body);
+          response.writeHead(400, { 'content-type': 'application/json' });
+          response.end('{"ok":false,"error":"invalid_lead_payload"}');
+        });
+        return;
+      }
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end('{"ok":false}');
+    });
+
+    try {
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
+      const envFile = join(root, 'verify.env');
+      writeFileSync(envFile, [
+        'EDGE_SHARED_SECRET=test_shared_secret_123456',
+        'DIRECT_LEAD_INGRESS_ENABLED=true',
+      ].join('\n'));
+
+      const { stdout } = await execFileAsync('bash', [
+        'scripts/verify-deployment.sh',
+        `--env-file=${envFile}`,
+        `--base-url=http://127.0.0.1:${address.port}`,
+        '--skip-ready',
+        '--skip-shadow',
+        '--check-direct-lead',
+        '--expect-direct-lead=enabled',
+      ], {
+        cwd: process.cwd(),
+        timeout: 10_000,
+      });
+
+      expect(stdout).toContain('Direct website lead ingress (enabled):');
+      expect(seenBodies).toHaveLength(1);
+      const [seenBody] = seenBodies;
+      if (!seenBody) throw new Error('direct_lead_probe_body_missing');
+      const payload = JSON.parse(seenBody) as Record<string, unknown>;
+      expect(payload.eventId).toMatch(/^verify-direct-lead-invalid-/);
+      expect(payload.clientKey).toBe('verify-deployment');
+      expect(payload).not.toHaveProperty('phone');
+      expect(payload).not.toHaveProperty('name');
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }).catch(() => undefined);
       rmSync(root, { recursive: true, force: true });
     }
   });

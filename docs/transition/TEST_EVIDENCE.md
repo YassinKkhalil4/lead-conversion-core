@@ -338,6 +338,10 @@ Command: `npm run lint`
 
 Result: passed.
 
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 14 files and 116 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
 Command: `npx vitest run tests/config-versioning.test.ts`
 
 Result: passed. Focused config tests ran 4 tests, including seed-to-Airtable-export deterministic version parity, CLI `npm run config -- validate --airtable-export=<dir>`, duplicate Airtable config record rejection, missing linked question rejection, and missing message text rejection.
@@ -1087,3 +1091,23 @@ Result: passed on direct retry with 0 vulnerabilities.
 Resolution command: `npm run test:smoke && npm run test:integration`
 
 Result: passed. Smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Direct Lead Deployment Validation Probe
+
+Command: `bash -n scripts/verify-deployment.sh`
+
+Result: passed.
+
+Command: `npx vitest run tests/ingress-gating.test.ts`
+
+Result: passed. Focused app/deployment-script tests ran 4 tests, including an enabled direct-lead deployment probe that sends only `eventId` and `clientKey`, expects an `invalid_lead_payload` response, and verifies no phone/name business lead payload is sent by the verifier.
+
+Command: `npm run lint`
+
+Result: failed on the first run because the test parsed a possibly undefined captured request body.
+
+Resolution: added an explicit captured-body presence check before JSON parsing.
+
+Command: `npm run lint`
+
+Result: passed.

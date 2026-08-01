@@ -23,6 +23,6 @@ Status: pending owner infrastructure setup.
 4. Unsigned invalid webhook is rejected.
 5. Test backup completes.
 6. Restore verification succeeds.
-7. `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled>` passes for the approved staging route state.
+7. `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled>` passes for the approved staging route state. The enabled direct-lead check is a deliberately invalid validation probe; review any resulting ignored inbox event as verification evidence, not as a business lead.
 8. `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-queue-age-seconds=300` is reviewed before staging route changes.
 9. `npm run decommission:readiness` is reviewed only after staging has generated enough direct-ingress and Edge qualification evidence; do not pass owner approval flags unless the corresponding owner evidence is complete.
