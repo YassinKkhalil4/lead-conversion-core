@@ -18,11 +18,11 @@ Remaining: none except ongoing secret hygiene.
 
 Status: locally_verified
 
-Deliverables: lockfile, fixed compiled paths, one-shot migrator, migration checksums/advisory lock, readiness, worker heartbeat, backup/restore scripts.
+Deliverables: lockfile, fixed compiled paths, one-shot migrator, migration checksums/advisory lock, readiness, worker heartbeat, backup/restore scripts, environment template, container topology.
 
 Dependencies: Docker daemon for image run and Docker-based dump inspection.
 
-Verification gates: serial npm gate, disposable PostgreSQL migration/idempotency/checksum/concurrency, backup/restore, readiness, heartbeat.
+Verification gates: serial npm gate, disposable PostgreSQL migration/idempotency/checksum/concurrency, backup/restore, readiness, heartbeat, environment contract, static Compose config.
 
 Remaining: Docker image run and dump metadata inspection when daemon is available.
 

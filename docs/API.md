@@ -75,3 +75,5 @@ GET /health
 GET /ready
 GET /metrics
 ```
+
+`GET /ready` verifies PostgreSQL connectivity, all migration files on disk, and fresh heartbeats for every enabled worker kind. `OUTBOX_WORKER_ENABLED=true` requires an `outbox` heartbeat; `RUNTIME_WORKER_ENABLED=true` requires a `runtime` heartbeat.

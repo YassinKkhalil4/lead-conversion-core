@@ -18,9 +18,11 @@ from pathlib import Path
 import sys
 path=Path('.env')
 text=path.read_text()
-text=text.replace('CHANGE_ME_LONG_RANDOM_PASSWORD',sys.argv[1])
-text=text.replace('CHANGE_ME_64_HEX',sys.argv[2],1)
-text=text.replace('CHANGE_ME_DIFFERENT_64_HEX',sys.argv[3],1)
+db_password, edge_secret, internal_secret = sys.argv[1:4]
+text=text.replace('EDGE_POSTGRES_PASSWORD=replace-with-secret',f'EDGE_POSTGRES_PASSWORD={db_password}')
+text=text.replace('DATABASE_URL=postgresql://lead_os_edge_app:replace-with-secret@127.0.0.1:5432/lead_os_edge',f'DATABASE_URL=postgresql://lead_os_edge_app:{db_password}@127.0.0.1:5432/lead_os_edge')
+text=text.replace('EDGE_SHARED_SECRET=replace-with-at-least-16-chars',f'EDGE_SHARED_SECRET={edge_secret}',1)
+text=text.replace('EDGE_INTERNAL_SECRET=replace-with-at-least-16-chars',f'EDGE_INTERNAL_SECRET={internal_secret}',1)
 path.write_text(text)
 PY
 chmod 600 .env

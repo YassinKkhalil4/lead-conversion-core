@@ -58,6 +58,21 @@ services:
     command: ["npm", "run", "worker"]
     networks: [edge, n8n]
 
+  lead-core-runtime-worker:
+    build: .
+    restart: unless-stopped
+    env_file: ${LEAD_CORE_ENV_FILE:-.env}
+    environment:
+      DATABASE_URL: postgresql://${EDGE_POSTGRES_USER:-lead_os_edge_app}:${EDGE_POSTGRES_PASSWORD}@lead-core-postgres:5432/${EDGE_POSTGRES_DB:-lead_os_edge}
+      WORKER_KIND: runtime
+    depends_on:
+      lead-core-postgres:
+        condition: service_healthy
+      lead-core-migrate:
+        condition: service_completed_successfully
+    command: ["npm", "run", "worker"]
+    networks: [edge, n8n]
+
   lead-core-backup:
     build: .
     restart: "no"

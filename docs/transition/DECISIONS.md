@@ -239,3 +239,11 @@ Decision: Import Airtable `Events` rows as historical `audit.events` records wit
 Reason: The existing n8n audit workflow proves the Events field contract, but `audit.events` is append-only and must not become a mutable duplicate authority. Reconciliation must verify source-to-target mapping while preserving audit immutability and secret hygiene.
 
 Date: 2026-08-01
+
+## DEC-022: Runtime Worker Is A First-Class Deployable Container
+
+Decision: Compose runs the durable runtime worker as `lead-core-runtime-worker` with `WORKER_KIND=runtime`, separate from the legacy `edge_outbox` compatibility worker, and `/ready` checks enabled outbox/runtime worker heartbeats independently.
+
+Reason: MP-04 and later durable inbox, runtime outbox, and scheduled job processing must be deployable without overloading the legacy n8n compatibility outbox path. Keeping both workers explicit preserves rollback while letting staging fail readiness when an enabled worker is not actually alive.
+
+Date: 2026-08-01

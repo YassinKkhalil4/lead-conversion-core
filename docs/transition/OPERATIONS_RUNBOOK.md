@@ -3,7 +3,7 @@
 Initial operator surfaces:
 
 - `/health` for process liveness
-- `/ready` for database readiness
+- `/ready` for database, migration, and enabled-worker heartbeat readiness
 - `/metrics` for Prometheus metrics
 - `scripts/ops/*` for local operational checks
 - SQL views and migration/reconciliation reports as they are added
