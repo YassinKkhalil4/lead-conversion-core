@@ -45,6 +45,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: current `HEAD` after the latest full local gate; run `git rev-parse --short HEAD` to read the exact hash.
+Last verified commit: `ddf9714` (`Keep generated env secrets out of process arguments`), with the full local gate passing before commit and no source changes afterward.
 
 Git worktree clean when recorded: yes
