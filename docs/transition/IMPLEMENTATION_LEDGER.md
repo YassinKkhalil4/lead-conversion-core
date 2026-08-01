@@ -503,3 +503,11 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 8 PostgreSQL tests and 69 skipped by filter, including a Meta-only stability regression while direct lead ingress is enabled.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 159 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `3a62a8c`: Match decommission stability to direct ingress families.
+
+## 2026-08-01 N8n Inbox Dead Letters Block Decommission
+
+- Implementation slice: Hardened `npm run decommission:readiness` so `no_unresolved_n8n_inbox` counts n8n inbox events in `dead_lettered` state as unresolved compatibility work.
+- Decision: Added DEC-051. N8n dead letters block decommission until replayed, ignored, or otherwise resolved by an operator-approved path.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 9 PostgreSQL tests and 69 skipped by filter, including an aged n8n dead-letter regression that does not rely on recent-usage blocking.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 160 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `3ec9096`: Block decommission on n8n inbox dead letters.

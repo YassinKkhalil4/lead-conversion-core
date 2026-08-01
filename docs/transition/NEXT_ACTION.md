@@ -4,7 +4,7 @@ Last updated: 2026-08-01
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Continue MP-12 local hardening by auditing deployment verification/runbook parity and remaining fallback-removal evidence paths, especially whether staging verification probes and n8n compatibility callback traffic are fully excluded from fallback-removal stability evidence while still visible as cutover/compatibility evidence. If no local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
+Exact next implementation task: Continue MP-12 local hardening by auditing deployment verification/runbook parity and remaining fallback-removal evidence paths, especially whether n8n compatibility command/status outcomes, legacy edge outbox terminal states, and Airtable projection terminal states are classified correctly for fallback removal. If no local defect is found, run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags.
 
 Files expected to change:
 
@@ -59,6 +59,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `3a62a8c` (`Match decommission stability to direct ingress families`), with focused decommission PostgreSQL tests and the full local gate passing before persistent state docs were updated.
+Last verified commit: `3ec9096` (`Block decommission on n8n inbox dead letters`), with focused decommission PostgreSQL tests and the full local gate passing before persistent state docs were updated.
 
 Git worktree clean when recorded: yes
