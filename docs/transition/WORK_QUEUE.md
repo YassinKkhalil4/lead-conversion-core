@@ -1,6 +1,6 @@
 # Work Queue
 
-Last updated: 2026-07-30
+Last updated: 2026-08-01
 
 ## MP-01 Baseline, Security, Source Cleanup
 
@@ -152,6 +152,6 @@ Dependencies: DNS/Caddy/production owner action.
 
 Verification gates: staging ingress, canary metrics, explicit owner approval for removals.
 
-Completed locally: direct Meta webhook route is disabled by default unless `DIRECT_META_WEBHOOK_ENABLED=true`; direct website/Facebook lead ingress is disabled by default unless `DIRECT_LEAD_INGRESS_ENABLED=true`; n8n compatibility routes remain independently gated by `N8N_COMPAT_ROUTES_ENABLED`; local app-injection tests prove disabled direct routes return 503 without provider calls while n8n compatibility remains available when explicitly enabled; `npm run cutover:readiness` provides a read-only PostgreSQL-backed readiness report for direct-route flags, n8n compatibility, pending/oldest inbox and outbox work, delivery-unknown counts, dead-letter counts, and runtime worker heartbeat age; `docs/transition/DIRECT_INGRESS_PLAN.md` documents staging and production canary route shapes, required flags, rollback, and decommission hold.
+Completed locally: direct Meta webhook route is disabled by default unless `DIRECT_META_WEBHOOK_ENABLED=true`; direct website/Facebook lead ingress is disabled by default unless `DIRECT_LEAD_INGRESS_ENABLED=true`; n8n compatibility routes remain independently gated by `N8N_COMPAT_ROUTES_ENABLED`; local app-injection tests prove disabled direct routes return 503 without provider calls while n8n compatibility remains available when explicitly enabled; `npm run cutover:readiness` provides a read-only PostgreSQL-backed readiness report for direct-route flags, n8n compatibility, pending/oldest inbox and outbox work, delivery-unknown counts, dead-letter counts, and runtime worker heartbeat age; `docs/transition/DIRECT_INGRESS_PLAN.md` documents staging and production canary route shapes, required flags, rollback, and decommission hold; `scripts/verify-deployment.sh` accepts `--base-url`, `--env-file`, direct ingress check flags, and skip flags so staging can verify direct Meta challenge and direct lead ingress enabled/disabled behavior without real customer messages.
 
-Remaining: staging ingress verification, production cutover owner approval, decommission exit criteria evidence, and all destructive fallback removals.
+Remaining: decommission exit criteria evidence/reporting, staging ingress verification, production cutover owner approval, and all destructive fallback removals.

@@ -23,3 +23,4 @@ Status: pending owner infrastructure setup.
 4. Unsigned invalid webhook is rejected.
 5. Test backup completes.
 6. Restore verification succeeds.
+7. `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled>` passes for the approved staging route state.

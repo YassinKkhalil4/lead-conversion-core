@@ -215,3 +215,11 @@ Decision: The MP-12 cutover readiness command reports direct-route flags, fallba
 Reason: Cutover checks must be safe to run repeatedly in staging and production. Operational repair actions belong to explicit reconciliation/replay commands with separate operator intent.
 
 Date: 2026-07-30
+
+## DEC-019: Deployment Verification Uses Synthetic Direct-Ingress Checks
+
+Decision: Deployment verification may probe direct Meta challenge and direct lead ingress route state with synthetic requests against a supplied staging base URL, but it must not send real customer messages or mutate external provider accounts.
+
+Reason: MP-12 needs repeatable route-state evidence before Caddy/DNS cutover. Synthetic route checks prove enabled/disabled behavior while preserving rollback paths and avoiding customer-facing side effects.
+
+Date: 2026-08-01

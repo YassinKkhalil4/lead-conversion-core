@@ -29,6 +29,7 @@ Default state keeps all direct provider ingress disabled even when provider secr
 4. Keep `N8N_COMPAT_ROUTES_ENABLED=true` during staging.
 5. Run `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-queue-age-seconds=300`.
 6. Verify `/health`, `/ready`, webhook challenge, signed webhook receipt, invalid signature rejection, and fallback route availability.
+7. Use `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead` with explicit `--expect-direct-meta=<enabled|disabled>` and `--expect-direct-lead=<enabled|disabled>` to prove the intended direct-ingress state before changing external routes.
 
 ## Production Canary Route Plan
 

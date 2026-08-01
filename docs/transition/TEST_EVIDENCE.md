@@ -740,6 +740,26 @@ Verification level: local PostgreSQL read-only readiness reporting and full npm 
 
 Verification: documentation-only route plan derived from implemented route flags and existing endpoint contracts. No command was required beyond the previous full gate for `8738391` and `16c0ac5`; no DNS, Caddy, provider, n8n, Typebot, or production route changes were made.
 
+## 2026-08-01 MP-12 Deployment Verification Hardening
+
+Command: `bash -n scripts/verify-deployment.sh`
+
+Result: passed.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/ingress-gating.test.ts`
+
+Result: passed. Focused tests ran 3 tests, including a local Fastify listener exercised through `scripts/verify-deployment.sh --check-direct-meta --check-direct-lead` with direct routes expected disabled.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 11 files and 109 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true` with config version `4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d`, 9 questions, 22 options, and 7 messages.
+
+Verification level: local deployment-script syntax and app-listener route checks plus full npm gate. No DNS, Caddy, provider, n8n, Typebot, or production route changes were made.
+
 ## 2026-07-30 MP-09 Salesperson Command Ingestion
 
 Command: `npm run lint`
