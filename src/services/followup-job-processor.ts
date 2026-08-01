@@ -20,7 +20,7 @@ export class FollowupJobProcessor {
   async process(job: ClaimedJob): Promise<JobProcessingResult> {
     const parsed = followupJobSchema.safeParse(job.payload);
     if (!parsed.success) {
-      return { outcome: 'retryable', error: `invalid_followup_job_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
+      return { outcome: 'dead_lettered', reason: `invalid_followup_job_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
     }
     const input = parsed.data;
     const client = await pool.connect();

@@ -687,6 +687,27 @@ export class JobRepository {
       [scheduledJobId, retryDelaySeconds(row.attempt_count), message],
     );
   }
+
+  async deadLetter(scheduledJobId: string, reason: string): Promise<void> {
+    await pool.query(
+      `WITH updated AS (
+        UPDATE runtime.scheduled_jobs
+        SET status='dead_lettered', last_error=$2, completed_at=now(),
+            locked_by='', locked_at=NULL, lock_expires_at=NULL
+        WHERE scheduled_job_id=$1
+        RETURNING scheduled_job_id, payload_json, attempt_count
+      ), dead_letter AS (
+        INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
+        SELECT 'runtime.scheduled_jobs', scheduled_job_id, $2, payload_json FROM updated
+      )
+      UPDATE runtime.scheduled_job_attempts a
+      SET outcome='dead_lettered', error_message=$2, finished_at=now()
+      FROM updated
+      WHERE a.scheduled_job_id=updated.scheduled_job_id
+        AND a.attempt_no=updated.attempt_count`,
+      [scheduledJobId, reason.slice(0, 4000)],
+    );
+  }
 }
 
 export class AuditRepository {

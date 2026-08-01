@@ -26,7 +26,8 @@ export type OutboxDispatchResult =
 
 export type JobProcessingResult =
   | { outcome: 'completed' }
-  | { outcome: 'retryable'; error: string };
+  | { outcome: 'retryable'; error: string }
+  | { outcome: 'dead_lettered'; reason: string };
 
 export interface RuntimeWorkerHandlers {
   processInbox?: (event: ClaimedInboxEvent) => Promise<InboxProcessingResult>;
@@ -163,6 +164,7 @@ export class RuntimeWorker {
         const result = await processor(job);
         if (result.outcome === 'completed') await this.jobs.complete(job.scheduledJobId);
         if (result.outcome === 'retryable') await this.jobs.retry(job.scheduledJobId, result.error);
+        if (result.outcome === 'dead_lettered') await this.jobs.deadLetter(job.scheduledJobId, result.reason);
       } catch (error) {
         await this.jobs.retry(job.scheduledJobId, String(error));
       }

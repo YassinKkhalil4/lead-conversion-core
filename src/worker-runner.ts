@@ -28,7 +28,7 @@ const processRuntimeJob = (job: ClaimedJob) => {
   if (job.jobType === 'sla.notify') return slaService.process(job);
   if (job.jobType === 'followup.send') return followupJobProcessor.process(job);
   if (job.jobType === 'report.daily') return reportingService.process(job);
-  return Promise.resolve({ outcome: 'retryable' as const, error: `unsupported_scheduled_job:${job.jobType}` });
+  return Promise.resolve({ outcome: 'dead_lettered' as const, reason: `unsupported_scheduled_job:${job.jobType}` });
 };
 const dispatchRuntimeOutbox = messagingDispatcher || calendarDispatcher
   ? (command: Parameters<MessagingOutboxDispatcher['dispatch']>[0]) => {

@@ -2084,6 +2084,45 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
   });
 
+  it('dead-letters malformed follow-up jobs without retrying invalid payloads', async () => {
+    const scheduledJobId = await new runtime.JobRepository().schedule(db.pool, {
+      jobKey: 'followup:malformed:payload',
+      jobType: 'followup.send',
+      dueAt: new Date(Date.now() - 1_000).toISOString(),
+      timezone: 'Africa/Cairo',
+      aggregateKey: 'malformed-followup',
+      payload: { followupId: 'not-a-uuid' },
+    });
+
+    const processor = new followupJob.FollowupJobProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processJob: (job) => processor.process(job) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+    expect(await worker.tick()).toBe(0);
+
+    expect((await db.pool.query(
+      'SELECT status, attempt_count, last_error FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1',
+      [scheduledJobId],
+    )).rows[0]).toMatchObject({
+      status: 'dead_lettered',
+      attempt_count: 1,
+      last_error: expect.stringContaining('invalid_followup_job_payload'),
+    });
+    expect((await db.pool.query(
+      'SELECT outcome, error_message FROM runtime.scheduled_job_attempts WHERE scheduled_job_id=$1',
+      [scheduledJobId],
+    )).rows[0]).toMatchObject({
+      outcome: 'dead_lettered',
+      error_message: expect.stringContaining('invalid_followup_job_payload'),
+    });
+    expect((await db.pool.query(
+      "SELECT count(*) FROM runtime.dead_letters WHERE source_table='runtime.scheduled_jobs' AND source_id=$1",
+      [scheduledJobId],
+    )).rows[0]?.count).toBe('1');
+  });
+
   it('recovers expired follow-up job leases before execution', async () => {
     const seeded = await seedMp08Conversation({
       suffix: 'FOLLOWLEASE',

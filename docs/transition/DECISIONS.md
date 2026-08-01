@@ -335,3 +335,11 @@ Decision: Environment validation rejects enabled external integration modes unle
 Reason: Disabled integrations must remain safely configurable without credentials during cutover, but enabling an integration with missing credentials turns deployment mistakes into runtime dead letters, failed webhook receipts, or synchronous legacy send failures. Startup validation gives operators a deterministic failure before traffic is routed.
 
 Date: 2026-08-01
+
+## DEC-034: Invalid Scheduled Jobs Dead-Letter Immediately
+
+Decision: Runtime scheduled-job processors may return a permanent `dead_lettered` outcome, and malformed durable job payloads use that path instead of retrying until maximum attempts.
+
+Reason: A malformed job payload is not a transient provider or database failure. Retrying it wastes worker capacity and delays operator-visible evidence, while direct dead-lettering preserves the original payload and attempt history for investigation.
+
+Date: 2026-08-01

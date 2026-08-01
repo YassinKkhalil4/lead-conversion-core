@@ -1283,3 +1283,17 @@ Result: passed.
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 138 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Scheduled Job Dead-Letter Outcomes
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "dead-letters malformed follow-up jobs|retry delays|retryable inbox|outbox retry"`
+
+Result: passed. Focused PostgreSQL run executed 3 tests and skipped 59 by filter, covering immediate malformed follow-up job dead-lettering with scheduled-job attempt history and `runtime.dead_letters`, plus existing retryable inbox and outbox retry/dead-letter behavior.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 139 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
