@@ -366,3 +366,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "daily report"` passed with 4 PostgreSQL daily-report tests and 59 skipped by filter, including the Europe/Berlin DST materialization case.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 140 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `7bc8748`: Materialized recurring daily report jobs.
+
+## 2026-08-01 Decommission Direct-Ingress Stability Evidence
+
+- Implementation slice: Tightened MP-12 decommission readiness so direct-ingress stability requires aged processed direct inbox events. Ignored direct-ingress validation probes remain route-check evidence but no longer count toward fallback-removal stability.
+- Decision: Added DEC-036. Synthetic invalid route probes cannot satisfy decommission readiness for legacy fallback removal.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 3 PostgreSQL decommission-readiness tests and 61 skipped by filter, including the ignored-probe regression case.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 141 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `2fb9221`: Required processed direct ingress for decommission stability.

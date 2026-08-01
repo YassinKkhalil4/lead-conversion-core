@@ -351,3 +351,11 @@ Decision: A successful `report.daily` worker transaction marks the current repor
 Reason: `runtime.scheduled_jobs.recurrence_json` is configuration metadata, not a durable scheduling authority by itself. Materializing one next occurrence at completion keeps recurrence restart-safe and idempotent without in-process timers, duplicate daily jobs, or an unbounded pre-generated queue.
 
 Date: 2026-08-01
+
+## DEC-036: Decommission Stability Requires Processed Direct Ingress
+
+Decision: `npm run decommission:readiness` counts only aged direct `runtime.inbox_events` with `status='processed'` as direct-ingress stability evidence. Ignored direct-ingress validation probes remain useful route-check evidence, but they do not satisfy fallback-removal stability criteria.
+
+Reason: Staging route validation intentionally uses invalid payloads that can produce ignored durable receipts without creating business state. Counting those receipts as stability evidence would allow synthetic probes to justify n8n/Typebot/Airtable decommission, contradicting the requirement not to claim production readiness from synthetic fixtures.
+
+Date: 2026-08-01
