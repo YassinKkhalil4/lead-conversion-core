@@ -979,3 +979,19 @@ Command: `npm ci && npm run lint && npm test && npm run build && npm audit --aud
 Result: passed after commit `4b04128`. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 13 files and 114 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
 
 Verification level: local migration-backed PostgreSQL integration, full npm gate, and smoke scripts. No live provider, n8n, Typebot, Airtable, DNS, Caddy, or production route change was made.
+
+## 2026-08-01 Active-Turn Compatibility Readiness Evidence
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness|decommission"`
+
+Result: passed. Focused PostgreSQL tests ran 4 tests covering cutover readiness and decommission readiness outputs, including `activeTurnCompatEnabled=false`, `active_turn_compatibility_disabled=pass`, and `active_turn_compat_disabled=pass` in the local safe state.
+
+Command: `npm ci && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; TypeScript lint passed; Vitest ran 13 files and 114 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+Verification level: local PostgreSQL readiness reporting, runbook review, full npm gate, and smoke scripts. No live provider, n8n, Typebot, Airtable, DNS, Caddy, or production route change was made.

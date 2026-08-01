@@ -269,3 +269,9 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "outbox"` passed before final commit; focused PostgreSQL tests ran 6 tests covering runtime outbox and legacy outbox behavior.
 - Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed after commit `4b04128`; Vitest ran 13 files and 114 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `4b04128`: Bounded legacy edge outbox retries.
+- Implementation slice: Surfaced `ACTIVE_TURN_COMPAT_ENABLED` in cutover and decommission evidence. `npm run cutover:readiness` now includes `activeTurnCompatEnabled` and fails `active_turn_compatibility_disabled` when the legacy synchronous route is enabled. `npm run decommission:readiness` includes `active_turn_compat_disabled` before n8n/Typebot fallback can be considered removable.
+- Decision: Legacy active-turn compatibility remains a rollback switch, but cutover and decommission reports must make it operator-visible and prevent accidental promotion/removal while enabled.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "cutover readiness|decommission"` passed; focused PostgreSQL tests ran 4 tests covering cutover readiness and decommission readiness outputs.
+- Verification: `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 13 files and 114 tests, audit found 0 vulnerabilities, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `1cbdd30`: Surfaced active turn compatibility in readiness reports.
