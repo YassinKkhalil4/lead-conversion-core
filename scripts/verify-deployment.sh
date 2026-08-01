@@ -9,8 +9,10 @@ SKIP_READY="false"
 SKIP_SHADOW="false"
 CHECK_DIRECT_META="false"
 CHECK_DIRECT_LEAD="false"
+CHECK_N8N_COMPAT="false"
 EXPECT_DIRECT_META=""
 EXPECT_DIRECT_LEAD=""
+EXPECT_N8N_COMPAT=""
 
 usage() {
   cat <<'USAGE'
@@ -23,8 +25,10 @@ Options:
   --skip-shadow                   Skip /v1/shadow/evaluate check.
   --check-direct-meta             Verify direct Meta challenge and POST behavior for the expected route state; enabled checks require Meta credentials.
   --check-direct-lead             Verify direct website and Facebook lead route behavior; enabled checks require EDGE_SHARED_SECRET.
+  --check-n8n-compat              Verify n8n compatibility fallback route behavior with a non-customer durable-receipt probe; requires EDGE_INTERNAL_SECRET.
   --expect-direct-meta=MODE       MODE is enabled or disabled. Defaults from DIRECT_META_WEBHOOK_ENABLED.
   --expect-direct-lead=MODE       MODE is enabled or disabled. Defaults from DIRECT_LEAD_INGRESS_ENABLED.
+  --expect-n8n-compat=MODE        MODE is enabled or disabled. Defaults from N8N_COMPAT_ROUTES_ENABLED.
 USAGE
 }
 
@@ -36,8 +40,10 @@ for arg in "$@"; do
     --skip-shadow) SKIP_SHADOW="true" ;;
     --check-direct-meta) CHECK_DIRECT_META="true" ;;
     --check-direct-lead) CHECK_DIRECT_LEAD="true" ;;
+    --check-n8n-compat) CHECK_N8N_COMPAT="true" ;;
     --expect-direct-meta=*) EXPECT_DIRECT_META="${arg#--expect-direct-meta=}" ;;
     --expect-direct-lead=*) EXPECT_DIRECT_LEAD="${arg#--expect-direct-lead=}" ;;
+    --expect-n8n-compat=*) EXPECT_N8N_COMPAT="${arg#--expect-n8n-compat=}" ;;
     --help|-h) usage; exit 0 ;;
     *) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
   esac
@@ -53,6 +59,7 @@ source "$ENV_FILE"
 BASE="${BASE:-http://127.0.0.1:${EDGE_PORT:-8080}}"
 EXPECT_DIRECT_META="${EXPECT_DIRECT_META:-$([[ ${DIRECT_META_WEBHOOK_ENABLED:-false} == "true" ]] && echo enabled || echo disabled)}"
 EXPECT_DIRECT_LEAD="${EXPECT_DIRECT_LEAD:-$([[ ${DIRECT_LEAD_INGRESS_ENABLED:-false} == "true" ]] && echo enabled || echo disabled)}"
+EXPECT_N8N_COMPAT="${EXPECT_N8N_COMPAT:-$([[ ${N8N_COMPAT_ROUTES_ENABLED:-false} == "true" ]] && echo enabled || echo disabled)}"
 
 if [[ "$EXPECT_DIRECT_META" != "enabled" && "$EXPECT_DIRECT_META" != "disabled" ]]; then
   echo "--expect-direct-meta must be enabled or disabled" >&2
@@ -62,19 +69,24 @@ if [[ "$EXPECT_DIRECT_LEAD" != "enabled" && "$EXPECT_DIRECT_LEAD" != "disabled" 
   echo "--expect-direct-lead must be enabled or disabled" >&2
   exit 2
 fi
+if [[ "$EXPECT_N8N_COMPAT" != "enabled" && "$EXPECT_N8N_COMPAT" != "disabled" ]]; then
+  echo "--expect-n8n-compat must be enabled or disabled" >&2
+  exit 2
+fi
 
 tmp_body="$(mktemp)"
 tmp_edge_header="$(mktemp)"
+tmp_internal_header="$(mktemp)"
 tmp_meta_curl_config="$(mktemp)"
 tmp_meta_post_config="$(mktemp)"
 tmp_meta_unsigned_post_config="$(mktemp)"
 tmp_meta_probe_body="$(mktemp)"
 tmp_meta_secret_file="$(mktemp)"
 cleanup() {
-  rm -f "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_unsigned_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
+  rm -f "$tmp_body" "$tmp_edge_header" "$tmp_internal_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_unsigned_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
 }
 trap cleanup EXIT
-chmod 600 "$tmp_body" "$tmp_edge_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_unsigned_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
+chmod 600 "$tmp_body" "$tmp_edge_header" "$tmp_internal_header" "$tmp_meta_curl_config" "$tmp_meta_post_config" "$tmp_meta_unsigned_post_config" "$tmp_meta_probe_body" "$tmp_meta_secret_file"
 
 status_request() {
   curl -sS -o "$tmp_body" -w "%{http_code}" "$@"
@@ -270,6 +282,43 @@ if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then
     fi
   else
     assert_status "$status" "503" "Disabled direct Facebook lead ingress"
+  fi
+  echo "ok"
+fi
+
+if [[ "$CHECK_N8N_COMPAT" == "true" ]]; then
+  if [[ -z "${EDGE_INTERNAL_SECRET:-}" ]]; then
+    echo "EDGE_INTERNAL_SECRET is required for --check-n8n-compat" >&2
+    exit 1
+  fi
+  printf 'X-Internal-Secret: %s\n' "$EDGE_INTERNAL_SECRET" > "$tmp_internal_header"
+  echo "n8n compatibility inbound fallback ($EXPECT_N8N_COMPAT):"
+  event="verify-n8n-compat-inbound-$(date +%s)"
+  status="$(status_request \
+    -H "@$tmp_internal_header" \
+    -H 'Content-Type: application/json' \
+    -d "{
+      \"sourceEventId\":\"$event\",
+      \"phoneNumberId\":\"verify-deployment-phone-number\",
+      \"phoneNormalized\":\"+201000000000\",
+      \"messageType\":\"text\",
+      \"messageText\":\"verify deployment fallback route\",
+      \"rawPayload\":{\"source\":\"verify-deployment\"}
+    }" \
+    "$BASE/compat/n8n/messages/whatsapp/inbound")"
+  if [[ "$EXPECT_N8N_COMPAT" == "enabled" ]]; then
+    if [[ "$status" != "200" ]]; then
+      echo "n8n compatibility inbound fallback failed: expected enabled durable receipt HTTP 200, got $status" >&2
+      cat "$tmp_body" >&2 || true
+      exit 1
+    fi
+    if ! grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$tmp_body"; then
+      echo "n8n compatibility inbound fallback failed: receipt response did not include ok=true" >&2
+      cat "$tmp_body" >&2 || true
+      exit 1
+    fi
+  else
+    assert_status "$status" "503" "Disabled n8n compatibility inbound fallback"
   fi
   echo "ok"
 fi

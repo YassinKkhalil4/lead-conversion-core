@@ -551,3 +551,11 @@ Decision: `N8N_COMPAT_ROUTES_ENABLED=true` requires `RUNTIME_WORKER_ENABLED=true
 Reason: n8n compatibility routes are fallback infrastructure, but their callback routes are still durable external event ingress. A deployment that accepts n8n callbacks without a runtime worker able to process those inbox rows would create hidden backlog and false cutover confidence.
 
 Date: 2026-08-01
+
+## DEC-061: Deployment Verifier Checks N8n Fallback Availability
+
+Decision: `scripts/verify-deployment.sh --check-n8n-compat` verifies the expected n8n compatibility fallback state using an authenticated, non-customer inbound-message probe. Enabled checks require durable receipt acknowledgement, while disabled checks require authenticated HTTP 503 unavailability.
+
+Reason: MP-12 staging evidence must prove fallback routes remain available during direct-ingress cutover, or are intentionally unavailable after approval, without relying on live customer traffic. The n8n compatibility routes are internal routes, so the verifier must prove their behavior with `EDGE_INTERNAL_SECRET` while keeping that secret out of command-line arguments.
+
+Date: 2026-08-01

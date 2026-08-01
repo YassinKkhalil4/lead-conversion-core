@@ -324,6 +324,138 @@ describe('direct ingress route gates', () => {
     }
   });
 
+  it('verifies n8n compatibility fallback availability with a non-customer durable-receipt probe', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-n8n-compat.'));
+    let fallbackProbeVerified = false;
+    const server = createServer((request, response) => {
+      if (request.method === 'GET' && request.url === '/health') {
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end('{"ok":true}');
+        return;
+      }
+      if (request.method === 'POST' && request.url === '/compat/n8n/messages/whatsapp/inbound') {
+        let body = '';
+        request.on('data', (chunk) => {
+          body += String(chunk);
+        });
+        request.on('end', () => {
+          if (request.headers['x-internal-secret'] !== 'test_internal_secret_123456') {
+            response.writeHead(401, { 'content-type': 'application/json' });
+            response.end('{"ok":false}');
+            return;
+          }
+          const payload = JSON.parse(body) as Record<string, unknown>;
+          fallbackProbeVerified = String(payload.sourceEventId || '').startsWith('verify-n8n-compat-inbound-')
+            && payload.phoneNumberId === 'verify-deployment-phone-number'
+            && payload.rawPayload !== undefined;
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end('{"ok":true,"received":1,"duplicate":false}');
+        });
+        return;
+      }
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end('{"ok":false}');
+    });
+
+    try {
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
+      const envFile = join(root, 'verify.env');
+      writeFileSync(envFile, [
+        'EDGE_INTERNAL_SECRET=test_internal_secret_123456',
+        'N8N_COMPAT_ROUTES_ENABLED=true',
+      ].join('\n'));
+
+      const { stdout } = await execFileAsync('bash', [
+        'scripts/verify-deployment.sh',
+        `--env-file=${envFile}`,
+        `--base-url=http://127.0.0.1:${address.port}`,
+        '--skip-ready',
+        '--skip-shadow',
+        '--check-n8n-compat',
+        '--expect-n8n-compat=enabled',
+      ], {
+        cwd: process.cwd(),
+        timeout: 10_000,
+      });
+
+      expect(stdout).toContain('n8n compatibility inbound fallback (enabled):');
+      expect(fallbackProbeVerified).toBe(true);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }).catch(() => undefined);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('verifies disabled n8n compatibility fallback availability after internal authentication', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-n8n-compat-disabled.'));
+    let fallbackProbeVerified = false;
+    const server = createServer((request, response) => {
+      if (request.method === 'GET' && request.url === '/health') {
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end('{"ok":true}');
+        return;
+      }
+      if (request.method === 'POST' && request.url === '/compat/n8n/messages/whatsapp/inbound') {
+        let body = '';
+        request.on('data', (chunk) => {
+          body += String(chunk);
+        });
+        request.on('end', () => {
+          if (request.headers['x-internal-secret'] !== 'test_internal_secret_123456') {
+            response.writeHead(401, { 'content-type': 'application/json' });
+            response.end('{"ok":false}');
+            return;
+          }
+          const payload = JSON.parse(body) as Record<string, unknown>;
+          fallbackProbeVerified = String(payload.sourceEventId || '').startsWith('verify-n8n-compat-inbound-')
+            && payload.phoneNumberId === 'verify-deployment-phone-number'
+            && payload.rawPayload !== undefined;
+          response.writeHead(503, { 'content-type': 'application/json' });
+          response.end('{"ok":false,"error":"n8n_compat_routes_disabled"}');
+        });
+        return;
+      }
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end('{"ok":false}');
+    });
+
+    try {
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
+      const envFile = join(root, 'verify.env');
+      writeFileSync(envFile, [
+        'EDGE_INTERNAL_SECRET=test_internal_secret_123456',
+        'N8N_COMPAT_ROUTES_ENABLED=false',
+      ].join('\n'));
+
+      const { stdout } = await execFileAsync('bash', [
+        'scripts/verify-deployment.sh',
+        `--env-file=${envFile}`,
+        `--base-url=http://127.0.0.1:${address.port}`,
+        '--skip-ready',
+        '--skip-shadow',
+        '--check-n8n-compat',
+        '--expect-n8n-compat=disabled',
+      ], {
+        cwd: process.cwd(),
+        timeout: 10_000,
+      });
+
+      expect(stdout).toContain('n8n compatibility inbound fallback (disabled):');
+      expect(fallbackProbeVerified).toBe(true);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }).catch(() => undefined);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('keeps shared secrets out of verifier curl process arguments', () => {
     const script = readFileSync('scripts/verify-deployment.sh', 'utf8');
     expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
@@ -336,5 +468,7 @@ describe('direct ingress route gates', () => {
     expect(script).toContain('status_request --config "$tmp_meta_post_config"');
     expect(script).toContain('status_request --config "$tmp_meta_unsigned_post_config"');
     expect(script).not.toContain('python3 - "$META_APP_SECRET"');
+    expect(script).toContain('-H "@$tmp_internal_header"');
+    expect(script).not.toContain('-H "X-Internal-Secret: $EDGE_INTERNAL_SECRET"');
   });
 });
