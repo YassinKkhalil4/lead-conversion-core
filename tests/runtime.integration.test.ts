@@ -804,6 +804,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(report.queues).toMatchObject({
       inboxPendingCount: 0,
       outboxPendingCount: 0,
+      scheduledJobPendingCount: 0,
       deliveryUnknownCount: 0,
       deadLetterCount: 0,
     });
@@ -814,6 +815,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       active_turn_compatibility_disabled: 'pass',
       inbox_backlog: 'pass',
       outbox_backlog: 'pass',
+      scheduled_job_backlog: 'pass',
       delivery_unknown: 'pass',
       dead_letters: 'pass',
       runtime_worker_heartbeat: 'pass',
@@ -851,18 +853,26 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
        VALUES ('runtime.outbox_commands', $1, 'cutover readiness fixture', '{}'::jsonb)`,
       [unknownOutboxId],
     );
+    await db.pool.query(
+      `INSERT INTO runtime.scheduled_jobs (job_key, job_type, aggregate_key, payload_json, status, due_at)
+       VALUES
+        ('cutover:due:job', 'followup.send', 'lead-cutover-readiness', '{}'::jsonb, 'pending', now() - interval '10 minutes'),
+        ('cutover:future:job', 'followup.send', 'lead-cutover-readiness', '{}'::jsonb, 'pending', now() + interval '1 day')`,
+    );
 
     const report = await new cutoverReadiness.CutoverReadinessService().report({ maxQueueAgeSeconds: 300 });
     expect(report.ok).toBe(false);
     expect(report.queues).toMatchObject({
       inboxPendingCount: 1,
       outboxPendingCount: 1,
+      scheduledJobPendingCount: 1,
       deliveryUnknownCount: 1,
       deadLetterCount: 1,
     });
     expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
       inbox_backlog: 'fail',
       outbox_backlog: 'fail',
+      scheduled_job_backlog: 'fail',
       delivery_unknown: 'fail',
       dead_letters: 'fail',
     });

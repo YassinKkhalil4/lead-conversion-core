@@ -22,6 +22,8 @@ export interface CutoverReadinessReport {
     inboxOldestAgeSeconds: number | null;
     outboxPendingCount: number;
     outboxOldestAgeSeconds: number | null;
+    scheduledJobPendingCount: number;
+    scheduledJobOldestAgeSeconds: number | null;
     deliveryUnknownCount: number;
     deadLetterCount: number;
   };
@@ -35,6 +37,7 @@ export interface CutoverReadinessReport {
 export interface CutoverReadinessOptions {
   maxPendingInbox?: number;
   maxPendingOutbox?: number;
+  maxPendingScheduledJobs?: number;
   maxQueueAgeSeconds?: number;
   maxWorkerHeartbeatAgeSeconds?: number;
 }
@@ -50,10 +53,11 @@ export class CutoverReadinessService {
     const env = getEnv();
     const maxPendingInbox = options.maxPendingInbox ?? 0;
     const maxPendingOutbox = options.maxPendingOutbox ?? 0;
+    const maxPendingScheduledJobs = options.maxPendingScheduledJobs ?? 0;
     const maxQueueAgeSeconds = options.maxQueueAgeSeconds ?? 300;
     const maxWorkerHeartbeatAgeSeconds = options.maxWorkerHeartbeatAgeSeconds ?? 120;
 
-    const [inbox, outbox, deadLetters, heartbeat] = await Promise.all([
+    const [inbox, outbox, scheduledJobs, deadLetters, heartbeat] = await Promise.all([
       pool.query<{ count: number; oldest_age_seconds: number | null }>(
         `SELECT
            count(*)::int AS count,
@@ -71,6 +75,14 @@ export class CutoverReadinessService {
            EXTRACT(EPOCH FROM now() - (min(created_at) FILTER (WHERE state IN ('pending','processing','retryable'))))::int AS oldest_age_seconds,
            count(*) FILTER (WHERE state='delivery_unknown')::int AS delivery_unknown_count
          FROM runtime.outbox_commands`,
+      ),
+      pool.query<{ count: number; oldest_age_seconds: number | null }>(
+        `SELECT
+           count(*)::int AS count,
+           EXTRACT(EPOCH FROM now() - min(due_at))::int AS oldest_age_seconds
+         FROM runtime.scheduled_jobs
+         WHERE status='processing'
+            OR (status IN ('pending','retryable') AND due_at <= now())`,
       ),
       pool.query<{ count: number }>(
         `SELECT count(*)::int AS count
@@ -90,6 +102,7 @@ export class CutoverReadinessService {
 
     const inboxRow = inbox.rows[0] || { count: 0, oldest_age_seconds: null };
     const outboxRow = outbox.rows[0] || { pending_count: 0, oldest_age_seconds: null, delivery_unknown_count: 0 };
+    const scheduledJobRow = scheduledJobs.rows[0] || { count: 0, oldest_age_seconds: null };
     const deadLetterCount = deadLetters.rows[0]?.count || 0;
     const heartbeatRow = heartbeat.rows[0] || null;
     const heartbeatAgeSeconds = heartbeatRow?.heartbeat_age_seconds ?? null;
@@ -126,6 +139,11 @@ export class CutoverReadinessService {
         details: { count: outboxRow.pending_count, oldestAgeSeconds: outboxRow.oldest_age_seconds, maxPendingOutbox, maxQueueAgeSeconds },
       },
       {
+        checkKey: 'scheduled_job_backlog',
+        status: backlogStatus(scheduledJobRow.count, scheduledJobRow.oldest_age_seconds, maxPendingScheduledJobs, maxQueueAgeSeconds),
+        details: { count: scheduledJobRow.count, oldestAgeSeconds: scheduledJobRow.oldest_age_seconds, maxPendingScheduledJobs, maxQueueAgeSeconds },
+      },
+      {
         checkKey: 'delivery_unknown',
         status: outboxRow.delivery_unknown_count === 0 ? 'pass' : 'fail',
         details: { count: outboxRow.delivery_unknown_count },
@@ -159,6 +177,8 @@ export class CutoverReadinessService {
         inboxOldestAgeSeconds: inboxRow.oldest_age_seconds,
         outboxPendingCount: outboxRow.pending_count,
         outboxOldestAgeSeconds: outboxRow.oldest_age_seconds,
+        scheduledJobPendingCount: scheduledJobRow.count,
+        scheduledJobOldestAgeSeconds: scheduledJobRow.oldest_age_seconds,
         deliveryUnknownCount: outboxRow.delivery_unknown_count,
         deadLetterCount,
       },

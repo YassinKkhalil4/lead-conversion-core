@@ -14,10 +14,12 @@ function parseArgs(argv: string[]): CutoverReadinessOptions {
   const options: CutoverReadinessOptions = {};
   const maxPendingInbox = numberArg(argv, '--max-pending-inbox');
   const maxPendingOutbox = numberArg(argv, '--max-pending-outbox');
+  const maxPendingScheduledJobs = numberArg(argv, '--max-pending-scheduled-jobs');
   const maxQueueAgeSeconds = numberArg(argv, '--max-queue-age-seconds');
   const maxWorkerHeartbeatAgeSeconds = numberArg(argv, '--max-worker-heartbeat-age-seconds');
   if (maxPendingInbox !== undefined) options.maxPendingInbox = maxPendingInbox;
   if (maxPendingOutbox !== undefined) options.maxPendingOutbox = maxPendingOutbox;
+  if (maxPendingScheduledJobs !== undefined) options.maxPendingScheduledJobs = maxPendingScheduledJobs;
   if (maxQueueAgeSeconds !== undefined) options.maxQueueAgeSeconds = maxQueueAgeSeconds;
   if (maxWorkerHeartbeatAgeSeconds !== undefined) options.maxWorkerHeartbeatAgeSeconds = maxWorkerHeartbeatAgeSeconds;
   return options;
