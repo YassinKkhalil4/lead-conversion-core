@@ -520,3 +520,11 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts` passed with 6 route/deployment-script tests, including a local HTTP server that validates the verifier's HMAC header for the signed non-customer Meta probe.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 161 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `f5f4847`: Verify signed direct Meta deployment probes.
+
+## 2026-08-01 Rejected N8n Salesperson Commands Block Decommission
+
+- Implementation slice: Hardened `npm run decommission:readiness` so rejected n8n salesperson command outcomes block fallback removal even when the originating compatibility inbox event has already been processed.
+- Decision: Added DEC-053. A processed inbox row proves durable receipt handling, but a rejected command row proves compatibility traffic failed business-authority validation and still needs operator reconciliation before n8n removal.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "decommission"` passed with 10 PostgreSQL tests and 69 skipped by filter, including an aged processed n8n command inbox receipt plus a rejected `app.salesperson_commands` row that fails only the new rejected-command readiness check.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 162 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `5192fdb`: Block decommission on rejected n8n commands.
