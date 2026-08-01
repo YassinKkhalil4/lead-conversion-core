@@ -182,7 +182,7 @@ export class DecommissionReadinessService {
         `SELECT count(*)::int AS count
          FROM runtime.outbox_commands
          WHERE command_type='airtable.project_lead_visibility'
-           AND state IN ('pending','processing','retryable','delivery_unknown','permanently_failed','dead_lettered')`,
+           AND state IN ('pending','processing','retryable','delivery_unknown','permanently_failed','cancelled','dead_lettered')`,
       ),
       scalar('SELECT count(*)::int AS count FROM migration.reconciliation_results'),
       scalar("SELECT count(*)::int AS count FROM migration.reconciliation_results WHERE status='fail'"),

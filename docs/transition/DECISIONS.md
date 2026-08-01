@@ -503,3 +503,11 @@ Decision: `npm run decommission:readiness` treats legacy `edge_outbox.status='pa
 Reason: Parked outbox rows are retained shadow-rollout side-effect records, not delivered or explicitly cancelled effects. Fallback removal should require an operator-visible disposition for those rows before n8n compatibility infrastructure is retired.
 
 Date: 2026-08-01
+
+## DEC-055: Cancelled Airtable Projection Commands Block Decommission
+
+Decision: `npm run decommission:readiness` treats cancelled `airtable.project_lead_visibility` outbox commands as incomplete Airtable projection evidence.
+
+Reason: A cancelled projection command is a terminal durable outbox state, but it is not evidence that the read-only Airtable visibility projection was delivered. Airtable retirement should require delivered projection work or separate reconciliation evidence that removes the cancelled command from the projection queue.
+
+Date: 2026-08-01

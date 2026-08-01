@@ -37,7 +37,7 @@ Stability evidence must match the currently enabled direct-ingress route family.
 
 Typebot removal requires no resumable legacy session, all content in versioned config, at least 100 successful real edge qualifications, appointment/media paths migrated, and explicit owner approval.
 
-Airtable removal requires projection-only operation for 30 days, no production reads, stable reconciliation, final export, operator tooling, and explicit owner approval.
+Airtable removal requires projection-only operation for 30 days, no production reads, no pending, failed, cancelled, dead-lettered, or ambiguous projection commands, stable reconciliation, final export, operator tooling, and explicit owner approval.
 
 ## Prohibited Without Separate Approval
 

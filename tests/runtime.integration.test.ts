@@ -1501,6 +1501,41 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('treats cancelled Airtable projection commands as incomplete decommission evidence', async () => {
+    await db.pool.query(
+      `INSERT INTO runtime.outbox_commands
+        (command_type, destination, idempotency_key, aggregate_key, payload_json, state)
+       VALUES (
+        'airtable.project_lead_visibility',
+        'airtable:leads',
+        'airtable.project_lead_visibility:decommission-cancelled',
+        'lead-decommission-cancelled',
+        '{"leadId":"lead-decommission-cancelled"}'::jsonb,
+        'cancelled'
+       )`,
+    );
+    await db.pool.query(
+      `INSERT INTO migration.reconciliation_results (check_key, status, expected_count, actual_count, details_json)
+       VALUES ('decommission-cancelled-projection', 'pass', 1, 1, '{}'::jsonb)`,
+    );
+
+    const report = await new decommissionReadiness.DecommissionReadinessService().report({
+      ownerApprovedAirtable: true,
+      finalAirtableExportComplete: true,
+      airtableProjectionOnlyVerified: true,
+      minCompletedEdgeQualifications: 0,
+    });
+    expect(report.ok).toBe(false);
+    expect(report.metrics.airtableProjectionBlockedCount).toBe(1);
+    expect(Object.fromEntries(report.checks.map((check) => [check.checkKey, check.status]))).toMatchObject({
+      airtable_projection_only_verified: 'pass',
+      airtable_projection_outbox_stable: 'fail',
+      airtable_reconciliation_stable: 'pass',
+      final_airtable_export_complete: 'pass',
+      owner_approved_airtable_decommission: 'pass',
+    });
+  });
+
   it('creates idempotent outbound message requests and outbox commands transactionally', async () => {
     const service = new messageRequests.MessageRequestService();
     const client = await db.pool.query<{ client_id: string }>(
