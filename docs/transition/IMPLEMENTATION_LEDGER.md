@@ -345,3 +345,8 @@
 - Verification: `npm run lint` passed.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 133 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `5268c98`: Added jitter to runtime retry backoff.
+- Implementation slice: Hardened environment validation so enabled external integration modes require their operational credentials at startup. Legacy outbox now requires target URL and secret, direct Meta webhook requires verify token and app secret, direct Meta send requires access token and phone ID, active-turn compatibility requires direct Meta send, and Google Calendar dispatch requires an access token.
+- Decision: Disabled integrations remain credential-free for cutover and local development, but enabled integrations should fail startup validation before receiving traffic if required credentials are absent.
+- Verification: `npx vitest run tests/env-contract.test.ts` passed with 6 tests covering env-template alignment, disabled integration blanks, legacy outbox requirements, direct Meta webhook requirements, direct Meta send/active-turn compatibility requirements, and Google Calendar requirements.
+- Verification: `npm run lint` passed.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 16 files and 138 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.

@@ -327,3 +327,11 @@ Decision: Runtime inbox, outbox, and scheduled-job retries use bounded exponenti
 Reason: Deterministic retry spacing can concentrate recovered worker traffic after provider or database incidents. Jitter reduces retry herd behavior while preserving the existing upper bound and honoring explicit provider rate-limit guidance.
 
 Date: 2026-08-01
+
+## DEC-033: Enabled Integrations Require Startup Credentials
+
+Decision: Environment validation rejects enabled external integration modes unless the required local configuration is present: legacy outbox target URL/secret, direct Meta webhook verify/app secrets, direct Meta send access token/phone ID, active-turn compatibility backed by direct Meta send, and Google Calendar access token.
+
+Reason: Disabled integrations must remain safely configurable without credentials during cutover, but enabling an integration with missing credentials turns deployment mistakes into runtime dead letters, failed webhook receipts, or synchronous legacy send failures. Startup validation gives operators a deterministic failure before traffic is routed.
+
+Date: 2026-08-01

@@ -1269,3 +1269,17 @@ Result: passed.
 Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
 
 Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 133 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
+
+## 2026-08-01 Enabled Integration Credential Validation
+
+Command: `npx vitest run tests/env-contract.test.ts`
+
+Result: passed. Focused env-contract tests ran 6 tests covering `.env.example` alignment, disabled integration blanks, legacy outbox target requirements, direct Meta webhook credential requirements, direct Meta send and active-turn compatibility requirements, and Google Calendar credential requirements.
+
+Command: `npm run lint`
+
+Result: passed.
+
+Command: `npm ci && npm run artifacts:scan && npm run lint && npm test && npm run build && npm audit --audit-level=moderate && npm run test:smoke && npm run test:integration`
+
+Result: passed. `npm ci` installed 118 packages and found 0 vulnerabilities; tracked artifact scan passed; TypeScript lint passed; Vitest ran 16 files and 138 tests; build passed; audit found 0 vulnerabilities; smoke returned `ok=true`; integration smoke returned `ok=true` with 12 stop conditions checked.
