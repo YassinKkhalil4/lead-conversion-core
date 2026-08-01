@@ -1,6 +1,8 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../db/pool.js';
 
+const LEGACY_OUTBOX_MAX_ATTEMPTS = 5;
+
 export interface ClaimedOutboxRow {
   outbox_id: string;
   conversation_id: string;
@@ -89,6 +91,17 @@ export class OutboxRepository {
   }
 
   async fail(outboxId: string, error: string, attemptCount: number): Promise<void> {
+    if (attemptCount >= LEGACY_OUTBOX_MAX_ATTEMPTS) {
+      await pool.query(
+        `UPDATE edge_outbox
+         SET status='dead_lettered', locked_at=NULL, last_error=$2,
+             completed_at=now()
+         WHERE outbox_id=$1`,
+        [outboxId, error.slice(0, 4000)],
+      );
+      return;
+    }
+
     const delaySeconds = Math.min(3600, Math.max(5, 2 ** Math.min(attemptCount, 10)));
     await pool.query(
       `UPDATE edge_outbox

@@ -55,6 +55,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
+  let legacyOutboxRepository: typeof import('../src/repositories/outbox-repository.js');
   let appModule: typeof import('../src/app.js');
 
   beforeAll(async () => {
@@ -90,6 +91,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
+    legacyOutboxRepository = await import('../src/repositories/outbox-repository.js');
     appModule = await import('../src/app.js');
   }, 30_000);
 
@@ -155,6 +157,32 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       payload: { text: 'welcome' },
       maxAttempts,
     });
+  }
+
+  async function seedLegacyEdgeOutbox(attemptCount: number): Promise<string> {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO edge_config_snapshots (config_version, client_record_id, industry, config_json, active)
+       VALUES ('legacy-outbox-test-config', 'recLEGACYOUTBOX', 'real_estate', '{}'::jsonb, true)`,
+    );
+    const conversation = await db.pool.query<{ conversation_id: string }>(
+      `INSERT INTO edge_conversations
+        (client_record_id, phone_normalized, lead_record_id, config_version, conversation_engine, state_authority)
+       VALUES ('recLEGACYOUTBOX', '+201000099999', 'recLEGACYLEAD', 'legacy-outbox-test-config', 'edge', 'edge')
+       RETURNING conversation_id`,
+    );
+    const conversationId = conversation.rows[0]?.conversation_id;
+    if (!conversationId) throw new Error('legacy_outbox_conversation_not_created');
+    const outbox = await db.pool.query<{ outbox_id: string }>(
+      `INSERT INTO edge_outbox
+        (conversation_id, event_type, idempotency_key, payload_json, status, attempt_count, available_at)
+       VALUES ($1, 'legacy.delivery', $2, '{}'::jsonb, 'pending', $3, now())
+       RETURNING outbox_id`,
+      [conversationId, `legacy-outbox:${attemptCount}`, attemptCount],
+    );
+    const outboxId = outbox.rows[0]?.outbox_id;
+    if (!outboxId) throw new Error('legacy_outbox_not_created');
+    return outboxId;
   }
 
   function metaStatusPayload(providerMessageId = 'wamid.status.delivered'): Record<string, unknown> {
@@ -681,6 +709,27 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     await outbox.markRetryable(maxedCommandId, 'maximum attempts reached');
     expect((await db.pool.query('SELECT state FROM runtime.outbox_commands WHERE outbox_command_id=$1', [maxedCommandId])).rows[0]?.state).toBe('dead_lettered');
     expect((await db.pool.query("SELECT count(*) FROM runtime.dead_letters WHERE source_table='runtime.outbox_commands'")).rows[0]?.count).toBe('1');
+  });
+
+  it('dead-letters legacy edge outbox rows after bounded compatibility retries', async () => {
+    const outboxId = await seedLegacyEdgeOutbox(4);
+    const outbox = new legacyOutboxRepository.OutboxRepository();
+    const claimed = await outbox.claimBatch(1);
+    expect(claimed.map((row) => row.outbox_id)).toEqual([outboxId]);
+    if (!claimed[0]) throw new Error('legacy_outbox_not_claimed');
+
+    await outbox.fail(outboxId, 'legacy target unavailable', Number(claimed[0].attempt_count) + 1);
+
+    const terminal = await db.pool.query<{ status: string; last_error: string; completed_at: Date | null }>(
+      'SELECT status, last_error, completed_at FROM edge_outbox WHERE outbox_id=$1',
+      [outboxId],
+    );
+    expect(terminal.rows[0]).toMatchObject({
+      status: 'dead_lettered',
+      last_error: 'legacy target unavailable',
+    });
+    expect(terminal.rows[0]?.completed_at).toBeTruthy();
+    expect(await outbox.claimBatch(1)).toHaveLength(0);
   });
 
   it('prevents duplicate durable jobs and never claims cancelled work', async () => {

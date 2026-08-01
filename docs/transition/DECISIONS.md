@@ -255,3 +255,11 @@ Decision: The legacy synchronous `/v1/turn` route is disabled by default behind 
 Reason: `/v1/turn` preserves rollback compatibility for the original active edge path, but it predates the durable outbox architecture and sends through the old synchronous Meta path. Keeping it opt-in prevents accidental reintroduction of in-transaction external sends or legacy fallback behavior during cutover.
 
 Date: 2026-08-01
+
+## DEC-024: Legacy Edge Outbox Has A Terminal Failure State
+
+Decision: The legacy `edge_outbox` compatibility queue now marks rows `dead_lettered` after five delivery attempts instead of retrying indefinitely.
+
+Reason: The durable runtime outbox is the target architecture, but the legacy compatibility worker may still be deliberately enabled during rollback. Bounded retry with an operator-visible terminal state prevents runaway compatibility retries while preserving the row for decommission readiness and manual inspection.
+
+Date: 2026-08-01
