@@ -57,7 +57,6 @@ describe('direct ingress route gates', () => {
       const lead = await app.inject({
         method: 'POST',
         url: '/webhooks/leads/website',
-        headers: { 'x-edge-secret': 'test_shared_secret_123456' },
         payload: { eventId: 'evt-disabled', phone: '+201000000001' },
       });
       expect(lead.statusCode).toBe(503);
@@ -122,9 +121,6 @@ describe('direct ingress route gates', () => {
       if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
       const envFile = join(root, 'verify.env');
       writeFileSync(envFile, [
-        'EDGE_SHARED_SECRET=test_shared_secret_123456',
-        'EDGE_INTERNAL_SECRET=test_internal_secret_123456',
-        'META_WEBHOOK_VERIFY_TOKEN=test_meta_verify_token_123456',
         'DIRECT_META_WEBHOOK_ENABLED=false',
         'DIRECT_LEAD_INGRESS_ENABLED=false',
         'N8N_COMPAT_ROUTES_ENABLED=true',
@@ -141,6 +137,11 @@ describe('direct ingress route gates', () => {
         '--expect-direct-lead=disabled',
       ], {
         cwd: process.cwd(),
+        env: {
+          HOME: process.env.HOME || '',
+          PATH: process.env.PATH || '',
+          TMPDIR: process.env.TMPDIR || tmpdir(),
+        },
         timeout: 10_000,
       });
       expect(stdout).toContain('Direct Meta challenge (disabled):');

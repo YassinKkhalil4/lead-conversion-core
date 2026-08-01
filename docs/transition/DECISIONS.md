@@ -527,3 +527,11 @@ Decision: `scripts/verify-deployment.sh --check-direct-meta` verifies direct Met
 Reason: A deployment can accept signed Meta probes while still accidentally accepting unsigned provider traffic if signature enforcement regresses. The staging verifier should prove both the positive and negative signature paths before route changes are treated as verified.
 
 Date: 2026-08-01
+
+## DEC-058: Disabled Direct-Ingress Verification Does Not Require Secrets
+
+Decision: Disabled direct Meta and direct website/Facebook lead ingress routes return HTTP 503 before provider token, signature, or shared-secret validation. `scripts/verify-deployment.sh` therefore requires `META_WEBHOOK_VERIFY_TOKEN`, `META_APP_SECRET`, and `EDGE_SHARED_SECRET` only for enabled direct-route verification paths that actually need those credentials.
+
+Reason: Missing rotated provider credentials or internal route secrets should not block proof that a direct ingress route family is disabled and unavailable. Enabled route verification still requires the appropriate credentials and proves authentication or signature enforcement before cutover.
+
+Date: 2026-08-01

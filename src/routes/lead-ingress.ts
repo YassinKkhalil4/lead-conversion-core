@@ -20,11 +20,11 @@ export async function leadIngressRoutes(app: FastifyInstance): Promise<void> {
     eventType: string;
     externalEventId?: string;
   }): Promise<Record<string, unknown>> {
-    requireSharedSecret(input.request);
     if (!getEnv().DIRECT_LEAD_INGRESS_ENABLED) {
       input.reply.code(503);
       return { ok: false, error: 'direct_lead_ingress_disabled' };
     }
+    requireSharedSecret(input.request);
     const payload = (input.request.body || {}) as Record<string, unknown>;
     const receiptInput = {
       provider: input.provider,
