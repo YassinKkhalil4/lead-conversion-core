@@ -6,6 +6,7 @@ Initial operator surfaces:
 - `/ready` for database, migration, and enabled-worker heartbeat readiness
 - `/metrics` for Prometheus metrics
 - `scripts/ops/*` for local operational checks
+- `DUMP_PATH=/path/to/archive.dump npm run dump:inspect` and `DUMP_PATH=/path/to/archive.dump npm run dump:restore-smoke` for PostgreSQL 16 dump inspection when Docker is available
 - SQL views and migration/reconciliation reports as they are added
 
 Alert categories:

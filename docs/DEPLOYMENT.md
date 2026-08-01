@@ -36,3 +36,10 @@ SHADOW_STATE_AUTHORITY=legacy
 Direct provider routes, real message sends, Google Calendar dispatch, runtime processing, and legacy active-turn compatibility are explicit cutover flags. Do not enable them only because credentials are present.
 
 `/ready` must be reviewed after enabling a worker flag. It reports `workerHeartbeats`; an enabled worker kind without a fresh heartbeat makes readiness fail.
+
+When Docker is available, inspect and restore-smoke supplied PostgreSQL dumps with PostgreSQL 16 tooling without modifying the original files:
+
+```bash
+DUMP_PATH=/path/to/archive.dump npm run dump:inspect
+DUMP_PATH=/path/to/archive.dump npm run dump:restore-smoke
+```
