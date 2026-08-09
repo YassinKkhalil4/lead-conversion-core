@@ -2,7 +2,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadAirtableExport } from '../scripts/import-airtable.js';
+import { loadAirtableExport, parseArgs as parseImportArgs } from '../scripts/import-airtable.js';
+import { parseArgs as parseReconciliationArgs } from '../scripts/reconcile-airtable.js';
 
 describe('airtable import dry run', () => {
   it('loads json and csv exports, validates minimum required fields, and reports missing tables', async () => {
@@ -70,5 +71,43 @@ describe('airtable import dry run', () => {
         count: 2,
       },
     ]);
+  });
+
+  it('fails Airtable import CLI parsing on ambiguous operator arguments before loading source files', () => {
+    expect(parseImportArgs(['--input=tests/fixtures/airtable-export'])).toEqual({
+      inputDir: 'tests/fixtures/airtable-export',
+      apply: false,
+    });
+    expect(parseImportArgs(['--input=tests/fixtures/airtable-export', '--apply'])).toEqual({
+      inputDir: 'tests/fixtures/airtable-export',
+      apply: true,
+    });
+
+    expect(() => parseImportArgs([])).toThrow(/Usage: npm run import:airtable/);
+    expect(() => parseImportArgs(['tests/fixtures/airtable-export'])).toThrow(/Unknown Airtable import argument/);
+    expect(() => parseImportArgs(['--input=tests/fixtures/airtable-export', '--input=other'])).toThrow(/Duplicate Airtable import argument: --input/);
+    expect(() => parseImportArgs(['--input=tests/fixtures/airtable-export', '--apply', '--apply'])).toThrow(/Duplicate Airtable import argument: --apply/);
+    expect(() => parseImportArgs(['--input='])).toThrow(/Missing Airtable import argument: --input/);
+    expect(() => parseImportArgs(['--input=tests/fixtures\n/airtable-export'])).toThrow(/Invalid Airtable import argument: --input/);
+    expect(() => parseImportArgs(['--input=tests/fixtures/airtable-export', '--apply=true'])).toThrow(/Unknown Airtable import argument/);
+  });
+
+  it('fails Airtable reconciliation CLI parsing on ambiguous operator arguments before querying PostgreSQL', () => {
+    const importRunId = '11111111-1111-4111-8111-111111111111';
+
+    expect(parseReconciliationArgs([])).toEqual({ recordResults: false });
+    expect(parseReconciliationArgs(['--record-results'])).toEqual({ recordResults: true });
+    expect(parseReconciliationArgs([`--import-run-id=${importRunId}`, '--record-results'])).toEqual({
+      importRunId,
+      recordResults: true,
+    });
+
+    expect(() => parseReconciliationArgs(['--record-results', '--record-results'])).toThrow(/Duplicate Airtable reconciliation argument: --record-results/);
+    expect(() => parseReconciliationArgs([`--import-run-id=${importRunId}`, '--import-run-id=22222222-2222-4222-8222-222222222222'])).toThrow(/Duplicate Airtable reconciliation argument: --import-run-id/);
+    expect(() => parseReconciliationArgs(['--import-run-id=not-a-uuid'])).toThrow(/Invalid Airtable reconciliation argument: --import-run-id/);
+    expect(() => parseReconciliationArgs(['--import-run-id='])).toThrow(/Missing Airtable reconciliation argument: --import-run-id/);
+    expect(() => parseReconciliationArgs([`--import-run-id=${importRunId}\n`])).toThrow(/Invalid Airtable reconciliation argument: --import-run-id/);
+    expect(() => parseReconciliationArgs(['--record-results=true'])).toThrow(/Unknown Airtable reconciliation argument/);
+    expect(() => parseReconciliationArgs(['--unknown=1'])).toThrow(/Unknown Airtable reconciliation argument/);
   });
 });

@@ -18,9 +18,9 @@ export interface ConfigCliArgs {
 const commands = new Set<ConfigCommand>(['validate', 'diff', 'publish', 'active', 'rollback']);
 
 function rejectUnsafeText(name: string, value: string): string {
+  if (/[\u0000-\u001f\u007f]/.test(value)) throw new Error(`Invalid config argument: ${name}`);
   const trimmed = value.trim();
   if (!trimmed) throw new Error(`Missing config argument: ${name}`);
-  if (/[\u0000-\u001f\u007f]/.test(trimmed)) throw new Error(`Invalid config argument: ${name}`);
   return trimmed;
 }
 

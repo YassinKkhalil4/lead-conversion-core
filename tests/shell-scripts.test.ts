@@ -305,6 +305,7 @@ describe('shell scripts', () => {
     expect(() => parseCalendarReconcileArgs(['confirm', '--outbox-command-id=not-a-uuid', '--provider-event-id=google-event-1'])).toThrow(/Invalid calendar reconciliation argument: --outbox-command-id/);
     expect(() => parseCalendarReconcileArgs(['confirm', `--outbox-command-id=${validOutboxId}`, '--provider-event-id=google-event-1', '--unknown=1'])).toThrow(/Unknown calendar reconciliation argument/);
     expect(() => parseCalendarReconcileArgs(['confirm', `--outbox-command-id=${validOutboxId}`, '--provider-event-id=google-event\n1'])).toThrow(/Invalid calendar reconciliation argument: --provider-event-id/);
+    expect(() => parseCalendarReconcileArgs(['confirm', `--outbox-command-id=${validOutboxId}`, '--provider-event-id=google-event-1\n'])).toThrow(/Invalid calendar reconciliation argument: --provider-event-id/);
     expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason='])).toThrow(/Missing calendar reconciliation argument: --reason/);
     expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason=operator verified', '--operator-id=ops\ncalendar'])).toThrow(/Invalid calendar reconciliation argument: --operator-id/);
   });
@@ -338,6 +339,7 @@ describe('shell scripts', () => {
     expect(() => parseConfigArgs(['active', '--actor=ops-config'], 'config/default.json')).toThrow(/Unknown config argument/);
     expect(() => parseConfigArgs(['validate', '--actor=ops-config'], 'config/default.json')).toThrow(/Unknown config argument/);
     expect(() => parseConfigArgs(['publish', '--actor=ops\nconfig'], 'config/default.json')).toThrow(/Invalid config argument: --actor/);
+    expect(() => parseConfigArgs(['publish', '--actor=ops-config\n'], 'config/default.json')).toThrow(/Invalid config argument: --actor/);
     expect(() => parseConfigArgs(['publish', '--client-record-id='], 'config/default.json')).toThrow(/Missing config argument: --client-record-id/);
     expect(() => parseConfigArgs(['delete', '--version=version-1'], 'config/default.json')).toThrow(/unknown_config_command:delete/);
   });

@@ -17,9 +17,9 @@ function parseNumberArg(name: string, value: string): number {
 }
 
 function rejectUnsafeText(name: string, value: string): string {
+  if (/[\u0000-\u001f\u007f]/.test(value)) throw new Error(`Invalid calendar reconciliation argument: ${name}`);
   const trimmed = value.trim();
   if (!trimmed) throw new Error(`Missing calendar reconciliation argument: ${name}`);
-  if (/[\u0000-\u001f\u007f]/.test(trimmed)) throw new Error(`Invalid calendar reconciliation argument: ${name}`);
   return trimmed;
 }
 

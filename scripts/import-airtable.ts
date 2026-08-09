@@ -1138,17 +1138,35 @@ async function applyImport(inputDir: string, loads: TableLoad[], summary: Import
   }
 }
 
-function parseArgs(argv: string[]): { inputDir: string; apply: boolean } {
-  const inputDir = argv.find((arg) => arg.startsWith('--input='))?.slice('--input='.length) || argv[0] || '';
-  return {
-    inputDir,
-    apply: argv.includes('--apply'),
-  };
+function rejectUnsafeText(name: string, value: string): string {
+  if (/[\u0000-\u001f\u007f]/.test(value)) throw new Error(`Invalid Airtable import argument: ${name}`);
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error(`Missing Airtable import argument: ${name}`);
+  return trimmed;
+}
+
+export function parseArgs(argv: string[]): { inputDir: string; apply: boolean } {
+  let inputDir = '';
+  let apply = false;
+  for (const arg of argv) {
+    if (arg === '--apply') {
+      if (apply) throw new Error('Duplicate Airtable import argument: --apply');
+      apply = true;
+      continue;
+    }
+    if (arg.startsWith('--input=')) {
+      if (inputDir) throw new Error('Duplicate Airtable import argument: --input');
+      inputDir = rejectUnsafeText('--input', arg.slice('--input='.length));
+      continue;
+    }
+    throw new Error(`Unknown Airtable import argument: ${arg}`);
+  }
+  if (!inputDir) throw new Error('Usage: npm run import:airtable -- --input=imports/airtable [--apply]');
+  return { inputDir, apply };
 }
 
 export async function runCli(argv = process.argv.slice(2)): Promise<void> {
   const args = parseArgs(argv);
-  if (!args.inputDir) throw new Error('Usage: npm run import:airtable -- --input=imports/airtable [--apply]');
   const { loads, summary } = await loadAirtableExport(args.inputDir);
   if (args.apply) {
     const importRunId = await applyImport(args.inputDir, loads, summary);

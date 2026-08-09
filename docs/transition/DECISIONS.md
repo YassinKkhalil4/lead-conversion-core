@@ -735,3 +735,11 @@ Decision: `npm run config` parses command arguments before constructing the conf
 Reason: Configuration publish and rollback update immutable configuration records, active pointers, and legacy rollback snapshots. Ambiguous source selection or typoed operator flags must fail before PostgreSQL access so configuration authority remains explicit, diffable, and auditable.
 
 Date: 2026-08-09
+
+## DEC-084: Airtable Migration CLIs Fail Closed On Ambiguous Arguments
+
+Decision: `npm run import:airtable` requires explicit `--input=<dir>`, accepts only the optional bare `--apply` flag, and rejects positional input, unknown flags, duplicate flags, empty paths, and control-character-bearing paths. `npm run reconcile:airtable` accepts only optional `--import-run-id=<uuid>` and bare `--record-results`, rejects malformed import-run IDs, unknown or duplicate flags, and validates arguments before any source-file load or PostgreSQL query.
+
+Reason: Airtable import `--apply` writes raw records, entity maps, rejects, and target rows; reconciliation `--record-results` writes migration check evidence used by decommission readiness. Ambiguous operator input must fail closed so migration evidence remains traceable to one explicit source and one explicit import run.
+
+Date: 2026-08-09

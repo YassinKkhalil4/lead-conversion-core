@@ -498,11 +498,33 @@ export async function reconcileAirtableImport(input: {
   }
 }
 
-function parseArgs(argv: string[]): { importRunId?: string; recordResults: boolean } {
-  const importRunId = argv.find((arg) => arg.startsWith('--import-run-id='))?.slice('--import-run-id='.length);
-  return importRunId
-    ? { importRunId, recordResults: argv.includes('--record-results') }
-    : { recordResults: argv.includes('--record-results') };
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function rejectUnsafeText(name: string, value: string): string {
+  if (/[\u0000-\u001f\u007f]/.test(value)) throw new Error(`Invalid Airtable reconciliation argument: ${name}`);
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error(`Missing Airtable reconciliation argument: ${name}`);
+  return trimmed;
+}
+
+export function parseArgs(argv: string[]): { importRunId?: string; recordResults: boolean } {
+  let importRunId = '';
+  let recordResults = false;
+  for (const arg of argv) {
+    if (arg === '--record-results') {
+      if (recordResults) throw new Error('Duplicate Airtable reconciliation argument: --record-results');
+      recordResults = true;
+      continue;
+    }
+    if (arg.startsWith('--import-run-id=')) {
+      if (importRunId) throw new Error('Duplicate Airtable reconciliation argument: --import-run-id');
+      importRunId = rejectUnsafeText('--import-run-id', arg.slice('--import-run-id='.length));
+      if (!uuidPattern.test(importRunId)) throw new Error('Invalid Airtable reconciliation argument: --import-run-id');
+      continue;
+    }
+    throw new Error(`Unknown Airtable reconciliation argument: ${arg}`);
+  }
+  return importRunId ? { importRunId, recordResults } : { recordResults };
 }
 
 async function runCli(argv = process.argv.slice(2)): Promise<void> {
