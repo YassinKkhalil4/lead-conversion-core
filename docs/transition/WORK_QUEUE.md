@@ -42,11 +42,11 @@ Remaining: broader real-export reconciliation checks and full reconciliation blo
 
 Status: locally_verified
 
-Deliverables: inbox receipt/claim/retry/dead-letter/replay, outbox commands/attempt history/provider failure classification, outbox idempotency keys that reject changed command semantics, scheduled jobs with retry and direct dead-letter outcomes, scheduled-job semantic keys that reject changed job semantics, audit service, bounded jittered retry backoff, bounded legacy outbox compatibility retries.
+Deliverables: inbox receipt/claim/retry/dead-letter/replay, inbox dedupe keys that reject changed payload semantics, outbox commands/attempt history/provider failure classification, outbox idempotency keys that reject changed command semantics, scheduled jobs with retry and direct dead-letter outcomes, scheduled-job semantic keys that reject changed job semantics, audit service, bounded jittered retry backoff, bounded legacy outbox compatibility retries.
 
 Dependencies: none for internal implementation.
 
-Verification gates: real PostgreSQL concurrency/lease/retry/dead-letter/atomicity/job/idempotency-collision/audit tests.
+Verification gates: real PostgreSQL concurrency/lease/retry/dead-letter/atomicity/job/idempotency-collision/inbox-collision/audit tests.
 
 Remaining: provider-specific dispatchers and business processors are intentionally deferred to MP-05 through MP-10. The runtime worker is present but disabled unless real handlers are configured.
 

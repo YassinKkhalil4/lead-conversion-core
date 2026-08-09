@@ -3395,3 +3395,55 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported before the implementation commit.
+
+## 2026-08-09 Inbox Dedupe Payload Collision Hardening
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: failed on the first focused run. The existing duplicate-inbox fixture reused the same provider event ID with changed aggregate semantics, which the new collision guard correctly rejected.
+
+Resolution: Updated the duplicate fixture to represent a true provider retry with matching aggregate identity, and kept a separate regression test for changed payload semantics.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed after the fixture correction. Focused PostgreSQL coverage ran 1 file and 95 tests, including changed-payload inbox dedupe collision rejection.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript compile check completed with no errors.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 204 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+Command: `git diff --check`
+
+Result: passed. No whitespace errors were reported before the implementation commit.

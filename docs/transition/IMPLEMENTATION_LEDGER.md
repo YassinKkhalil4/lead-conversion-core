@@ -1017,3 +1017,13 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts` passed with 1 file and 94 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 203 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `f8707e4`: Harden runtime idempotency collisions.
+
+## 2026-08-09 Inbox Dedupe Payload Collision Hardening
+
+- Implementation slice: Hardened `InboxRepository.receive` so duplicate provider dedupe keys reuse the existing inbox row only when event type, external event ID, aggregate key, and payload hash match.
+- Implementation slice: Added PostgreSQL regression coverage proving a reused provider event ID with a changed payload fails closed without creating a second receipt/event or altering the original payload.
+- Decision: Added DEC-093. Provider dedupe keys are replay protection and must not silently suppress changed payloads.
+- Verification failure: The first focused runtime integration run failed because the existing duplicate-inbox fixture omitted the aggregate key used by the original receipt, making it a semantic collision. Resolution: changed the duplicate fixture to represent a true retry with matching aggregate identity and retained a separate collision test for changed payloads.
+- Verification: `npx vitest run tests/runtime.integration.test.ts` passed after the fixture correction with 1 file and 95 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 204 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `ad329be`: Reject inbox dedupe payload collisions.

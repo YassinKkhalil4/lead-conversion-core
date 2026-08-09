@@ -807,3 +807,11 @@ Decision: Durable outbox command idempotency keys and scheduled-job semantic key
 Reason: Idempotency keys are replay protection, not mutable aliases. Silently accepting a reused key for a changed external effect or schedule can hide producer defects and leave PostgreSQL durable state disagreeing with the business action the caller believes was requested.
 
 Date: 2026-08-09
+
+## DEC-093: Inbox Dedupe Keys Require Matching Payload Semantics
+
+Decision: Durable inbox receipt may acknowledge a duplicate provider dedupe key only when the existing inbox event has the same event type, external event ID, aggregate identity, and payload hash. A reused provider dedupe key with changed event semantics fails closed as an inbox collision and leaves the original durable receipt/event unchanged.
+
+Reason: Provider event IDs are replay protection. Treating a reused ID with a changed payload as an ordinary duplicate can hide provider/source defects, suppress business processing for the changed event, and lose evidence of the conflicting payload.
+
+Date: 2026-08-09
