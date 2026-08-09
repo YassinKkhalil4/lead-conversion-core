@@ -986,3 +986,13 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 1 file and 21 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 199 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `c5f8a4c`: Harden backup restore script arguments.
+
+## 2026-08-09 Operator Verification Script Argument Hardening
+
+- Implementation slice: Hardened `scripts/verify-deployment.sh` so duplicate, empty, unknown, or control-character-bearing operator arguments fail before env-file loading, route checks, or durable verification probes.
+- Implementation slice: Hardened `scripts/shadow-sequence.sh`, `scripts/ops/inspect-dump-metadata.sh`, and `scripts/ops/restore-dump-smoke.sh` as env-only commands that reject all positional or flag arguments before reading `.env`, `DUMP_PATH`, or invoking Docker.
+- Implementation slice: Added executable shell-script coverage proving deployment verifier and env-only probe/dump argument rejection happens before secret-bearing env or Docker inputs.
+- Decision: Added DEC-090. Operator verification scripts create or inspect operational evidence, so ambiguous CLI input must fail closed before evidence-producing actions.
+- Verification: `npx vitest run tests/shell-scripts.test.ts tests/ingress-gating.test.ts` passed with 2 files and 32 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 201 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `d758c7e`: Harden operator verification script arguments.
