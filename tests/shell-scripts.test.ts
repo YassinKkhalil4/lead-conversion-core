@@ -184,6 +184,16 @@ describe('shell scripts', () => {
     expect(verify).toContain('psql "service=lead_core_restore_target"');
   });
 
+  it('rejects backup and restore script arguments before reading secret-bearing env', () => {
+    const env = { PATH: process.env.PATH || '' };
+    expect(() => execFileSync('sh', ['scripts/backup/backup-postgres.sh', '--database-url=postgresql://example'], { env, stdio: 'pipe' }))
+      .toThrow(/backup-postgres\.sh does not accept arguments/);
+    expect(() => execFileSync('sh', ['scripts/backup/restore-postgres.sh', '--dump=backup.enc'], { env, stdio: 'pipe' }))
+      .toThrow(/restore-postgres\.sh does not accept arguments/);
+    expect(() => execFileSync('sh', ['scripts/backup/verify-restore.sh', '--target=postgresql://example'], { env, stdio: 'pipe' }))
+      .toThrow(/verify-restore\.sh does not accept arguments/);
+  });
+
   it('computes backup checksums through the portable helper', () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-checksum.'));
     try {

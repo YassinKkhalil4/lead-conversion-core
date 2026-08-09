@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if [ "$#" -ne 0 ]; then
+  echo "verify-restore.sh does not accept arguments; configure it with environment variables" >&2
+  exit 2
+fi
+
 : "${RESTORE_TARGET_DATABASE_URL:?RESTORE_TARGET_DATABASE_URL is required}"
 : "${EXPECTED_MIN_MIGRATIONS:=1}"
 

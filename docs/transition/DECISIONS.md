@@ -775,3 +775,11 @@ Decision: `npm run migrate` and `npm run migrate:prod` accept no operator argume
 Reason: The migrator mutates schema authority. Ignoring typoed flags, alternate migration paths, or unsafe argument text can create misleading migration evidence or run against the wrong operator intent.
 
 Date: 2026-08-09
+
+## DEC-089: Backup And Restore Scripts Are Env-Only Commands
+
+Decision: `scripts/backup/backup-postgres.sh`, `scripts/backup/restore-postgres.sh`, and `scripts/backup/verify-restore.sh` accept no positional or flag arguments and fail before reading required secret-bearing environment variables when arguments are supplied.
+
+Reason: Backup and restore commands are recovery-authority operations configured through explicit environment variables and private service files. Silently ignoring command arguments can make an operator believe a different database, dump, checksum, or password file was used.
+
+Date: 2026-08-09

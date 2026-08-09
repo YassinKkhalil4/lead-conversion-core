@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if [ "$#" -ne 0 ]; then
+  echo "backup-postgres.sh does not accept arguments; configure it with environment variables" >&2
+  exit 2
+fi
+
 : "${DATABASE_URL:?DATABASE_URL is required}"
 : "${BACKUP_DIR:=./backups}"
 : "${BACKUP_ENCRYPTION_PASSWORD_FILE:?BACKUP_ENCRYPTION_PASSWORD_FILE is required}"

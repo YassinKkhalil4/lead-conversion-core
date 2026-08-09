@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if [ "$#" -ne 0 ]; then
+  echo "restore-postgres.sh does not accept arguments; configure it with environment variables" >&2
+  exit 2
+fi
+
 : "${RESTORE_TARGET_DATABASE_URL:?RESTORE_TARGET_DATABASE_URL is required}"
 : "${ENCRYPTED_DUMP_PATH:?ENCRYPTED_DUMP_PATH is required}"
 : "${BACKUP_ENCRYPTION_PASSWORD_FILE:?BACKUP_ENCRYPTION_PASSWORD_FILE is required}"
