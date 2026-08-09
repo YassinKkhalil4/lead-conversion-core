@@ -947,3 +947,13 @@
 - Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/shell-scripts.test.ts` passed with 3 files and 38 tests after the test isolation fix.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 195 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `74c71df`: Disable legacy config mutation paths by default.
+
+## 2026-08-09 Versioned Seed Configuration Authority
+
+- Implementation slice: Changed `npm run seed` from direct `edge_config_snapshots` writes to `VersionedConfigService.publish`, so seed bootstrap creates or reuses immutable published configuration, activates the default scope, and maintains the legacy compatibility snapshot through the same versioned path.
+- Implementation slice: Seed now skips only when the default `configuration.active_versions` pointer already exists, rather than treating a legacy-only active snapshot as sufficient runtime authority.
+- Implementation slice: Added PostgreSQL regression coverage proving `npm run seed` creates one published version, one default active pointer, one matching legacy compatibility snapshot, and remains idempotent on rerun.
+- Decision: Added DEC-086. Seed bootstrap must not create legacy-only configuration authority.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "seeds configuration|publishes immutable versioned configuration|activates and rolls back"` passed with 1 file, 3 tests, and 90 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 196 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `a4f2b5e`: Publish seed config through versioned authority.
