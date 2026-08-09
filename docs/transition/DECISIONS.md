@@ -759,3 +759,11 @@ Decision: `npm run seed` publishes the configured seed file through `VersionedCo
 Reason: A seed operation must not create legacy-only configuration authority. Publishing through the versioned service keeps seed bootstrap idempotent, immutable once published, auditable through configuration metadata, and compatible with legacy rollback reads during cutover.
 
 Date: 2026-08-09
+
+## DEC-087: Seed CLI Is A Closed No-Argument Bootstrap
+
+Decision: `npm run seed` accepts no operator arguments and rejects unknown or control-character-bearing arguments before any PostgreSQL query. The seed source remains `SEED_CONFIG_PATH` from validated environment.
+
+Reason: Seed mutates configuration authority. Silently ignoring typoed arguments such as an intended input path can publish the wrong seed source or create misleading bootstrap evidence.
+
+Date: 2026-08-09

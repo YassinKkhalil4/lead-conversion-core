@@ -357,4 +357,14 @@ describe('shell scripts', () => {
     expect(() => parseSyncConfigArgs(['--client-record-id=recCLIENT01\n'])).toThrow(/Invalid sync-config argument/);
     expect(() => parseSyncConfigArgs(['--unknown=recCLIENT01'])).toThrow(/Unknown sync-config argument/);
   });
+
+  it('fails seed CLI commands on any operator argument before querying PostgreSQL', async () => {
+    Object.assign(process.env, cliEnv);
+    const { parseArgs: parseSeedArgs } = await import('../scripts/seed.js');
+
+    expect(parseSeedArgs([])).toBeUndefined();
+    expect(() => parseSeedArgs(['--input=config/seed-real-estate.json'])).toThrow(/Unknown seed argument/);
+    expect(() => parseSeedArgs(['unexpected'])).toThrow(/Unknown seed argument/);
+    expect(() => parseSeedArgs(['unexpected\n'])).toThrow(/Invalid seed argument/);
+  });
 });
