@@ -2805,3 +2805,53 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported.
+
+## 2026-08-09 Backup Restore Checksum Verification
+
+Command: `bash -n scripts/backup/backup-postgres.sh && bash -n scripts/backup/restore-postgres.sh && bash -n scripts/backup/sha256-file.sh && bash -n scripts/backup/verify-restore.sh`
+
+Result: passed. Backup, restore, checksum helper, and restore verification shell syntax are valid.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed before full gate execution. Focused shell-script coverage ran 16 tests, including portable checksum helper behavior and restore checksum preflight ordering before encrypted dump decryption.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript compile check completed with no errors.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 188 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+Command: `git diff --check`
+
+Result: passed. No whitespace errors were reported before the implementation commit.

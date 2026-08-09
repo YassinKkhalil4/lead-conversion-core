@@ -890,3 +890,14 @@
 - Verification: `bash -n scripts/backup/backup-postgres.sh` passed.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 186 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `2b67fd1`: Prevent backup output overwrite.
+
+## 2026-08-09 Backup Restore Checksum Verification
+
+- Implementation slice: Added `scripts/backup/sha256-file.sh`, a portable SHA-256 helper that uses `sha256sum` when present and falls back to `shasum -a 256`.
+- Implementation slice: Updated backup creation to write checksum files through the helper and updated restore to verify the encrypted dump checksum before decryption and PostgreSQL restore by default.
+- Implementation slice: Added an explicit `RESTORE_SKIP_CHECKSUM=true` operator escape hatch for intentional unchecked restore, while malformed, unreadable, or mismatched checksum artifacts fail closed.
+- Decision: Added DEC-081. Restore must verify encrypted backup artifacts before mutating a target database.
+- Verification: `bash -n scripts/backup/backup-postgres.sh && bash -n scripts/backup/restore-postgres.sh && bash -n scripts/backup/sha256-file.sh && bash -n scripts/backup/verify-restore.sh` passed.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 16 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 188 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `716404c`: Verify backup checksum before restore.
