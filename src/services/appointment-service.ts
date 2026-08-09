@@ -200,14 +200,26 @@ export class AppointmentService {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const duplicate = await client.query<{ appointment_id: string; outbox_command_id: string | null }>(
-        `SELECT appointment_id, outbox_command_id
+      const bookedBy = input.bookedBy || 'external_user';
+      const duplicate = await client.query<{
+        appointment_id: string;
+        outbox_command_id: string | null;
+        appointment_slot_id: string;
+        booked_by: string;
+      }>(
+        `SELECT appointment_id, outbox_command_id, appointment_slot_id, booked_by
          FROM app.appointments
          WHERE idempotency_key=$1
          LIMIT 1`,
         [idempotencyKey],
       );
       if (duplicate.rows[0]) {
+        if (
+          duplicate.rows[0].appointment_slot_id !== input.appointmentSlotId
+          || duplicate.rows[0].booked_by !== bookedBy
+        ) {
+          throw new Error(`appointment_booking_idempotency_collision:${idempotencyKey}`);
+        }
         await client.query('COMMIT');
         return {
           outcome: 'duplicate',
@@ -294,7 +306,7 @@ export class AppointmentService {
           row.ends_at,
           row.timezone,
           idempotencyKey,
-          input.bookedBy || 'external_user',
+          bookedBy,
           input.sourceEventId,
         ],
       );

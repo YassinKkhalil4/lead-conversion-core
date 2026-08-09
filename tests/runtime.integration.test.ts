@@ -3967,6 +3967,47 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     });
   });
 
+  it('rejects appointment booking idempotency collisions for changed slot replies', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'APPCOLLISION',
+      phone: '+201099999960',
+      phoneNumberId: 'phone-number-id-mp11-collision',
+    });
+    await db.pool.query("UPDATE app.clients SET calendar_id='calendar-test-primary' WHERE client_id=$1", [seeded.clientId]);
+    const service = new appointmentService.AppointmentService();
+    const startsAt = [
+      new Date(Date.now() + 86_400_000).toISOString(),
+      new Date(Date.now() + 172_800_000).toISOString(),
+    ];
+    const offer = await service.createOffer(db.pool, {
+      leadId: seeded.leadId,
+      startsAt,
+      durationMinutes: 45,
+      correlationId: 'appointment-collision-test',
+    });
+
+    const first = await service.bookSlot({
+      appointmentOfferId: offer.appointmentOfferId,
+      appointmentSlotId: offer.slotIds[0] || '',
+      sourceEventId: 'appointment-book-collision',
+      bookedBy: seeded.leadId,
+      correlationId: 'appointment-collision-test',
+    });
+    expect(first.outcome).toBe('booked');
+
+    await expect(service.bookSlot({
+      appointmentOfferId: offer.appointmentOfferId,
+      appointmentSlotId: offer.slotIds[1] || '',
+      sourceEventId: 'appointment-book-collision',
+      bookedBy: seeded.leadId,
+      correlationId: 'appointment-collision-test',
+    })).rejects.toThrow(/appointment_booking_idempotency_collision/);
+
+    expect((await db.pool.query('SELECT count(*) FROM app.appointments WHERE appointment_offer_id=$1', [offer.appointmentOfferId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM runtime.outbox_commands WHERE command_type='calendar.create_event' AND aggregate_key=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT appointment_slot_id FROM app.appointments WHERE appointment_id=$1', [first.appointmentId])).rows[0]?.appointment_slot_id).toBe(offer.slotIds[0]);
+  });
+
   it('preserves delivery-unknown calendar creates without blind duplicate event generation', async () => {
     const seeded = await seedMp08Conversation({
       suffix: 'APPUNKNOWN',
