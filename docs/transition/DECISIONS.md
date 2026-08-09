@@ -815,3 +815,11 @@ Decision: Durable inbox receipt may acknowledge a duplicate provider dedupe key 
 Reason: Provider event IDs are replay protection. Treating a reused ID with a changed payload as an ordinary duplicate can hide provider/source defects, suppress business processing for the changed event, and lose evidence of the conflicting payload.
 
 Date: 2026-08-09
+
+## DEC-094: Appointment Booking Idempotency Requires Matching Reply Semantics
+
+Decision: Appointment booking replay may return an existing appointment only when the reused source-event idempotency key names the same offer, slot, and booking actor. A reused booking source event for a different slot or actor fails closed as an appointment booking idempotency collision.
+
+Reason: Appointment source-event IDs are replay protection for a specific customer slot reply. Silently treating a changed slot reply as a duplicate can confirm the wrong appointment and suppress the operator-visible conflict that should be resolved before creating or reconciling calendar side effects.
+
+Date: 2026-08-09

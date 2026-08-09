@@ -1027,3 +1027,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts` passed after the fixture correction with 1 file and 95 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 204 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `ad329be`: Reject inbox dedupe payload collisions.
+
+## 2026-08-09 Appointment Booking Idempotency Collision Hardening
+
+- Implementation slice: Hardened `AppointmentService.bookSlot` so duplicate booking source-event keys return an existing appointment only when the requested slot and booking actor match the stored appointment.
+- Implementation slice: Added PostgreSQL regression coverage proving a reused appointment source event for a different slot fails closed without creating a second appointment or calendar outbox command.
+- Decision: Added DEC-094. Appointment booking source-event keys protect a specific customer slot reply and must not alias changed booking semantics.
+- Verification: `npx vitest run tests/runtime.integration.test.ts` passed with 1 file and 96 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 205 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `a9270b3`: Reject appointment booking idempotency collisions.
