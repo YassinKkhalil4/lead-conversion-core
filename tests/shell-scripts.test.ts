@@ -153,5 +153,8 @@ describe('shell scripts', () => {
     expect(() => parseDecommissionReadinessArgs(['--direct-stability-days='])).toThrow(/Invalid numeric argument/);
     expect(() => parseCutoverReadinessArgs(['--max-queue-age-seconds=0.5'])).toThrow(/Invalid numeric argument/);
     expect(() => parseDecommissionReadinessArgs(['--direct-stability-days=1.5'])).toThrow(/Invalid numeric argument/);
+    expect(() => parseCutoverReadinessArgs(['--max-pending-outbox=1e3'])).toThrow(/Invalid numeric argument/);
+    expect(() => parseDecommissionReadinessArgs(['--max-worker-heartbeat-age-seconds=0x10'])).toThrow(/Invalid numeric argument/);
+    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox= 1'])).toThrow(/Invalid numeric argument/);
   });
 });

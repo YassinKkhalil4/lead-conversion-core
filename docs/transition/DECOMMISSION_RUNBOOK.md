@@ -25,7 +25,7 @@ Only add these flags when the matching evidence is complete and owner-approved:
 
 The command is read-only. A passing report is a decommission precondition, not approval to delete or disable infrastructure.
 
-Threshold arguments must be non-negative integers. Decimal windows, counts, or heartbeat thresholds are rejected before PostgreSQL is queried.
+Threshold arguments must be plain base-10 non-negative integers. Decimal, scientific-notation, hexadecimal, whitespace-padded, negative, or empty windows, counts, or heartbeat thresholds are rejected before PostgreSQL is queried.
 
 ## Exit Criteria
 
