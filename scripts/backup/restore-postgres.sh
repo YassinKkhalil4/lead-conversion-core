@@ -4,6 +4,7 @@ set -eu
 : "${RESTORE_TARGET_DATABASE_URL:?RESTORE_TARGET_DATABASE_URL is required}"
 : "${ENCRYPTED_DUMP_PATH:?ENCRYPTED_DUMP_PATH is required}"
 : "${BACKUP_ENCRYPTION_PASSWORD_FILE:?BACKUP_ENCRYPTION_PASSWORD_FILE is required}"
+: "${RESTORE_SKIP_CHECKSUM:=false}"
 
 if [ ! -r "$BACKUP_ENCRYPTION_PASSWORD_FILE" ]; then
   echo "Backup encryption password file is not readable" >&2
@@ -13,6 +14,25 @@ fi
 if [ ! -r "$ENCRYPTED_DUMP_PATH" ]; then
   echo "Encrypted dump path is not readable" >&2
   exit 1
+fi
+
+if [ "$RESTORE_SKIP_CHECKSUM" != "true" ]; then
+  checksum_path="${ENCRYPTED_DUMP_SHA256_PATH:-$ENCRYPTED_DUMP_PATH.sha256}"
+  if [ ! -r "$checksum_path" ]; then
+    echo "Backup checksum file is not readable. Set RESTORE_SKIP_CHECKSUM=true only for an intentional unchecked restore." >&2
+    exit 1
+  fi
+  expected_checksum="$(awk 'NR == 1 { print $1 }' "$checksum_path")"
+  if ! printf '%s\n' "$expected_checksum" | grep -Eq '^[0-9a-fA-F]{64}$'; then
+    echo "Backup checksum file is malformed: $checksum_path" >&2
+    exit 1
+  fi
+  actual_checksum="$(scripts/backup/sha256-file.sh "$ENCRYPTED_DUMP_PATH")"
+  if [ "$actual_checksum" != "$expected_checksum" ]; then
+    echo "Backup checksum mismatch; refusing to restore encrypted dump" >&2
+    exit 1
+  fi
+  unset actual_checksum expected_checksum checksum_path
 fi
 
 restore_target_database_url_file="$(mktemp)"

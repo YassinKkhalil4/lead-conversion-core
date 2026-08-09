@@ -711,3 +711,11 @@ Decision: `scripts/backup/backup-postgres.sh` creates a per-output lock before w
 Reason: Backup filenames are timestamped to second precision. Two operator runs in the same second, a stale checksum, or a rerun against an existing backup path must not overwrite restorable evidence. A per-output lock and explicit existence check make backup creation fail closed instead of silently replacing an encrypted dump or checksum.
 
 Date: 2026-08-09
+
+## DEC-081: Restore Requires Encrypted Dump Checksum Verification
+
+Decision: `scripts/backup/restore-postgres.sh` verifies the encrypted dump SHA-256 checksum before decryption and restore by default. Operators may bypass the check only by setting `RESTORE_SKIP_CHECKSUM=true`, and checksum generation uses the repository helper `scripts/backup/sha256-file.sh` so either `sha256sum` or `shasum -a 256` can satisfy the local platform.
+
+Reason: Restore must fail closed on corrupted, truncated, or mismatched encrypted backup artifacts before mutating a target database. The bypass is explicit for exceptional manual recovery cases and does not silently weaken normal restore behavior.
+
+Date: 2026-08-09

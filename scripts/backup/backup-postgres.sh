@@ -55,7 +55,9 @@ openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
   -in "$plain_dump" \
   -out "$encrypted_dump"
 
-sha256sum "$encrypted_dump" > "$checksum_file"
+checksum_value="$(scripts/backup/sha256-file.sh "$encrypted_dump")"
+printf '%s  %s\n' "$checksum_value" "$(basename "$encrypted_dump")" > "$checksum_file"
+unset checksum_value
 backup_complete="true"
 echo "Encrypted backup written: $encrypted_dump"
 echo "Checksum written: $checksum_file"

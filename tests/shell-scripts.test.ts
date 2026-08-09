@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,6 +20,7 @@ describe('shell scripts', () => {
       'scripts/shadow-sequence.sh',
       'scripts/backup/backup-postgres.sh',
       'scripts/backup/restore-postgres.sh',
+      'scripts/backup/sha256-file.sh',
       'scripts/backup/verify-restore.sh',
       'scripts/ops/inspect-dump-metadata.sh',
       'scripts/ops/restore-dump-smoke.sh',
@@ -180,6 +182,38 @@ describe('shell scripts', () => {
     expect(backup).toContain('--dbname="service=lead_core_backup_source"');
     expect(restore).toContain('--dbname="service=lead_core_restore_target"');
     expect(verify).toContain('psql "service=lead_core_restore_target"');
+  });
+
+  it('computes backup checksums through the portable helper', () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-checksum.'));
+    try {
+      const payload = join(root, 'payload.dump.enc');
+      writeFileSync(payload, 'backup-payload');
+
+      const expected = createHash('sha256').update('backup-payload').digest('hex');
+      const actual = execFileSync('sh', ['scripts/backup/sha256-file.sh', payload], { encoding: 'utf8' }).trim();
+
+      expect(actual).toBe(expected);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('requires checksum verification before encrypted restore', () => {
+    const backup = readFileSync('scripts/backup/backup-postgres.sh', 'utf8');
+    const restore = readFileSync('scripts/backup/restore-postgres.sh', 'utf8');
+
+    expect(backup).toContain('checksum_value="$(scripts/backup/sha256-file.sh "$encrypted_dump")"');
+    expect(backup).toContain('printf \'%s  %s\\n\' "$checksum_value" "$(basename "$encrypted_dump")" > "$checksum_file"');
+    expect(backup).not.toContain('sha256sum "$encrypted_dump" > "$checksum_file"');
+    expect(restore).toContain(': "${RESTORE_SKIP_CHECKSUM:=false}"');
+    expect(restore).toContain('checksum_path="${ENCRYPTED_DUMP_SHA256_PATH:-$ENCRYPTED_DUMP_PATH.sha256}"');
+    expect(restore).toContain('Set RESTORE_SKIP_CHECKSUM=true only for an intentional unchecked restore');
+    expect(restore).toContain("grep -Eq '^[0-9a-fA-F]{64}$'");
+    expect(restore).toContain('actual_checksum="$(scripts/backup/sha256-file.sh "$ENCRYPTED_DUMP_PATH")"');
+    expect(restore).toContain('Backup checksum mismatch; refusing to restore encrypted dump');
+    expect(restore.indexOf('actual_checksum="$(scripts/backup/sha256-file.sh "$ENCRYPTED_DUMP_PATH")"'))
+      .toBeLessThan(restore.indexOf('openssl enc -d -aes-256-cbc'));
   });
 
   it('refuses to overwrite backup outputs when timestamped names collide', () => {
