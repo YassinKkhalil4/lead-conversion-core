@@ -967,3 +967,13 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts tests/runtime.integration.test.ts -t "seed CLI|seeds configuration"` passed with 2 files, 2 tests, and 111 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 197 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `28aba0d`: Harden seed CLI arguments.
+
+## 2026-08-09 Migrator CLI Argument Hardening
+
+- Implementation slice: Added a pure no-argument parser to `scripts/migrate.ts` and routed direct CLI execution through `runCli`, so argument validation happens before database/logger runtime modules are imported.
+- Implementation slice: `npm run migrate` and `npm run migrate:prod` now reject unknown or control-character-bearing arguments before opening PostgreSQL or mutating schema state.
+- Implementation slice: Added migrator parser coverage alongside checksum coverage.
+- Decision: Added DEC-088. The migrator is a closed no-argument command because ignored migration flags or alternate paths can create misleading schema authority evidence.
+- Verification: `npx vitest run tests/migrate.test.ts tests/shell-scripts.test.ts` passed with 2 files and 25 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 198 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `78a53f3`: Harden migrator CLI arguments.
