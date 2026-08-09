@@ -2363,3 +2363,57 @@ Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 me
 Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+## 2026-08-09 Canonical Readiness Threshold Syntax
+
+Command: `docker info --format '{{json .ServerVersion}}'`
+
+Result: blocked by local Docker daemon availability. Docker reported it could not connect to `unix:///var/run/docker.sock`, so Docker-backed PostgreSQL dump metadata inspection and restore-smoke execution remain pending.
+
+Command: `npm run lint`
+
+Result: passed before full gate execution.
+
+Command: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"`
+
+Result: passed before full gate execution. Focused parser coverage ran 2 tests and skipped 8 by filter, including scientific notation, hexadecimal notation, and whitespace-padded readiness thresholds.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"`
+
+Result: passed after `npm ci`. Focused parser coverage ran 2 tests and skipped 8 by filter.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 181 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

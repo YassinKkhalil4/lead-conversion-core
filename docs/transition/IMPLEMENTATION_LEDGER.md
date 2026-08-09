@@ -799,3 +799,15 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 parser tests and 8 skipped by filter before and after `npm ci`.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `16f13d5`: Harden readiness threshold parsing.
+
+## 2026-08-09 Canonical Readiness Threshold Syntax
+
+- Implementation slice: Tightened `scripts/cutover-readiness.ts` and `scripts/decommission-readiness.ts` so threshold values must match canonical base-10 non-negative integer strings before JavaScript numeric conversion.
+- Implementation slice: Added parser regression coverage for scientific notation, hexadecimal notation, and whitespace-padded threshold values.
+- Decision update: Expanded DEC-076 to state that alternate JavaScript number syntaxes are invalid for readiness evidence.
+- Documentation slice: Updated cutover and decommission runbooks, status, work queue, and next-action records with the canonical threshold syntax rule.
+- Verification: `docker info --format '{{json .ServerVersion}}'` failed because `/var/run/docker.sock` is unavailable; Docker-backed dump metadata inspection and restore-smoke execution remain blocked by local daemon availability.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 parser tests and 8 skipped by filter before and after `npm ci`.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `0d690d7`: Require canonical readiness thresholds.
