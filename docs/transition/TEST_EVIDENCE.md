@@ -2467,3 +2467,53 @@ Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 me
 Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+## 2026-08-09 Worker Role Selection Validation
+
+Command: `npx vitest run tests/env-contract.test.ts`
+
+Result: passed before full gate execution. Focused environment contract coverage ran 9 tests, including invalid `WORKER_KIND` rejection.
+
+Command: `npm run lint`
+
+Result: passed before full gate execution.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npx vitest run tests/env-contract.test.ts`
+
+Result: passed after `npm ci`. Environment contract coverage ran 9 tests.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 182 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

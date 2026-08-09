@@ -821,3 +821,14 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 parser tests and 8 skipped by filter before and after `npm ci`.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `89fa366`: Reject unsafe readiness thresholds.
+
+## 2026-08-09 Worker Role Selection Validation
+
+- Implementation slice: Changed `WORKER_KIND` environment validation from a free-form string to the closed role set `outbox` or `runtime`.
+- Implementation slice: Added environment contract coverage proving an invalid worker kind fails before a worker can start the wrong loop.
+- Decision: Added DEC-077. Worker kind is a closed deployment role because the worker entrypoint selects the legacy outbox worker unless `WORKER_KIND=runtime`.
+- Documentation slice: Updated status, work queue, and next-action state with the closed worker-role rule.
+- Verification: `npx vitest run tests/env-contract.test.ts` passed with 9 tests before and after `npm ci`.
+- Verification: `npm run lint` passed before and after `npm ci`.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 182 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `5a6c053`: Validate worker role selection.
