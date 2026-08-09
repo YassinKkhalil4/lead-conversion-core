@@ -852,3 +852,12 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts tests/ingress-gating.test.ts` passed with 2 files and 19 tests; `bash -n scripts/verify-deployment.sh` and `bash -n scripts/shadow-sequence.sh` passed.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 183 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `e784a57`: Parse operator env files safely.
+
+## 2026-08-09 Duplicate Operator Env Key Rejection
+
+- Implementation slice: Hardened `scripts/ops/read-env-file.py` so duplicate env keys fail closed instead of allowing later values to silently override route flags or secrets.
+- Implementation slice: Added shell-script regression coverage proving duplicate `DIRECT_META_WEBHOOK_ENABLED` assignments are rejected before operator scripts can use ambiguous values.
+- Decision update: Expanded DEC-079 to include duplicate-key override rejection as part of parsed operator env-file handling.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 12 tests.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 184 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `add8a1e`: Reject duplicate operator env keys.
