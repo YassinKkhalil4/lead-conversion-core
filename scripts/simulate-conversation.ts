@@ -3,6 +3,19 @@ import { compileConfig, type CompileInput } from '../src/domain/compiler.js';
 import { evaluateConversation } from '../src/domain/engine.js';
 import type { ConversationState } from '../src/domain/types.js';
 
+function parseArgs(argv = process.argv.slice(2)): void {
+  for (const arg of argv) {
+    if (/[\u0000-\u001f\u007f]/.test(arg)) {
+      throw new Error('Invalid simulate-conversation argument');
+    }
+  }
+  if (argv.length > 0) {
+    throw new Error('simulate-conversation does not accept arguments');
+  }
+}
+
+parseArgs();
+
 const seed = JSON.parse(await readFile('./config/seed-real-estate.json', 'utf8')) as CompileInput;
 const config = compileConfig(seed);
 let state: ConversationState = {

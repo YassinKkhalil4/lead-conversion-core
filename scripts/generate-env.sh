@@ -3,6 +3,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if [ "$#" -ne 0 ]; then
+  echo "generate-env.sh does not accept arguments" >&2
+  exit 2
+fi
+
 if [[ -f .env ]]; then
   echo "Refusing to overwrite existing .env" >&2
   exit 1

@@ -791,3 +791,11 @@ Decision: `scripts/verify-deployment.sh` rejects duplicate, empty, unknown, or c
 Reason: Deployment, shadow, and dump verification scripts create or inspect operational evidence. Ignored arguments, duplicate flags, empty target values, or control characters can make a run appear to verify one target while using another value, or can silently hide an operator typo before durable inbox or dump evidence is produced.
 
 Date: 2026-08-09
+
+## DEC-091: Utility Verification Scripts Fail Closed On Unexpected Arguments
+
+Decision: `scripts/generate-env.sh`, `scripts/ops/scan-tracked-artifacts.sh`, `scripts/smoke-engine.ts`, `scripts/smoke-integration.ts`, and `scripts/simulate-conversation.ts` are no-argument utilities. `scripts/backup/sha256-file.sh` accepts exactly one readable file path and rejects missing, extra, empty, or control-character-bearing path arguments.
+
+Reason: These scripts create local configuration files or produce baseline verification evidence. Ignored flags or extra positional arguments can make generated env, smoke, simulation, artifact-scan, or checksum evidence appear to use an operator-supplied input while actually using the repository default.
+
+Date: 2026-08-09

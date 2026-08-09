@@ -220,6 +220,28 @@ describe('shell scripts', () => {
       .toThrow(/restore-dump-smoke\.sh does not accept arguments/);
   });
 
+  it('rejects utility script arguments before generating files or evidence', () => {
+    const env = { PATH: process.env.PATH || '' };
+    const tsxBin = join(process.cwd(), 'node_modules', '.bin', 'tsx');
+
+    expect(() => execFileSync('bash', ['scripts/generate-env.sh', '--output=.env'], { env, stdio: 'pipe' }))
+      .toThrow(/generate-env\.sh does not accept arguments/);
+    expect(() => execFileSync('bash', ['scripts/ops/scan-tracked-artifacts.sh', '--include=.env'], { env, stdio: 'pipe' }))
+      .toThrow(/scan-tracked-artifacts\.sh does not accept arguments/);
+    expect(() => execFileSync('sh', ['scripts/backup/sha256-file.sh'], { env, stdio: 'pipe' }))
+      .toThrow(/Usage: sha256-file\.sh FILE/);
+    expect(() => execFileSync('sh', ['scripts/backup/sha256-file.sh', 'one', 'two'], { env, stdio: 'pipe' }))
+      .toThrow(/Usage: sha256-file\.sh FILE/);
+    expect(() => execFileSync('sh', ['scripts/backup/sha256-file.sh', 'bad\npath'], { env, stdio: 'pipe' }))
+      .toThrow(/Invalid checksum file path/);
+    expect(() => execFileSync(tsxBin, ['scripts/smoke-engine.ts', '--input=config/other.json'], { env, stdio: 'pipe' }))
+      .toThrow(/smoke-engine does not accept arguments/);
+    expect(() => execFileSync(tsxBin, ['scripts/smoke-integration.ts', '--input=config/other.json'], { env, stdio: 'pipe' }))
+      .toThrow(/smoke-integration does not accept arguments/);
+    expect(() => execFileSync(tsxBin, ['scripts/simulate-conversation.ts', '--input=config/other.json'], { env, stdio: 'pipe' }))
+      .toThrow(/simulate-conversation does not accept arguments/);
+  });
+
   it('computes backup checksums through the portable helper', () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-checksum.'));
     try {

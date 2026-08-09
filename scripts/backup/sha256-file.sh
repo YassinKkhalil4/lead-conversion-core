@@ -1,9 +1,23 @@
 #!/bin/sh
 set -eu
 
-: "${1:?file path is required}"
+if [ "$#" -ne 1 ]; then
+  echo "Usage: sha256-file.sh FILE" >&2
+  exit 2
+fi
 
 file_path="$1"
+newline='
+'
+carriage_return="$(printf '\r')"
+tab="$(printf '\t')"
+
+case "$file_path" in
+  ""|*"$newline"*|*"$carriage_return"*|*"$tab"*)
+    echo "Invalid checksum file path" >&2
+    exit 2
+    ;;
+esac
 
 if [ ! -r "$file_path" ]; then
   echo "File is not readable for checksum: $file_path" >&2

@@ -3,6 +3,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
+if [ "$#" -ne 0 ]; then
+  echo "scan-tracked-artifacts.sh does not accept arguments" >&2
+  exit 2
+fi
+
 patterns=(
   '(^|/)\.env($|\.)'
   '(^|/)node_modules/'
