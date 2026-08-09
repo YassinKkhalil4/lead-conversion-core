@@ -853,6 +853,72 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(await outbox.claimBatch(1)).toHaveLength(0);
   });
 
+  it('rejects legacy edge outbox idempotency collisions with changed semantics', async () => {
+    await db.pool.query('TRUNCATE edge_active_turns, edge_message_events, edge_shadow_evaluations, edge_outbox, edge_conversations, edge_client_channels, edge_config_snapshots RESTART IDENTITY CASCADE');
+    await db.pool.query(
+      `INSERT INTO edge_config_snapshots (config_version, client_record_id, industry, config_json, active)
+       VALUES ('legacy-outbox-idempotency-config', 'recLEGACYIDEMPOTENCY', 'real_estate', '{}'::jsonb, true)`,
+    );
+    const conversation = await db.pool.query<{ conversation_id: string }>(
+      `INSERT INTO edge_conversations
+        (client_record_id, phone_normalized, lead_record_id, config_version, conversation_engine, state_authority)
+       VALUES ('recLEGACYIDEMPOTENCY', '+201000088888', 'recLEGACYIDEMPOTENCYLEAD', 'legacy-outbox-idempotency-config', 'edge', 'edge')
+       RETURNING conversation_id`,
+    );
+    const conversationId = conversation.rows[0]?.conversation_id;
+    if (!conversationId) throw new Error('legacy_outbox_idempotency_conversation_not_created');
+
+    const outbox = new legacyOutboxRepository.OutboxRepository();
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await outbox.enqueue(client, {
+        conversationId,
+        eventType: 'legacy.delivery',
+        idempotencyKey: 'legacy-outbox:idempotency-collision',
+        payload: { text: 'original' },
+        parked: false,
+      });
+      await outbox.enqueue(client, {
+        conversationId,
+        eventType: 'legacy.delivery',
+        idempotencyKey: 'legacy-outbox:idempotency-collision',
+        payload: { text: 'original' },
+        parked: false,
+      });
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    const collisionClient = await db.pool.connect();
+    try {
+      await collisionClient.query('BEGIN');
+      await expect(outbox.enqueue(collisionClient, {
+        conversationId,
+        eventType: 'legacy.delivery',
+        idempotencyKey: 'legacy-outbox:idempotency-collision',
+        payload: { text: 'changed' },
+        parked: false,
+      })).rejects.toThrow(/edge_outbox_idempotency_key_collision:legacy-outbox:idempotency-collision/);
+      await collisionClient.query('ROLLBACK');
+    } finally {
+      collisionClient.release();
+    }
+
+    const count = await db.pool.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM edge_outbox WHERE idempotency_key='legacy-outbox:idempotency-collision'",
+    );
+    const preserved = await db.pool.query<{ payload_json: { text?: string } }>(
+      "SELECT payload_json FROM edge_outbox WHERE idempotency_key='legacy-outbox:idempotency-collision'",
+    );
+    expect(count.rows[0]?.count).toBe('1');
+    expect(preserved.rows[0]?.payload_json).toEqual({ text: 'original' });
+  });
+
   it('prevents duplicate durable jobs and never claims cancelled work', async () => {
     const jobs = new runtime.JobRepository();
     const dueAt = new Date(Date.now() - 1000).toISOString();

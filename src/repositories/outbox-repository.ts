@@ -25,19 +25,43 @@ export class OutboxRepository {
       parked: boolean;
     },
   ): Promise<void> {
-    await client.query(
+    const payloadJson = JSON.stringify(input.payload);
+    const intendedParked = input.parked;
+    const inserted = await client.query<{ outbox_id: string }>(
       `INSERT INTO edge_outbox
         (conversation_id, event_type, idempotency_key, payload_json, status)
        VALUES ($1,$2,$3,$4::jsonb,$5)
-       ON CONFLICT (idempotency_key) DO NOTHING`,
+       ON CONFLICT (idempotency_key) DO NOTHING
+       RETURNING outbox_id`,
       [
         input.conversationId,
         input.eventType,
         input.idempotencyKey,
-        JSON.stringify(input.payload),
-        input.parked ? 'parked' : 'pending',
+        payloadJson,
+        intendedParked ? 'parked' : 'pending',
       ],
     );
+    if (inserted.rows[0]) return;
+
+    const existing = await client.query<{ outbox_id: string }>(
+      `SELECT outbox_id
+       FROM edge_outbox
+       WHERE idempotency_key=$1
+         AND conversation_id=$2
+         AND event_type=$3
+         AND payload_json=$4::jsonb
+         AND (status = 'parked') = $5`,
+      [
+        input.idempotencyKey,
+        input.conversationId,
+        input.eventType,
+        payloadJson,
+        intendedParked,
+      ],
+    );
+    if (!existing.rows[0]) {
+      throw new Error(`edge_outbox_idempotency_key_collision:${input.idempotencyKey}`);
+    }
   }
 
   async claimBatch(limit = 20): Promise<ClaimedOutboxRow[]> {
