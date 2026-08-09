@@ -901,3 +901,14 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 16 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 188 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `716404c`: Verify backup checksum before restore.
+
+## 2026-08-09 Calendar Reconciliation Argument Hardening
+
+- Implementation slice: Hardened `scripts/calendar-reconcile.ts` so `list`, `confirm`, and `fail` are the only accepted commands and each command accepts only its known flags.
+- Implementation slice: Calendar reconciliation now rejects duplicate flags, malformed outbox UUIDs, unsafe provider event IDs/reasons/operator IDs, non-canonical list limits, unsafe integer limits, and out-of-range limits before constructing `CalendarReconciliationService`.
+- Implementation slice: Exported the parser for direct focused coverage and added regression tests proving bad operator arguments fail before PostgreSQL access.
+- Decision: Added DEC-082. Calendar reconciliation is an operator mutation path and must fail closed on ambiguous CLI input.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 17 tests before the full gate.
+- Verification: `npm run lint` passed before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 189 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `8e90b83`: Harden calendar reconciliation arguments.
