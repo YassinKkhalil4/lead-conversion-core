@@ -2311,3 +2311,55 @@ Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 me
 Command: `npm run test:integration`
 
 Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+## 2026-08-09 Readiness Threshold Integer Parsing And Audit Lockfile Patch
+
+Command: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"`
+
+Result: passed. Focused parser coverage ran 2 tests and skipped 8 by filter, proving decimal cutover queue-age and decommission stability-day threshold values are rejected.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: failed. Current registry audit data reported two high-severity advisories in transitive packages `fast-uri` and `nanoid`.
+
+Resolution: ran `npm audit fix`, which updated only `package-lock.json` transitive package versions: `fast-uri` to `3.1.5` and `4.1.2`, and `nanoid` to `3.3.18`.
+
+Command: `npm ci`
+
+Result: passed after the audit fix. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed after `npm ci`.
+
+Command: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"`
+
+Result: passed after `npm ci`. Focused parser coverage ran 2 tests and skipped 8 by filter.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 181 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed after the lockfile audit patch. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.

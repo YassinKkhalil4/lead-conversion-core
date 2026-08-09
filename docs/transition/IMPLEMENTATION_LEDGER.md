@@ -786,3 +786,16 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "draft version|website and Facebook|n8n semantic scheduled|decommission"` passed with 21 PostgreSQL readiness tests and 71 skipped by filter after fixture cleanup.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npx vitest run tests/runtime.integration.test.ts -t "draft version|website and Facebook|n8n semantic scheduled|decommission"`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `4b60e30`: Require published active config for Typebot removal.
+
+## 2026-08-09 Readiness Threshold Integer Parsing And Audit Lockfile Patch
+
+- Implementation slice: Hardened `scripts/cutover-readiness.ts` and `scripts/decommission-readiness.ts` so numeric readiness thresholds reject decimal, negative, empty, infinite, and non-numeric values before any PostgreSQL query.
+- Implementation slice: Added focused parser tests for decimal cutover queue-age and decommission stability-day values.
+- Security slice: Ran `npm audit fix` after current registry audit data reported vulnerable transitive `fast-uri` and `nanoid` versions; only `package-lock.json` changed, updating `fast-uri` to `3.1.5` and `4.1.2`, and `nanoid` to `3.3.18`.
+- Decision: Added DEC-076. Readiness threshold arguments are non-negative integers because they represent counts, seconds, and whole-day windows used in readiness evidence.
+- Documentation slice: Updated the cutover and decommission runbooks with the integer threshold rule, and corrected direct lead decommission wording to require both website and Facebook evidence.
+- Verification failure: The first current-turn `npm audit --audit-level=moderate` failed with two high-severity advisories in transitive packages `fast-uri` and `nanoid`.
+- Resolution: `npm audit fix` updated the lockfile-only transitive package versions, then `npm ci` and `npm audit --audit-level=moderate` passed with 0 vulnerabilities.
+- Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 parser tests and 8 skipped by filter before and after `npm ci`.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `16f13d5`: Harden readiness threshold parsing.
