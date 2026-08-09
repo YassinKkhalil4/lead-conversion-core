@@ -77,6 +77,22 @@ describe('shell scripts', () => {
     }
   });
 
+  it('rejects duplicate env keys before operator scripts can use ambiguous values', () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-duplicate-env.'));
+    try {
+      const envFile = join(root, 'operator.env');
+      writeFileSync(envFile, [
+        'DIRECT_META_WEBHOOK_ENABLED=false',
+        'DIRECT_META_WEBHOOK_ENABLED=true',
+      ].join('\n'));
+
+      expect(() => execFileSync('python3', ['scripts/ops/read-env-file.py', envFile], { stdio: 'pipe' }))
+        .toThrow(/Duplicate environment key on line 2: DIRECT_META_WEBHOOK_ENABLED/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('keeps generated env secrets out of Python process arguments', () => {
     const script = readFileSync('scripts/generate-env.sh', 'utf8');
     expect(script).not.toContain('python3 - "$DB_PASSWORD" "$EDGE_SECRET" "$INTERNAL_SECRET"');

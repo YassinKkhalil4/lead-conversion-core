@@ -55,6 +55,7 @@ def main() -> None:
     if len(sys.argv) != 2:
         fail("Usage: read-env-file.py ENV_FILE")
     path = Path(sys.argv[1])
+    seen_keys: set[str] = set()
     for line_number, raw_line in enumerate(path.read_text().splitlines(), start=1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -67,6 +68,9 @@ def main() -> None:
         key = key.strip()
         if not KEY_RE.match(key):
             fail(f"Invalid environment key on line {line_number}")
+        if key in seen_keys:
+            fail(f"Duplicate environment key on line {line_number}: {key}")
+        seen_keys.add(key)
         assignment = f"{key}={parse_value(value)}".encode()
         sys.stdout.buffer.write(assignment + b"\0")
 
