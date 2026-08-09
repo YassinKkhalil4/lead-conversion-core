@@ -799,3 +799,11 @@ Decision: `scripts/generate-env.sh`, `scripts/ops/scan-tracked-artifacts.sh`, `s
 Reason: These scripts create local configuration files or produce baseline verification evidence. Ignored flags or extra positional arguments can make generated env, smoke, simulation, artifact-scan, or checksum evidence appear to use an operator-supplied input while actually using the repository default.
 
 Date: 2026-08-09
+
+## DEC-092: Runtime Idempotency Keys Require Matching Semantics
+
+Decision: Durable outbox command idempotency keys and scheduled-job semantic keys may return an existing row only when the existing durable command or job has the same type, aggregate identity, payload, destination or schedule, recurrence, and maximum-attempt policy. A reused key with different command or job semantics fails closed as an idempotency collision.
+
+Reason: Idempotency keys are replay protection, not mutable aliases. Silently accepting a reused key for a changed external effect or schedule can hide producer defects and leave PostgreSQL durable state disagreeing with the business action the caller believes was requested.
+
+Date: 2026-08-09

@@ -1007,3 +1007,13 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 1 file and 24 tests before the full gate and again after the timeout resolution.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed after the resolution; Vitest ran 17 files and 202 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `b63e996`: Harden utility script arguments.
+
+## 2026-08-09 Runtime Idempotency Collision Hardening
+
+- Implementation slice: Hardened `RuntimeOutboxRepository.enqueue` so duplicate outbox idempotency keys reuse existing commands only when command type, destination, aggregate key, payload, and maximum-attempt policy match the persisted row.
+- Implementation slice: Hardened `JobRepository.schedule` so duplicate scheduled-job semantic keys reuse existing jobs only when job type, aggregate key, payload, due time, timezone, recurrence, and maximum-attempt policy match the persisted row.
+- Implementation slice: Added PostgreSQL regression coverage proving changed outbox command semantics and changed scheduled-job semantics fail closed without creating duplicate durable rows.
+- Decision: Added DEC-092. Runtime idempotency keys are replay protection and must not silently alias changed external effects or schedules.
+- Verification: `npx vitest run tests/runtime.integration.test.ts` passed with 1 file and 94 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 203 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `f8707e4`: Harden runtime idempotency collisions.
