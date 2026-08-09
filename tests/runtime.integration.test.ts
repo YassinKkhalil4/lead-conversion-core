@@ -4651,6 +4651,29 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     ).rejects.toThrow(/published_configuration_versions_are_immutable/);
   });
 
+  it('seeds configuration through immutable versioned authority instead of legacy-only snapshots', async () => {
+    await db.pool.query('TRUNCATE edge_config_snapshots RESTART IDENTITY CASCADE');
+
+    execFileSync('npm', ['run', '--silent', 'seed'], { env, stdio: 'ignore' });
+    execFileSync('npm', ['run', '--silent', 'seed'], { env, stdio: 'ignore' });
+
+    expect((await db.pool.query('SELECT count(*) FROM configuration.versions')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query("SELECT count(*) FROM configuration.active_versions WHERE scope_key='default'")).rows[0]?.count).toBe('1');
+    const active = await db.pool.query<{ version_key: string }>(
+      `SELECT v.version_key
+       FROM configuration.active_versions a
+       JOIN configuration.versions v USING (configuration_version_id)
+       WHERE a.scope_key='default'
+       LIMIT 1`,
+    );
+    expect(active.rows[0]?.version_key).toBeTruthy();
+    const legacy = await db.pool.query<{ count: string }>(
+      'SELECT count(*) FROM edge_config_snapshots WHERE active=true AND config_version=$1',
+      [active.rows[0]?.version_key],
+    );
+    expect(legacy.rows[0]?.count).toBe('1');
+  });
+
   it('activates and rolls back published configuration versions for runtime reads', async () => {
     const service = new versionedConfig.VersionedConfigService();
     const repository = new configRepository.ConfigRepository();

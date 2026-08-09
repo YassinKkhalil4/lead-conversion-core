@@ -751,3 +751,11 @@ Decision: `/internal/config/import`, `/internal/config/sync`, and `npm run sync-
 Reason: These legacy paths write `edge_config_snapshots` outside immutable `configuration.active_versions` and `configuration.versions`. Keeping them disabled by default preserves rollback tooling without allowing accidental Airtable or ad hoc config writes to become live authority.
 
 Date: 2026-08-09
+
+## DEC-086: Seed Publishes Versioned Configuration
+
+Decision: `npm run seed` publishes the configured seed file through `VersionedConfigService` and skips only when a default active `configuration.active_versions` row already exists. The seed path still maintains `edge_config_snapshots` through the same compatibility update used by versioned publish.
+
+Reason: A seed operation must not create legacy-only configuration authority. Publishing through the versioned service keeps seed bootstrap idempotent, immutable once published, auditable through configuration metadata, and compatible with legacy rollback reads during cutover.
+
+Date: 2026-08-09
