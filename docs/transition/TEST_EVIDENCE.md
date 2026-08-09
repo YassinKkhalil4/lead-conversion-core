@@ -3289,3 +3289,63 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported before the implementation commit.
+
+## 2026-08-09 Utility Script Argument Hardening
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed before the full gate. Focused coverage ran 1 file and 24 tests, including generated-env, artifact-scan, checksum, smoke, integration, and simulation argument rejection before file generation or evidence output.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript compile check completed with no errors.
+
+Command: `npm test -- --silent`
+
+Result: failed on the first full-gate run. Vitest timed out the new utility-script rejection test after 5000 ms because the test spawned `npx tsx` three times under full-suite load.
+
+Resolution: Changed the executable coverage to call the local `node_modules/.bin/tsx` binary directly instead of `npx`, preserving the same production script behavior while removing package-runner startup overhead.
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed after the resolution. Focused coverage ran 1 file and 24 tests.
+
+Command: `npm test -- --silent`
+
+Result: passed after the resolution. Vitest ran 17 files and 202 tests.
+
+Command: `npm run lint`
+
+Result: passed after the resolution. TypeScript compile check completed with no errors.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+Command: `git diff --check`
+
+Result: passed. No whitespace errors were reported before the implementation commit.

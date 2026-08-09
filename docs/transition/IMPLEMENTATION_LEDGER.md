@@ -996,3 +996,14 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts tests/ingress-gating.test.ts` passed with 2 files and 32 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 201 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `d758c7e`: Harden operator verification script arguments.
+
+## 2026-08-09 Utility Script Argument Hardening
+
+- Implementation slice: Hardened `scripts/generate-env.sh` and `scripts/ops/scan-tracked-artifacts.sh` as no-argument utilities so typoed flags fail before `.env` generation or tracked-artifact evidence.
+- Implementation slice: Hardened `scripts/smoke-engine.ts`, `scripts/smoke-integration.ts`, and `scripts/simulate-conversation.ts` so unexpected or control-character-bearing arguments fail before default-seed smoke/simulation evidence is produced.
+- Implementation slice: Hardened `scripts/backup/sha256-file.sh` so it accepts exactly one readable safe path and rejects missing, extra, empty, newline, carriage-return, or tab-bearing path arguments before readability checks.
+- Decision: Added DEC-091. Utility scripts create local files or verification evidence and must fail closed on unexpected operator input.
+- Verification failure: The first full `npm test -- --silent` run timed out the new utility-script rejection test after 5000 ms because it spawned `npx tsx` three times under full-suite load. Resolution: invoke the local `node_modules/.bin/tsx` binary directly in the executable regression test, preserving the same script behavior without package-runner startup overhead.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 1 file and 24 tests before the full gate and again after the timeout resolution.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed after the resolution; Vitest ran 17 files and 202 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `b63e996`: Harden utility script arguments.
