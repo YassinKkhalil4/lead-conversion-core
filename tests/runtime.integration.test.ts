@@ -44,6 +44,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let messageRequests: typeof import('../src/services/message-request-service.js');
   let metaStatus: typeof import('../src/services/meta-status-webhook-service.js');
   let metaInbox: typeof import('../src/services/meta-inbox-processor.js');
+  let leadIntake: typeof import('../src/services/lead-intake-service.js');
   let leadIngressProcessor: typeof import('../src/services/lead-ingress-inbox-processor.js');
   let leadScoring: typeof import('../src/services/lead-scoring-service.js');
   let leadRouting: typeof import('../src/services/lead-routing-service.js');
@@ -84,6 +85,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     messageRequests = await import('../src/services/message-request-service.js');
     metaStatus = await import('../src/services/meta-status-webhook-service.js');
     metaInbox = await import('../src/services/meta-inbox-processor.js');
+    leadIntake = await import('../src/services/lead-intake-service.js');
     leadIngressProcessor = await import('../src/services/lead-ingress-inbox-processor.js');
     leadScoring = await import('../src/services/lead-scoring-service.js');
     leadRouting = await import('../src/services/lead-routing-service.js');
@@ -2265,6 +2267,54 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('rejects lead intake idempotency collisions with changed source payloads', async () => {
+    const client = await db.pool.query<{ client_id: string }>(
+      "INSERT INTO app.clients (client_key, company_name) VALUES ('client-intake-collision', 'Intake Collision Client') RETURNING client_id",
+    );
+    const clientId = client.rows[0]?.client_id;
+    if (!clientId) throw new Error('client_not_created');
+    const service = new leadIntake.LeadIntakeService();
+
+    const first = await service.intake({
+      clientId,
+      provider: 'website',
+      providerExternalId: 'website-lead-collision-001',
+      source: 'website_form',
+      contact: {
+        name: 'Original Intake Lead',
+        phoneRaw: '01099999981',
+        email: 'original@example.test',
+      },
+      rawPayload: { form: 'website-sanitized', version: 1 },
+    });
+    expect(first.duplicate).toBe(false);
+
+    await expect(service.intake({
+      clientId,
+      provider: 'website',
+      providerExternalId: 'website-lead-collision-001',
+      source: 'website_form',
+      contact: {
+        name: 'Changed Intake Lead',
+        phoneRaw: '01099999981',
+        email: 'changed@example.test',
+      },
+      rawPayload: { form: 'website-sanitized', version: 2 },
+    })).rejects.toThrow(/lead_intake_idempotency_collision/);
+
+    expect((await db.pool.query('SELECT count(*) FROM app.contacts')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM app.leads')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM app.lead_intake_events')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT name, email FROM app.contacts')).rows[0]).toEqual({
+      name: 'Original Intake Lead',
+      email: 'original@example.test',
+    });
+    expect((await db.pool.query('SELECT payload_json FROM app.lead_intake_events WHERE intake_event_id=$1', [first.intakeEventId])).rows[0]?.payload_json).toMatchObject({
+      rawPayload: { form: 'website-sanitized', version: 1 },
+    });
   });
 
   it('suppresses lead intake first contact for opted-out contacts', async () => {

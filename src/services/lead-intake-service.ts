@@ -177,14 +177,18 @@ export class LeadIntakeService {
       const leadId = lead.rows[0]?.lead_id;
       if (!leadId) throw new Error('lead_not_created');
 
-      const intakeEvent = await client.query<{ intake_event_id: string; inserted: boolean }>(
+      const intakePayload = {
+        contact: parsed.contact,
+        project: parsed.project,
+        rawPayload: parsed.rawPayload,
+        payloadHash,
+      };
+      const intakeEvent = await client.query<{ intake_event_id: string }>(
         `INSERT INTO app.lead_intake_events
           (lead_id, client_id, contact_id, provider, provider_external_id, idempotency_key, received_at, payload_json)
          VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::timestamptz, now()), $8::jsonb)
-         ON CONFLICT (client_id, provider, idempotency_key) DO UPDATE SET
-          lead_id=EXCLUDED.lead_id,
-          contact_id=EXCLUDED.contact_id
-         RETURNING intake_event_id, (xmax = 0) AS inserted`,
+         ON CONFLICT (client_id, provider, idempotency_key) DO NOTHING
+         RETURNING intake_event_id`,
         [
           leadId,
           clientId,
@@ -193,16 +197,29 @@ export class LeadIntakeService {
           providerExternalId,
           idempotencyKey,
           parsed.receivedAt || null,
-          JSON.stringify({
-            contact: parsed.contact,
-            project: parsed.project,
-            rawPayload: parsed.rawPayload,
-            payloadHash,
-          }),
+          JSON.stringify(intakePayload),
         ],
       );
-      const intakeRow = intakeEvent.rows[0];
-      if (!intakeRow) throw new Error('lead_intake_event_not_created');
+      let intakeEventId = intakeEvent.rows[0]?.intake_event_id || '';
+      const insertedIntakeEvent = Boolean(intakeEventId);
+      if (!intakeEventId) {
+        const existing = await client.query<{ intake_event_id: string; same_semantics: boolean }>(
+          `SELECT intake_event_id,
+                  lead_id=$4
+              AND contact_id=$5
+              AND provider_external_id=$6
+              AND payload_json->>'payloadHash'=$7 AS same_semantics
+           FROM app.lead_intake_events
+           WHERE client_id=$1 AND provider=$2 AND idempotency_key=$3`,
+          [clientId, parsed.provider, idempotencyKey, leadId, contactRow.contact_id, providerExternalId, payloadHash],
+        );
+        const row = existing.rows[0];
+        if (row && !row.same_semantics) {
+          throw new Error(`lead_intake_idempotency_collision:${idempotencyKey}`);
+        }
+        intakeEventId = row?.intake_event_id || '';
+      }
+      if (!intakeEventId) throw new Error('lead_intake_event_not_created');
       const projectionOutboxCommandId = await this.outbox.enqueue(client, {
         commandType: 'airtable.project_lead_visibility',
         destination: 'airtable:leads',
@@ -290,7 +307,7 @@ export class LeadIntakeService {
         }
       }
 
-      if (intakeRow.inserted) {
+      if (insertedIntakeEvent) {
         await this.audit.record(client, {
           eventType: 'lead.intake_received',
           actorType: 'system',
@@ -316,8 +333,8 @@ export class LeadIntakeService {
         clientId,
         contactId: contactRow.contact_id,
         leadId,
-        intakeEventId: intakeRow.intake_event_id,
-        duplicate: !intakeRow.inserted,
+        intakeEventId,
+        duplicate: !insertedIntakeEvent,
         idempotencyKey,
         projectionOutboxCommandId,
         firstContact,
