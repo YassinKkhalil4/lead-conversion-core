@@ -870,3 +870,12 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts tests/ingress-gating.test.ts` passed with 2 files and 20 tests.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 184 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `c39e7f4`: Protect parsed env temp files.
+
+## 2026-08-09 Operator Env Control Character Rejection
+
+- Implementation slice: Hardened `scripts/ops/read-env-file.py` so decoded NUL, newline, and carriage-return characters in env values fail closed before the NUL-delimited assignment stream is built.
+- Implementation slice: Added shell-script parser coverage proving escaped NUL and escaped newline values are rejected.
+- Decision update: Expanded DEC-079 to record one-line parsed env values and control-character rejection.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 13 tests.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 185 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `4639617`: Reject control characters in operator env values.
