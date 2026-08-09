@@ -832,3 +832,13 @@
 - Verification: `npm run lint` passed before and after `npm ci`.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 182 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `5a6c053`: Validate worker role selection.
+
+## 2026-08-09 Deployment Probe Identity Scoping
+
+- Implementation slice: Hardened `scripts/verify-deployment.sh` so direct Meta challenge probes, direct website/Facebook lead probes, n8n compatibility fallback probes, and shadow evaluation probes all derive event IDs from one per-run identifier.
+- Implementation slice: Hardened `scripts/shadow-sequence.sh` so every turn in an operator shadow sequence uses the same per-run identity plus a counter instead of second-resolution event IDs.
+- Implementation slice: Added ingress verifier coverage proving explicit verifier run IDs flow into direct-lead and n8n durable probe payloads, and static shell-script coverage preventing regression to second-only event IDs.
+- Decision: Added DEC-078. Deployment and shadow probes use run-scoped durable IDs because durable inbox/outbox idempotency makes accidental event-ID reuse operationally misleading.
+- Verification: `npx vitest run tests/ingress-gating.test.ts tests/shell-scripts.test.ts` passed with 2 files and 18 tests.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 182 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `cf86d71`: Scope deployment probe identities.
