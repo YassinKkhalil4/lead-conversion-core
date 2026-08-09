@@ -30,11 +30,11 @@ Remaining: Docker image run and Docker-backed dump metadata/restore-smoke execut
 
 Status: locally_verified
 
-Deliverables: app/runtime/configuration/audit/migration schemas, per-table importer, raw records, reject capture, entity maps, relationship validation, collision reporting, contact opt-out preservation, dry-run/apply summaries, reconciliation report with accepted-row business count/distribution checks, projection readiness.
+Deliverables: app/runtime/configuration/audit/migration schemas, per-table importer, raw records, reject capture, entity maps, relationship validation, collision reporting, contact opt-out preservation, dry-run/apply summaries, fail-closed Airtable import/reconciliation CLI argument parsing, reconciliation report with accepted-row business count/distribution checks, projection readiness.
 
 Dependencies: complete Airtable export for production reconciliation.
 
-Verification gates: synthetic malformed/duplicate/missing-relationship fixtures, source phone/email collision analysis, idempotent rerun, partial failure rollback, disposable PostgreSQL apply/reconcile, documented field map.
+Verification gates: synthetic malformed/duplicate/missing-relationship fixtures, source phone/email collision analysis, idempotent rerun, partial failure rollback, disposable PostgreSQL apply/reconcile, Airtable migration CLI parser coverage, documented field map.
 
 Remaining: broader real-export reconciliation checks and full reconciliation blocked on export. Any rejected row in the final export must be resolved or explicitly dispositioned before decommission readiness can pass.
 

@@ -923,3 +923,15 @@
 - Verification: `npm run lint` passed before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 190 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `28ebd3d`: Harden configuration CLI arguments.
+
+## 2026-08-09 Airtable Migration CLI Argument Hardening
+
+- Implementation slice: Hardened `scripts/import-airtable.ts` so import requires explicit `--input=<dir>`, accepts only bare `--apply`, and rejects positional input, unknown flags, duplicate flags, empty paths, and control-character-bearing paths before loading source files.
+- Implementation slice: Hardened `scripts/reconcile-airtable.ts` so reconciliation accepts only optional `--import-run-id=<uuid>` and bare `--record-results`, rejects malformed UUIDs, unknown flags, duplicate flags, and unsafe values before PostgreSQL access.
+- Implementation slice: Tightened raw control-character checks in the calendar reconciliation and configuration CLI parsers after focused Airtable parser coverage exposed that trailing newlines were trimmed before validation.
+- Decision: Added DEC-084. Airtable import/reconciliation commands write migration state and reconciliation evidence, so ambiguous operator input must fail closed.
+- Verification failure: The first focused `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts` run failed because `--import-run-id=<uuid>\n` was trimmed before control-character validation. Resolution: reject control characters in raw parser values before trimming and add the same trailing-newline regression coverage to calendar/config parser tests.
+- Verification: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts tests/shell-scripts.test.ts tests/config-versioning.test.ts` passed with 4 files and 30 tests.
+- Verification: `npm run lint` passed before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 192 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `70a5f29`: Harden Airtable migration CLI arguments.

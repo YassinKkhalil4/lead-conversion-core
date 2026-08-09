@@ -2955,3 +2955,57 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported before the implementation commit.
+
+## 2026-08-09 Airtable Migration CLI Argument Hardening
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts`
+
+Result: failed on first run. The new reconciliation parser test expected a trailing newline in `--import-run-id` to fail, but the parser checked control characters only after trimming. Resolution: changed Airtable import and reconciliation parser helpers to reject control characters in raw argument values before trimming, then reran successfully.
+
+Command: `npx vitest run tests/import-airtable.test.ts tests/import-airtable.integration.test.ts tests/shell-scripts.test.ts tests/config-versioning.test.ts`
+
+Result: passed after the parser fix. Focused Airtable migration, shell/config parser, and config-versioning coverage ran 4 files and 30 tests.
+
+Command: `npm run lint`
+
+Result: passed before full gate execution. TypeScript compile check completed with no errors.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript compile check completed with no errors.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 192 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+Command: `git diff --check`
+
+Result: passed. No whitespace errors were reported before the implementation commit.
