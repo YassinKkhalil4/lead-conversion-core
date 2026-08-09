@@ -45,6 +45,7 @@ describe('shell scripts', () => {
     expect(script).not.toContain("-H 'X-Edge-Secret: $EDGE_SHARED_SECRET'");
     expect(script).toContain('-H "@$tmp_edge_header"');
     expect(script).toContain('python3 scripts/ops/read-env-file.py "$file"');
+    expect(script).toContain('chmod 600 "$tmp_assignments"');
     expect(script).toContain('SHADOW_SEQUENCE_RUN_ID="${SHADOW_SEQUENCE_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"');
     expect(script).not.toContain('local event="sequence-$(date +%s)-$COUNTER"');
   });

@@ -58,6 +58,7 @@ load_env_file() {
   local file="$1"
   local tmp_assignments
   tmp_assignments="$(mktemp)"
+  chmod 600 "$tmp_assignments"
   if ! python3 scripts/ops/read-env-file.py "$file" > "$tmp_assignments"; then
     rm -f "$tmp_assignments"
     return 1
