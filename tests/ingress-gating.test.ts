@@ -213,6 +213,10 @@ describe('direct ingress route gates', () => {
         '--expect-direct-lead=enabled',
       ], {
         cwd: process.cwd(),
+        env: {
+          ...process.env,
+          VERIFY_DEPLOYMENT_RUN_ID: 'direct-lead-test-run',
+        },
         timeout: 10_000,
       });
 
@@ -223,12 +227,12 @@ describe('direct ingress route gates', () => {
       if (!websiteBody) throw new Error('direct_website_lead_probe_body_missing');
       if (!facebookBody) throw new Error('direct_facebook_lead_probe_body_missing');
       const websitePayload = JSON.parse(websiteBody) as Record<string, unknown>;
-      expect(websitePayload.eventId).toMatch(/^verify-direct-website-lead-invalid-/);
+      expect(websitePayload.eventId).toBe('verify-direct-website-lead-invalid-direct-lead-test-run');
       expect(websitePayload.clientKey).toBe('verify-deployment');
       expect(websitePayload).not.toHaveProperty('phone');
       expect(websitePayload).not.toHaveProperty('name');
       const facebookPayload = JSON.parse(facebookBody) as Record<string, unknown>;
-      expect(facebookPayload.leadgen_id).toMatch(/^verify-direct-facebook-lead-invalid-/);
+      expect(facebookPayload.leadgen_id).toBe('verify-direct-facebook-lead-invalid-direct-lead-test-run');
       expect(facebookPayload.clientKey).toBe('verify-deployment');
       expect(facebookPayload).not.toHaveProperty('field_data');
     } finally {
@@ -307,6 +311,10 @@ describe('direct ingress route gates', () => {
         '--expect-direct-meta=enabled',
       ], {
         cwd: process.cwd(),
+        env: {
+          ...process.env,
+          VERIFY_DEPLOYMENT_RUN_ID: 'direct-meta-test-run',
+        },
         timeout: 10_000,
       });
 
@@ -345,7 +353,7 @@ describe('direct ingress route gates', () => {
             return;
           }
           const payload = JSON.parse(body) as Record<string, unknown>;
-          fallbackProbeVerified = String(payload.sourceEventId || '').startsWith('verify-n8n-compat-inbound-')
+          fallbackProbeVerified = payload.sourceEventId === 'verify-n8n-compat-inbound-n8n-compat-test-run'
             && payload.phoneNumberId === 'verify-deployment-phone-number'
             && payload.rawPayload !== undefined;
           response.writeHead(200, { 'content-type': 'application/json' });
@@ -377,6 +385,10 @@ describe('direct ingress route gates', () => {
         '--expect-n8n-compat=enabled',
       ], {
         cwd: process.cwd(),
+        env: {
+          ...process.env,
+          VERIFY_DEPLOYMENT_RUN_ID: 'n8n-compat-test-run',
+        },
         timeout: 10_000,
       });
 
@@ -411,7 +423,7 @@ describe('direct ingress route gates', () => {
             return;
           }
           const payload = JSON.parse(body) as Record<string, unknown>;
-          fallbackProbeVerified = String(payload.sourceEventId || '').startsWith('verify-n8n-compat-inbound-')
+          fallbackProbeVerified = payload.sourceEventId === 'verify-n8n-compat-inbound-n8n-compat-disabled-test-run'
             && payload.phoneNumberId === 'verify-deployment-phone-number'
             && payload.rawPayload !== undefined;
           response.writeHead(503, { 'content-type': 'application/json' });
@@ -443,6 +455,10 @@ describe('direct ingress route gates', () => {
         '--expect-n8n-compat=disabled',
       ], {
         cwd: process.cwd(),
+        env: {
+          ...process.env,
+          VERIFY_DEPLOYMENT_RUN_ID: 'n8n-compat-disabled-test-run',
+        },
         timeout: 10_000,
       });
 
@@ -470,5 +486,9 @@ describe('direct ingress route gates', () => {
     expect(script).not.toContain('python3 - "$META_APP_SECRET"');
     expect(script).toContain('-H "@$tmp_internal_header"');
     expect(script).not.toContain('-H "X-Internal-Secret: $EDGE_INTERNAL_SECRET"');
+    expect(script).toContain('VERIFY_DEPLOYMENT_RUN_ID="${VERIFY_DEPLOYMENT_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"');
+    expect(script).not.toContain('event="verify-direct-website-lead-invalid-$(date +%s)"');
+    expect(script).not.toContain('event="verify-direct-facebook-lead-invalid-$(date +%s)"');
+    expect(script).not.toContain('event="verify-n8n-compat-inbound-$(date +%s)"');
   });
 });

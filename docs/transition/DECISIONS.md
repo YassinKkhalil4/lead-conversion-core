@@ -687,3 +687,11 @@ Decision: `WORKER_KIND` accepts only `outbox` or `runtime`; any other value fail
 Reason: The worker entrypoint selects the legacy outbox worker unless `WORKER_KIND=runtime`. A typoed worker role could otherwise run the wrong loop and leave required durable runtime processing absent until readiness fails. Failing closed at startup makes deployment role evidence explicit.
 
 Date: 2026-08-09
+
+## DEC-078: Deployment Probe IDs Are Run-Scoped
+
+Decision: Deployment verification and shadow-sequence probes derive durable event IDs from a per-run identifier that includes timestamp, process ID, and shell random suffix by default, with an explicit override available for deterministic tests.
+
+Reason: Direct ingress, n8n compatibility, and shadow probes write through durable idempotency boundaries. Second-resolution event IDs can collide when operators rerun checks quickly, producing duplicate durable receipts that look like stale success. Run-scoped identities keep verification evidence tied to the current operator run without using customer data or secrets.
+
+Date: 2026-08-09

@@ -74,6 +74,8 @@ if [[ "$EXPECT_N8N_COMPAT" != "enabled" && "$EXPECT_N8N_COMPAT" != "disabled" ]]
   exit 2
 fi
 
+VERIFY_DEPLOYMENT_RUN_ID="${VERIFY_DEPLOYMENT_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"
+
 tmp_body="$(mktemp)"
 tmp_edge_header="$(mktemp)"
 tmp_internal_header="$(mktemp)"
@@ -159,7 +161,7 @@ if [[ "$CHECK_DIRECT_META" == "true" ]]; then
   fi
   meta_challenge_token="${META_WEBHOOK_VERIFY_TOKEN:-verify-deployment-disabled-token}"
   echo "Direct Meta challenge ($EXPECT_DIRECT_META):"
-  challenge="verify-deployment-$(date +%s)"
+  challenge="verify-deployment-$VERIFY_DEPLOYMENT_RUN_ID"
   write_url_config "$tmp_meta_curl_config" "$BASE/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=$meta_challenge_token&hub.challenge=$challenge"
   status="$(status_request --config "$tmp_meta_curl_config")"
   if [[ "$EXPECT_DIRECT_META" == "enabled" ]]; then
@@ -236,7 +238,7 @@ if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then
     fi
   }
   echo "Direct website lead ingress ($EXPECT_DIRECT_LEAD):"
-  event="verify-direct-website-lead-invalid-$(date +%s)"
+  event="verify-direct-website-lead-invalid-$VERIFY_DEPLOYMENT_RUN_ID"
   status="$(lead_status_request \
     -H 'Content-Type: application/json' \
     -d "{
@@ -261,7 +263,7 @@ if [[ "$CHECK_DIRECT_LEAD" == "true" ]]; then
   echo "ok"
 
   echo "Direct Facebook lead ingress ($EXPECT_DIRECT_LEAD):"
-  event="verify-direct-facebook-lead-invalid-$(date +%s)"
+  event="verify-direct-facebook-lead-invalid-$VERIFY_DEPLOYMENT_RUN_ID"
   status="$(lead_status_request \
     -H 'Content-Type: application/json' \
     -d "{
@@ -293,7 +295,7 @@ if [[ "$CHECK_N8N_COMPAT" == "true" ]]; then
   fi
   printf 'X-Internal-Secret: %s\n' "$EDGE_INTERNAL_SECRET" > "$tmp_internal_header"
   echo "n8n compatibility inbound fallback ($EXPECT_N8N_COMPAT):"
-  event="verify-n8n-compat-inbound-$(date +%s)"
+  event="verify-n8n-compat-inbound-$VERIFY_DEPLOYMENT_RUN_ID"
   status="$(status_request \
     -H "@$tmp_internal_header" \
     -H 'Content-Type: application/json' \
@@ -330,7 +332,7 @@ if [[ "$SKIP_SHADOW" != "true" ]]; then
   fi
   printf 'X-Edge-Secret: %s\n' "$EDGE_SHARED_SECRET" > "$tmp_edge_header"
   PHONE="+2010$(date +%H%M%S)00"
-  EVENT="verify-$(date +%s)-1"
+  EVENT="verify-$VERIFY_DEPLOYMENT_RUN_ID-1"
 
   echo "First shadow evaluation:"
   curl -fsS \

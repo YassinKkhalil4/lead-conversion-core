@@ -17,12 +17,13 @@ PHONE="+2010$(date +%H%M%S)11"
 CLIENT="recSHADOWCLIENT01"
 LEAD="recSHADOWLEAD001"
 COUNTER=0
+SHADOW_SEQUENCE_RUN_ID="${SHADOW_SEQUENCE_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"
 
 post_turn() {
   local text="${1:-}"
   local option="${2:-}"
   COUNTER=$((COUNTER+1))
-  local event="sequence-$(date +%s)-$COUNTER"
+  local event="sequence-$SHADOW_SEQUENCE_RUN_ID-$COUNTER"
   local payload
   payload="$(python3 - "$event" "$CLIENT" "$PHONE" "$LEAD" "$text" "$option" <<'PY'
 import json,sys

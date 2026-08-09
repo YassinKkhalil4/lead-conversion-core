@@ -39,6 +39,8 @@ describe('shell scripts', () => {
     expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
     expect(script).not.toContain("-H 'X-Edge-Secret: $EDGE_SHARED_SECRET'");
     expect(script).toContain('-H "@$tmp_edge_header"');
+    expect(script).toContain('SHADOW_SEQUENCE_RUN_ID="${SHADOW_SEQUENCE_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"');
+    expect(script).not.toContain('local event="sequence-$(date +%s)-$COUNTER"');
   });
 
   it('keeps generated env secrets out of Python process arguments', () => {
