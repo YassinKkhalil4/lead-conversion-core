@@ -68,11 +68,11 @@ Remaining: live staging verification pending owner action for rotated credential
 
 Status: staging_blocked
 
-Deliverables: import/validate/diff/publish/rollback/active CLI with fail-closed argument parsing, immutable published config, conversation pins to immutable configuration version IDs with legacy `config_version` compatibility, and Airtable export compilation for Questions, Question Options, and Conversation Messages.
+Deliverables: import/validate/diff/publish/rollback/active CLI with fail-closed argument parsing, immutable published config, conversation pins to immutable configuration version IDs with legacy `config_version` compatibility, disabled-by-default legacy config import and Airtable sync compatibility gates, and Airtable export compilation for Questions, Question Options, and Conversation Messages.
 
 Dependencies: complete config source for final parity.
 
-Verification gates: invalid config rejection, seed/export parity compile, rollback, conversation pinning, and command-specific configuration CLI parser coverage.
+Verification gates: invalid config rejection, seed/export parity compile, rollback, conversation pinning, command-specific configuration CLI parser coverage, and disabled legacy config mutation route/CLI coverage.
 
 Remaining: final real-export config-source reconciliation is blocked until the owner supplies the complete Airtable export or rotated Airtable access.
 

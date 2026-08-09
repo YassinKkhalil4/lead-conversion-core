@@ -935,3 +935,15 @@
 - Verification: `npm run lint` passed before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 192 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `70a5f29`: Harden Airtable migration CLI arguments.
+
+## 2026-08-09 Legacy Config Mutation Gate Hardening
+
+- Implementation slice: Added `LEGACY_CONFIG_IMPORT_ENABLED` and `LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED` environment flags, both disabled by default in validation and `.env.example`.
+- Implementation slice: Gated `/internal/config/import` and `/internal/config/sync` after internal-secret authentication and before payload parsing, database work, or Airtable access.
+- Implementation slice: Gated `ConfigSyncService.sync` so direct service use and `npm run sync-config` cannot read live Airtable unless the legacy compatibility flag is explicitly enabled and `AIRTABLE_TOKEN` is configured.
+- Implementation slice: Refactored `scripts/sync-config.ts` to export a pure parser, execute only when invoked as a CLI, and reject positional, unknown, duplicate, empty, or control-character-bearing operator arguments before service use.
+- Decision: Added DEC-085. Legacy config import and Airtable sync are compatibility paths, not normal immutable configuration authority.
+- Verification failure: The first focused `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/shell-scripts.test.ts` run failed because the new disabled-route test inherited direct-ingress flags from earlier app-injection tests. Resolution: pinned all route/runtime flags in that test to disabled values before rerunning successfully.
+- Verification: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/shell-scripts.test.ts` passed with 3 files and 38 tests after the test isolation fix.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 195 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `74c71df`: Disable legacy config mutation paths by default.

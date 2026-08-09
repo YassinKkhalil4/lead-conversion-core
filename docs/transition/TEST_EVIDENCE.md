@@ -3009,3 +3009,53 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported before the implementation commit.
+
+## 2026-08-09 Legacy Config Mutation Gate Hardening
+
+Command: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/shell-scripts.test.ts`
+
+Result: failed on first run. The new disabled legacy config route test inherited direct-ingress flags from prior app-injection tests through `process.env`, causing environment validation to fail before route registration. Resolution: explicitly pinned all relevant direct/n8n/active-turn/runtime flags to `false` in the new test, then reran successfully.
+
+Command: `npx vitest run tests/env-contract.test.ts tests/ingress-gating.test.ts tests/shell-scripts.test.ts`
+
+Result: passed after the test isolation fix. Focused environment contract, ingress-gating, and shell-script parser coverage ran 3 files and 38 tests.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript compile check completed with no errors.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 195 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+Command: `git diff --check`
+
+Result: passed. No whitespace errors were reported before the implementation commit.
