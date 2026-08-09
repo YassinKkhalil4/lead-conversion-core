@@ -671,3 +671,11 @@ Decision: `npm run decommission:readiness` counts only active configuration poin
 Reason: Draft configuration can be edited and has not become immutable runtime authority. Typebot removal must prove live conversation content is backed by a published immutable version, not merely that an active pointer row exists.
 
 Date: 2026-08-01
+
+## DEC-076: Readiness Threshold Arguments Are Non-Negative Integers
+
+Decision: `npm run cutover:readiness` and `npm run decommission:readiness` reject decimal, negative, empty, infinite, or non-numeric threshold values before querying PostgreSQL.
+
+Reason: Cutover and decommission thresholds represent counts, seconds, and whole-day windows used directly in PostgreSQL queue and interval checks. Operator typos must fail closed at the parser boundary rather than producing ambiguous readiness evidence.
+
+Date: 2026-08-09

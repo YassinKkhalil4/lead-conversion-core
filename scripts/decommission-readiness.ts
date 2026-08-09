@@ -20,7 +20,7 @@ const booleanArguments = new Set([
 
 function parseNumberArg(name: string, value: string): number {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`Invalid numeric argument: ${name}`);
+  if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) throw new Error(`Invalid numeric argument: ${name}`);
   return parsed;
 }
 
