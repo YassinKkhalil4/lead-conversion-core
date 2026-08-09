@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if [ "$#" -ne 0 ]; then
+  echo "restore-dump-smoke.sh does not accept arguments" >&2
+  exit 2
+fi
+
 : "${DUMP_PATH:?DUMP_PATH is required}"
 POSTGRES_DOCKER_IMAGE="${POSTGRES_DOCKER_IMAGE:-postgres:16-alpine}"
 COUNT_TABLES="${COUNT_TABLES:-edge_schema_migrations,edge_conversations,edge_outbox,workflow_entity,credentials_entity,execution_entity}"

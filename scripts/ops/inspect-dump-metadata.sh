@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if [ "$#" -ne 0 ]; then
+  echo "inspect-dump-metadata.sh does not accept arguments" >&2
+  exit 2
+fi
+
 : "${DUMP_PATH:?DUMP_PATH is required}"
 POSTGRES_DOCKER_IMAGE="${POSTGRES_DOCKER_IMAGE:-postgres:16-alpine}"
 

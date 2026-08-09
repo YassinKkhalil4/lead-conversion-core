@@ -13,6 +13,16 @@ CHECK_N8N_COMPAT="false"
 EXPECT_DIRECT_META=""
 EXPECT_DIRECT_LEAD=""
 EXPECT_N8N_COMPAT=""
+SEEN_ENV_FILE="false"
+SEEN_BASE_URL="false"
+SEEN_SKIP_READY="false"
+SEEN_SKIP_SHADOW="false"
+SEEN_CHECK_DIRECT_META="false"
+SEEN_CHECK_DIRECT_LEAD="false"
+SEEN_CHECK_N8N_COMPAT="false"
+SEEN_EXPECT_DIRECT_META="false"
+SEEN_EXPECT_DIRECT_LEAD="false"
+SEEN_EXPECT_N8N_COMPAT="false"
 
 usage() {
   cat <<'USAGE'
@@ -32,20 +42,87 @@ Options:
 USAGE
 }
 
+reject_duplicate_arg() {
+  local name="$1"
+  local seen="$2"
+  if [[ "$seen" == "true" ]]; then
+    echo "Duplicate verify-deployment argument: $name" >&2
+    exit 2
+  fi
+}
+
+validate_arg_value() {
+  local name="$1"
+  local value="$2"
+  if [[ -z "$value" ]]; then
+    echo "Missing verify-deployment argument: $name" >&2
+    exit 2
+  fi
+  if [[ "$value" =~ [[:cntrl:]] ]]; then
+    echo "Invalid verify-deployment argument: $name" >&2
+    exit 2
+  fi
+}
+
 for arg in "$@"; do
   case "$arg" in
-    --env-file=*) ENV_FILE="${arg#--env-file=}" ;;
-    --base-url=*) BASE="${arg#--base-url=}" ;;
-    --skip-ready) SKIP_READY="true" ;;
-    --skip-shadow) SKIP_SHADOW="true" ;;
-    --check-direct-meta) CHECK_DIRECT_META="true" ;;
-    --check-direct-lead) CHECK_DIRECT_LEAD="true" ;;
-    --check-n8n-compat) CHECK_N8N_COMPAT="true" ;;
-    --expect-direct-meta=*) EXPECT_DIRECT_META="${arg#--expect-direct-meta=}" ;;
-    --expect-direct-lead=*) EXPECT_DIRECT_LEAD="${arg#--expect-direct-lead=}" ;;
-    --expect-n8n-compat=*) EXPECT_N8N_COMPAT="${arg#--expect-n8n-compat=}" ;;
+    --env-file=*)
+      reject_duplicate_arg "--env-file" "$SEEN_ENV_FILE"
+      SEEN_ENV_FILE="true"
+      ENV_FILE="${arg#--env-file=}"
+      validate_arg_value "--env-file" "$ENV_FILE"
+      ;;
+    --base-url=*)
+      reject_duplicate_arg "--base-url" "$SEEN_BASE_URL"
+      SEEN_BASE_URL="true"
+      BASE="${arg#--base-url=}"
+      validate_arg_value "--base-url" "$BASE"
+      ;;
+    --skip-ready)
+      reject_duplicate_arg "--skip-ready" "$SEEN_SKIP_READY"
+      SEEN_SKIP_READY="true"
+      SKIP_READY="true"
+      ;;
+    --skip-shadow)
+      reject_duplicate_arg "--skip-shadow" "$SEEN_SKIP_SHADOW"
+      SEEN_SKIP_SHADOW="true"
+      SKIP_SHADOW="true"
+      ;;
+    --check-direct-meta)
+      reject_duplicate_arg "--check-direct-meta" "$SEEN_CHECK_DIRECT_META"
+      SEEN_CHECK_DIRECT_META="true"
+      CHECK_DIRECT_META="true"
+      ;;
+    --check-direct-lead)
+      reject_duplicate_arg "--check-direct-lead" "$SEEN_CHECK_DIRECT_LEAD"
+      SEEN_CHECK_DIRECT_LEAD="true"
+      CHECK_DIRECT_LEAD="true"
+      ;;
+    --check-n8n-compat)
+      reject_duplicate_arg "--check-n8n-compat" "$SEEN_CHECK_N8N_COMPAT"
+      SEEN_CHECK_N8N_COMPAT="true"
+      CHECK_N8N_COMPAT="true"
+      ;;
+    --expect-direct-meta=*)
+      reject_duplicate_arg "--expect-direct-meta" "$SEEN_EXPECT_DIRECT_META"
+      SEEN_EXPECT_DIRECT_META="true"
+      EXPECT_DIRECT_META="${arg#--expect-direct-meta=}"
+      validate_arg_value "--expect-direct-meta" "$EXPECT_DIRECT_META"
+      ;;
+    --expect-direct-lead=*)
+      reject_duplicate_arg "--expect-direct-lead" "$SEEN_EXPECT_DIRECT_LEAD"
+      SEEN_EXPECT_DIRECT_LEAD="true"
+      EXPECT_DIRECT_LEAD="${arg#--expect-direct-lead=}"
+      validate_arg_value "--expect-direct-lead" "$EXPECT_DIRECT_LEAD"
+      ;;
+    --expect-n8n-compat=*)
+      reject_duplicate_arg "--expect-n8n-compat" "$SEEN_EXPECT_N8N_COMPAT"
+      SEEN_EXPECT_N8N_COMPAT="true"
+      EXPECT_N8N_COMPAT="${arg#--expect-n8n-compat=}"
+      validate_arg_value "--expect-n8n-compat" "$EXPECT_N8N_COMPAT"
+      ;;
     --help|-h) usage; exit 0 ;;
-    *) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
+    *) echo "Unknown verify-deployment argument" >&2; usage >&2; exit 2 ;;
   esac
 done
 

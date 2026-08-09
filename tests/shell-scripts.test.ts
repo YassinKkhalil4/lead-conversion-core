@@ -194,6 +194,32 @@ describe('shell scripts', () => {
       .toThrow(/verify-restore\.sh does not accept arguments/);
   });
 
+  it('rejects deployment verifier ambiguous arguments before loading env', () => {
+    const env = { PATH: process.env.PATH || '' };
+
+    expect(() => execFileSync('bash', ['scripts/verify-deployment.sh', '--base-url=http://127.0.0.1:1', '--base-url=http://127.0.0.1:2'], { env, stdio: 'pipe' }))
+      .toThrow(/Duplicate verify-deployment argument: --base-url/);
+    expect(() => execFileSync('bash', ['scripts/verify-deployment.sh', '--base-url='], { env, stdio: 'pipe' }))
+      .toThrow(/Missing verify-deployment argument: --base-url/);
+    expect(() => execFileSync('bash', ['scripts/verify-deployment.sh', '--expect-direct-meta=enabled\n'], { env, stdio: 'pipe' }))
+      .toThrow(/Invalid verify-deployment argument: --expect-direct-meta/);
+    expect(() => execFileSync('bash', ['scripts/verify-deployment.sh', '--skip-ready', '--skip-ready'], { env, stdio: 'pipe' }))
+      .toThrow(/Duplicate verify-deployment argument: --skip-ready/);
+    expect(() => execFileSync('bash', ['scripts/verify-deployment.sh', '--unknown=value'], { env, stdio: 'pipe' }))
+      .toThrow(/Unknown verify-deployment argument/);
+  });
+
+  it('rejects env-only probe and dump script arguments before reading env or Docker inputs', () => {
+    const env = { PATH: process.env.PATH || '' };
+
+    expect(() => execFileSync('bash', ['scripts/shadow-sequence.sh', '--base-url=http://127.0.0.1:8080'], { env, stdio: 'pipe' }))
+      .toThrow(/shadow-sequence\.sh does not accept arguments/);
+    expect(() => execFileSync('sh', ['scripts/ops/inspect-dump-metadata.sh', '--dump=/tmp/example.dump'], { env, stdio: 'pipe' }))
+      .toThrow(/inspect-dump-metadata\.sh does not accept arguments/);
+    expect(() => execFileSync('sh', ['scripts/ops/restore-dump-smoke.sh', '--dump=/tmp/example.dump'], { env, stdio: 'pipe' }))
+      .toThrow(/restore-dump-smoke\.sh does not accept arguments/);
+  });
+
   it('computes backup checksums through the portable helper', () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-checksum.'));
     try {

@@ -783,3 +783,11 @@ Decision: `scripts/backup/backup-postgres.sh`, `scripts/backup/restore-postgres.
 Reason: Backup and restore commands are recovery-authority operations configured through explicit environment variables and private service files. Silently ignoring command arguments can make an operator believe a different database, dump, checksum, or password file was used.
 
 Date: 2026-08-09
+
+## DEC-090: Operator Verification Scripts Fail Closed On Ambiguous Arguments
+
+Decision: `scripts/verify-deployment.sh` rejects duplicate, empty, unknown, or control-character-bearing operator arguments before loading env files or sending verification probes. `scripts/shadow-sequence.sh`, `scripts/ops/inspect-dump-metadata.sh`, and `scripts/ops/restore-dump-smoke.sh` are env-only commands and reject all positional or flag arguments before reading env or invoking Docker.
+
+Reason: Deployment, shadow, and dump verification scripts create or inspect operational evidence. Ignored arguments, duplicate flags, empty target values, or control characters can make a run appear to verify one target while using another value, or can silently hide an operator typo before durable inbox or dump evidence is produced.
+
+Date: 2026-08-09

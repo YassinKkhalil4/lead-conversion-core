@@ -3,6 +3,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if [ "$#" -ne 0 ]; then
+  echo "shadow-sequence.sh does not accept arguments" >&2
+  exit 2
+fi
+
 load_env_file() {
   local file="$1"
   local tmp_assignments
