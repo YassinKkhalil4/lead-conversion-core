@@ -105,10 +105,24 @@ export class InboxRepository {
         ],
       );
       const duplicate = !inserted.rows[0];
-      const eventId = inserted.rows[0]?.inbox_event_id || (await client.query<{ inbox_event_id: string }>(
-        'SELECT inbox_event_id FROM runtime.inbox_events WHERE provider=$1 AND dedupe_key=$2',
-        [input.provider, dedupeKey],
-      )).rows[0]?.inbox_event_id;
+      let eventId = inserted.rows[0]?.inbox_event_id;
+      if (!eventId) {
+        const existing = await client.query<{ inbox_event_id: string; same_semantics: boolean }>(
+          `SELECT inbox_event_id,
+                  event_type=$3
+              AND external_event_id=$4
+              AND aggregate_key=$5
+              AND payload_hash=$6 AS same_semantics
+           FROM runtime.inbox_events
+           WHERE provider=$1 AND dedupe_key=$2`,
+          [input.provider, dedupeKey, input.eventType, input.externalEventId || '', input.aggregateKey || '', payloadHash],
+        );
+        const row = existing.rows[0];
+        if (row && !row.same_semantics) {
+          throw new Error(`inbox_dedupe_key_collision:${dedupeKey}`);
+        }
+        eventId = row?.inbox_event_id;
+      }
       if (!eventId) throw new Error('inbox_event_not_found_after_receive');
       await client.query('COMMIT');
       return { inboxEventId: eventId, duplicate, dedupeKey };

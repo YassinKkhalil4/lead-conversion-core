@@ -525,6 +525,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       headers: {},
       payload: { id: 'evt-duplicate', text: 'hello' },
       signatureValid: true,
+      aggregateKey: '+201000000001',
     });
 
     expect(second.inboxEventId).toBe(first);
@@ -544,6 +545,36 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
     expect(await inbox.claim('worker-b')).toHaveLength(0);
     expect((await db.pool.query('SELECT outcome FROM runtime.inbox_event_attempts WHERE inbox_event_id=$1', [first])).rows[0]?.outcome).toBe('processed');
+  });
+
+  it('rejects inbound dedupe key collisions with changed payload semantics', async () => {
+    const inbox = new runtime.InboxRepository();
+    const first = await inbox.receive({
+      provider: 'meta',
+      eventType: 'message.received',
+      externalEventId: 'evt-collision',
+      rawBody: Buffer.from('{"id":"evt-collision","text":"first"}'),
+      headers: {},
+      payload: { id: 'evt-collision', text: 'first' },
+      signatureValid: true,
+    });
+
+    await expect(inbox.receive({
+      provider: 'meta',
+      eventType: 'message.received',
+      externalEventId: 'evt-collision',
+      rawBody: Buffer.from('{"id":"evt-collision","text":"changed"}'),
+      headers: {},
+      payload: { id: 'evt-collision', text: 'changed' },
+      signatureValid: true,
+    })).rejects.toThrow(/inbox_dedupe_key_collision:meta:message\.received:evt-collision/);
+
+    expect((await db.pool.query('SELECT count(*) FROM runtime.inbox_events')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT count(*) FROM runtime.webhook_receipts')).rows[0]?.count).toBe('1');
+    expect((await db.pool.query('SELECT payload_json FROM runtime.inbox_events WHERE inbox_event_id=$1', [first.inboxEventId])).rows[0]?.payload_json).toEqual({
+      id: 'evt-collision',
+      text: 'first',
+    });
   });
 
   it('uses deterministic payload hashes when providers omit stable event IDs', async () => {
