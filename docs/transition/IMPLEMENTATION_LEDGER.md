@@ -912,3 +912,14 @@
 - Verification: `npm run lint` passed before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 189 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `8e90b83`: Harden calendar reconciliation arguments.
+
+## 2026-08-09 Versioned Configuration CLI Argument Hardening
+
+- Implementation slice: Refactored `scripts/config.ts` to export a pure parser and to execute `main` only when invoked as the CLI script.
+- Implementation slice: Hardened `npm run config` so `validate`, `diff`, `publish`, `active`, and `rollback` are the only accepted commands and each command accepts only its intended flags.
+- Implementation slice: Configuration CLI parsing now rejects duplicate flags, simultaneous `--input` and `--airtable-export`, rollback without `--version`, command-inappropriate actor/source/version flags, and empty or control-character-bearing values before constructing `VersionedConfigService`.
+- Decision: Added DEC-083. Configuration publish and rollback mutate active configuration authority, so ambiguous operator input must fail before PostgreSQL access.
+- Verification: `npx vitest run tests/shell-scripts.test.ts tests/config-versioning.test.ts` passed with 2 files and 22 tests before the full gate.
+- Verification: `npm run lint` passed before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 190 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `28ebd3d`: Harden configuration CLI arguments.
