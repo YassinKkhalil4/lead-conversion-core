@@ -703,3 +703,11 @@ Decision: Operator shell scripts that need `.env` values load assignments throug
 Reason: Deployment verification and shadow scripts read secret-bearing env files. Sourcing an env file can execute command substitutions or arbitrary shell content before verification begins, duplicate route flags or secrets can make the effective operator configuration ambiguous, parsed assignment temp files can briefly contain secrets, and decoded control characters are incompatible with the NUL-delimited assignment stream. A safe parser plus private temp files keeps env loading compatible with simple dotenv syntax while failing closed on malformed, duplicate, or multi-line/control-character assignments.
 
 Date: 2026-08-09
+
+## DEC-080: Backup Outputs Are Locked Before Writing
+
+Decision: `scripts/backup/backup-postgres.sh` creates a per-output lock before writing the encrypted dump or checksum, refuses to proceed when either target output already exists, and removes partial output files if the backup exits before completion.
+
+Reason: Backup filenames are timestamped to second precision. Two operator runs in the same second, a stale checksum, or a rerun against an existing backup path must not overwrite restorable evidence. A per-output lock and explicit existence check make backup creation fail closed instead of silently replacing an encrypted dump or checksum.
+
+Date: 2026-08-09

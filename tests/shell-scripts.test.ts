@@ -182,6 +182,19 @@ describe('shell scripts', () => {
     expect(verify).toContain('psql "service=lead_core_restore_target"');
   });
 
+  it('refuses to overwrite backup outputs when timestamped names collide', () => {
+    const backup = readFileSync('scripts/backup/backup-postgres.sh', 'utf8');
+
+    expect(backup).toContain('output_lock="$encrypted_dump.lock"');
+    expect(backup).toContain('if ! mkdir "$output_lock"; then');
+    expect(backup).toContain('Backup output lock already exists');
+    expect(backup).toContain('if [ -e "$encrypted_dump" ] || [ -e "$checksum_file" ]; then');
+    expect(backup).toContain('refusing to overwrite');
+    expect(backup).toContain('output_paths_reserved="true"');
+    expect(backup).toContain('backup_complete="true"');
+    expect(backup).toContain('rm -f "$encrypted_dump" "$checksum_file"');
+  });
+
   it('does not mutate configuration from the API container startup command', () => {
     const compose = readFileSync('docker-compose.yml', 'utf8');
     expect(compose).toContain('lead-core-api:');
