@@ -679,3 +679,11 @@ Decision: `npm run cutover:readiness` and `npm run decommission:readiness` accep
 Reason: Cutover and decommission thresholds represent counts, seconds, and whole-day windows used directly in PostgreSQL queue and interval checks. Operator typos, alternate JavaScript number syntaxes, and values that cannot be represented precisely must fail closed at the parser boundary rather than producing ambiguous readiness evidence.
 
 Date: 2026-08-09
+
+## DEC-077: Worker Kind Is A Closed Deployment Role
+
+Decision: `WORKER_KIND` accepts only `outbox` or `runtime`; any other value fails environment validation before the worker process starts.
+
+Reason: The worker entrypoint selects the legacy outbox worker unless `WORKER_KIND=runtime`. A typoed worker role could otherwise run the wrong loop and leave required durable runtime processing absent until readiness fails. Failing closed at startup makes deployment role evidence explicit.
+
+Date: 2026-08-09

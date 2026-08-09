@@ -54,6 +54,11 @@ describe('environment contract', () => {
     }).OUTBOX_WORKER_ENABLED).toBe(true);
   });
 
+  it('rejects unknown worker kinds before a worker can start the wrong role', () => {
+    expect(() => parseEnv({ ...baseEnv, WORKER_KIND: 'runtim' })).toThrow(/WORKER_KIND/);
+    expect(parseEnv({ ...baseEnv, WORKER_KIND: 'runtime' }).WORKER_KIND).toBe('runtime');
+  });
+
   it('requires Meta webhook verification secrets before direct webhooks can be enabled', () => {
     expect(() => parseEnv({ ...baseEnv, DIRECT_META_WEBHOOK_ENABLED: 'true' })).toThrow(/META_WEBHOOK_VERIFY_TOKEN/);
     expect(() => parseEnv({

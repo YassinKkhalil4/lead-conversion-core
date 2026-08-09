@@ -19,7 +19,7 @@ const baseSchema = z.object({
   OUTBOX_TARGET_URL: z.string().url().optional().or(z.literal('')),
   OUTBOX_TARGET_SECRET: z.string().optional().default(''),
   WORKER_NAME: z.string().optional().default(''),
-  WORKER_KIND: z.string().optional().default('outbox'),
+  WORKER_KIND: z.enum(['outbox', 'runtime']).default('outbox'),
   RUNTIME_WORKER_ENABLED: booleanString.default('false'),
   N8N_COMPAT_ROUTES_ENABLED: booleanString.default('false'),
   DIRECT_META_WEBHOOK_ENABLED: booleanString.default('false'),
