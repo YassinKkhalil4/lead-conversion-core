@@ -7,40 +7,78 @@ type ParsedArgs =
   | { command: 'confirm'; outboxCommandId: string; providerEventId: string; operatorId?: string }
   | { command: 'fail'; outboxCommandId: string; reason: string; operatorId?: string };
 
-function valueArg(argv: string[], name: string): string {
-  return argv.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1) || '';
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function parseNumberArg(name: string, value: string): number {
+  if (!/^(0|[1-9]\d*)$/.test(value)) throw new Error(`Invalid numeric calendar reconciliation argument: ${name}`);
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`Invalid numeric calendar reconciliation argument: ${name}`);
+  return parsed;
 }
 
-function optionalValueArg(argv: string[], name: string): string | undefined {
-  const value = valueArg(argv, name);
-  return value ? value : undefined;
+function rejectUnsafeText(name: string, value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error(`Missing calendar reconciliation argument: ${name}`);
+  if (/[\u0000-\u001f\u007f]/.test(trimmed)) throw new Error(`Invalid calendar reconciliation argument: ${name}`);
+  return trimmed;
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
-  const command = argv[0] || 'list';
+function parseKeyValueArgs(argv: string[], allowed: Set<string>): Map<string, string> {
+  const parsed = new Map<string, string>();
+  for (const arg of argv) {
+    const separator = arg.indexOf('=');
+    if (separator < 0) throw new Error(`Unknown calendar reconciliation argument: ${arg}`);
+    const name = arg.slice(0, separator);
+    const value = arg.slice(separator + 1);
+    if (!allowed.has(name)) throw new Error(`Unknown calendar reconciliation argument: ${arg}`);
+    if (parsed.has(name)) throw new Error(`Duplicate calendar reconciliation argument: ${name}`);
+    parsed.set(name, value);
+  }
+  return parsed;
+}
+
+function requiredArg(args: Map<string, string>, name: string): string {
+  const value = args.get(name);
+  if (value === undefined) throw new Error(`Missing calendar reconciliation argument: ${name}`);
+  return value;
+}
+
+function optionalTextArg(args: Map<string, string>, name: string): string | undefined {
+  const value = args.get(name);
+  return value === undefined ? undefined : rejectUnsafeText(name, value);
+}
+
+function requiredUuidArg(args: Map<string, string>, name: string): string {
+  const value = rejectUnsafeText(name, requiredArg(args, name));
+  if (!uuidPattern.test(value)) throw new Error(`Invalid calendar reconciliation argument: ${name}`);
+  return value;
+}
+
+export function parseArgs(argv: string[]): ParsedArgs {
+  const command = argv[0]?.startsWith('--') ? 'list' : argv[0] || 'list';
+  const rest = argv[0]?.startsWith('--') ? argv : argv.slice(1);
   if (command === 'list') {
-    const limit = Number(valueArg(argv, '--limit') || 50);
-    return { command, limit: Number.isFinite(limit) ? limit : 50 };
+    const args = parseKeyValueArgs(rest, new Set(['--limit']));
+    const limitValue = args.get('--limit');
+    const limit = limitValue === undefined ? 50 : parseNumberArg('--limit', limitValue);
+    if (limit > 500) throw new Error('Invalid numeric calendar reconciliation argument: --limit');
+    return { command, limit };
   }
-  const outboxCommandId = valueArg(argv, '--outbox-command-id');
-  if (!outboxCommandId) {
-    throw new Error('Usage: npm run calendar:reconcile -- <list|confirm|fail> --outbox-command-id=<uuid>');
-  }
-  const operatorId = optionalValueArg(argv, '--operator-id');
   if (command === 'confirm') {
-    const providerEventId = valueArg(argv, '--provider-event-id');
-    if (!providerEventId) {
-      throw new Error('Usage: npm run calendar:reconcile -- confirm --outbox-command-id=<uuid> --provider-event-id=<event-id>');
-    }
+    const args = parseKeyValueArgs(rest, new Set(['--outbox-command-id', '--provider-event-id', '--operator-id']));
+    const outboxCommandId = requiredUuidArg(args, '--outbox-command-id');
+    const providerEventId = rejectUnsafeText('--provider-event-id', requiredArg(args, '--provider-event-id'));
+    const operatorId = optionalTextArg(args, '--operator-id');
     return operatorId
       ? { command, outboxCommandId, providerEventId, operatorId }
       : { command, outboxCommandId, providerEventId };
   }
   if (command === 'fail') {
-    const reason = valueArg(argv, '--reason');
-    if (!reason) {
-      throw new Error('Usage: npm run calendar:reconcile -- fail --outbox-command-id=<uuid> --reason=<reason>');
-    }
+    const args = parseKeyValueArgs(rest, new Set(['--outbox-command-id', '--reason', '--operator-id']));
+    const outboxCommandId = requiredUuidArg(args, '--outbox-command-id');
+    const reason = rejectUnsafeText('--reason', requiredArg(args, '--reason'));
+    if (reason.length > 4000) throw new Error('Invalid calendar reconciliation argument: --reason');
+    const operatorId = optionalTextArg(args, '--operator-id');
     return operatorId
       ? { command, outboxCommandId, reason, operatorId }
       : { command, outboxCommandId, reason };

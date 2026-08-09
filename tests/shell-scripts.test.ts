@@ -276,4 +276,36 @@ describe('shell scripts', () => {
     expect(() => parseCutoverReadinessArgs(['--max-pending-inbox=9007199254740993'])).toThrow(/Invalid numeric argument/);
     expect(() => parseDecommissionReadinessArgs(['--min-completed-edge-qualifications=9007199254740993'])).toThrow(/Invalid numeric argument/);
   });
+
+  it('fails calendar reconciliation CLI commands on ambiguous operator arguments before querying PostgreSQL', async () => {
+    Object.assign(process.env, cliEnv);
+    const { parseArgs: parseCalendarReconcileArgs } = await import('../scripts/calendar-reconcile.js');
+    const validOutboxId = '11111111-1111-4111-8111-111111111111';
+
+    expect(parseCalendarReconcileArgs([])).toEqual({ command: 'list', limit: 50 });
+    expect(parseCalendarReconcileArgs(['list', '--limit=25'])).toEqual({ command: 'list', limit: 25 });
+    expect(parseCalendarReconcileArgs(['--limit=25'])).toEqual({ command: 'list', limit: 25 });
+    expect(parseCalendarReconcileArgs([
+      'confirm',
+      `--outbox-command-id=${validOutboxId}`,
+      '--provider-event-id=google-event-1',
+      '--operator-id=ops-calendar',
+    ])).toEqual({
+      command: 'confirm',
+      outboxCommandId: validOutboxId,
+      providerEventId: 'google-event-1',
+      operatorId: 'ops-calendar',
+    });
+
+    expect(() => parseCalendarReconcileArgs(['list', '--limit=1.5'])).toThrow(/Invalid numeric calendar reconciliation argument/);
+    expect(() => parseCalendarReconcileArgs(['list', '--limit=0'])).toThrow(/Invalid numeric calendar reconciliation argument/);
+    expect(() => parseCalendarReconcileArgs(['list', '--limit=501'])).toThrow(/Invalid numeric calendar reconciliation argument/);
+    expect(() => parseCalendarReconcileArgs(['list', '--limit=9007199254740993'])).toThrow(/Invalid numeric calendar reconciliation argument/);
+    expect(() => parseCalendarReconcileArgs(['list', '--limit=10', '--limit=20'])).toThrow(/Duplicate calendar reconciliation argument/);
+    expect(() => parseCalendarReconcileArgs(['confirm', '--outbox-command-id=not-a-uuid', '--provider-event-id=google-event-1'])).toThrow(/Invalid calendar reconciliation argument: --outbox-command-id/);
+    expect(() => parseCalendarReconcileArgs(['confirm', `--outbox-command-id=${validOutboxId}`, '--provider-event-id=google-event-1', '--unknown=1'])).toThrow(/Unknown calendar reconciliation argument/);
+    expect(() => parseCalendarReconcileArgs(['confirm', `--outbox-command-id=${validOutboxId}`, '--provider-event-id=google-event\n1'])).toThrow(/Invalid calendar reconciliation argument: --provider-event-id/);
+    expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason='])).toThrow(/Missing calendar reconciliation argument: --reason/);
+    expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason=operator verified', '--operator-id=ops\ncalendar'])).toThrow(/Invalid calendar reconciliation argument: --operator-id/);
+  });
 });

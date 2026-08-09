@@ -719,3 +719,11 @@ Decision: `scripts/backup/restore-postgres.sh` verifies the encrypted dump SHA-2
 Reason: Restore must fail closed on corrupted, truncated, or mismatched encrypted backup artifacts before mutating a target database. The bypass is explicit for exceptional manual recovery cases and does not silently weaken normal restore behavior.
 
 Date: 2026-08-09
+
+## DEC-082: Calendar Reconciliation CLI Fails Closed On Ambiguous Arguments
+
+Decision: `npm run calendar:reconcile` accepts only the closed command set `list`, `confirm`, and `fail`; rejects unknown or duplicate flags; validates list limits as canonical positive safe integers bounded to the service limit; validates operator-supplied outbox command IDs as UUIDs; and rejects empty or control-character-bearing provider event IDs, failure reasons, and operator IDs before constructing the reconciliation service.
+
+Reason: Calendar reconciliation is an operator mutation path for ambiguous provider creates. A typoed flag, malformed UUID, unsafe provider event ID, or ambiguous numeric limit must fail before any PostgreSQL query or durable state transition can occur.
+
+Date: 2026-08-09
