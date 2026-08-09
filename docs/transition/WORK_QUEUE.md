@@ -86,6 +86,8 @@ Dependencies: real website/Facebook configuration for live verification.
 
 Verification gates: idempotent intake, opted-out suppression, projection failure isolation.
 
+Completed locally: authenticated internal lead intake validates source payloads, upserts contacts and project-scoped leads idempotently, matches projects without inventing missing relationships, records immutable lead-intake receipts that reject changed-payload idempotency collisions, records audit metadata, suppresses first-contact effects for opted-out contacts, enqueues first-contact WhatsApp outbox commands, processes durably received website/Facebook source webhooks through the runtime inbox worker, and enqueues Airtable read-only visibility projection commands.
+
 Remaining: live website/Facebook intake verification and live Airtable projection verification pending owner source/Airtable configuration.
 
 ## MP-08 Conversation And Qualification

@@ -3493,3 +3493,57 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported before the implementation commit.
+
+## 2026-08-09 Lead Intake Idempotency Collision Hardening
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: first run failed after a local stall when the existing Meta inbound processing test timed out. No lead-intake assertion failed. Resolution was to run the new lead-intake collision test in isolation and rerun the full focused runtime integration file successfully.
+
+Command: `npx vitest run tests/runtime.integration.test.ts -t "lead intake idempotency collisions"`
+
+Result: passed. Vitest ran 1 focused test and skipped 96 tests by filter.
+
+Command: `npx vitest run tests/runtime.integration.test.ts`
+
+Result: passed after the timeout rerun. Focused PostgreSQL runtime coverage ran 1 file and 97 tests, including changed source-payload lead-intake idempotency collision rejection.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript compile check completed with no errors.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 206 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+Command: `git diff --check`
+
+Result: passed. No whitespace errors were reported before the implementation commit.

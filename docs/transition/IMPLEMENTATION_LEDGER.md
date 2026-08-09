@@ -1036,3 +1036,15 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts` passed with 1 file and 96 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 205 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `a9270b3`: Reject appointment booking idempotency collisions.
+
+## 2026-08-09 Lead Intake Idempotency Collision Hardening
+
+- Implementation slice: Hardened `LeadIntakeService.intake` so duplicate provider/source idempotency keys return an existing intake event only when lead, contact, provider external ID, and payload hash match the persisted receipt.
+- Implementation slice: Replaced the mutable lead-intake event conflict update with immutable insert-or-read collision detection, preserving the original contact, lead, intake event, projection outbox command, and audit evidence on changed-payload reuse.
+- Implementation slice: Added PostgreSQL regression coverage proving a reused lead-intake source event with changed contact/source payload semantics fails closed without creating duplicate durable rows or mutating the accepted source payload evidence.
+- Decision: Added DEC-095. Lead intake events are immutable durable receipts, not mutable aliases for changed provider/source payloads.
+- Verification failure: The first focused runtime integration run failed after a local stall when an existing Meta inbound processing test timed out. Resolution: the new lead-intake collision test passed in isolation, then the full focused runtime integration file passed on rerun.
+- Verification: `npx vitest run tests/runtime.integration.test.ts -t "lead intake idempotency collisions"` passed with 1 test and 96 skipped by filter.
+- Verification: `npx vitest run tests/runtime.integration.test.ts` passed on rerun with 1 file and 97 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 206 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `837c3d4`: Reject lead intake idempotency collisions.

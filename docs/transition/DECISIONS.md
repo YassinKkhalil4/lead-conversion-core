@@ -823,3 +823,11 @@ Decision: Appointment booking replay may return an existing appointment only whe
 Reason: Appointment source-event IDs are replay protection for a specific customer slot reply. Silently treating a changed slot reply as a duplicate can confirm the wrong appointment and suppress the operator-visible conflict that should be resolved before creating or reconciling calendar side effects.
 
 Date: 2026-08-09
+
+## DEC-095: Lead Intake Events Are Immutable Idempotent Receipts
+
+Decision: Lead intake idempotency keys may return an existing intake event only when the existing event references the same lead, contact, provider external ID, and source payload hash. A reused intake idempotency key with changed source payload semantics fails closed as a lead intake collision and leaves the original contact, lead, intake event, and projection outbox state unchanged.
+
+Reason: Lead intake events are durable receipt evidence, not mutable link records. Updating them on duplicate keys can hide changed source payloads and make migration or projection evidence disagree with the source event that was actually accepted.
+
+Date: 2026-08-09
