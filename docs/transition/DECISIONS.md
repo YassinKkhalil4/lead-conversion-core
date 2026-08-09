@@ -831,3 +831,11 @@ Decision: Lead intake idempotency keys may return an existing intake event only 
 Reason: Lead intake events are durable receipt evidence, not mutable link records. Updating them on duplicate keys can hide changed source payloads and make migration or projection evidence disagree with the source event that was actually accepted.
 
 Date: 2026-08-09
+
+## DEC-096: Legacy Edge Outbox Idempotency Requires Matching Semantics
+
+Decision: The legacy `edge_outbox` compatibility repository may suppress a duplicate idempotency key only when the existing row has the same conversation, event type, payload, and parked-vs-deliverable intent. A reused key with changed semantics fails closed as an edge outbox idempotency collision.
+
+Reason: Legacy outbox rows remain part of rollback and fallback evidence until decommission. Silently ignoring a changed compatibility event can hide shadow/active-turn defects and leave fallback evidence disagreeing with the event the caller believes was queued.
+
+Date: 2026-08-09

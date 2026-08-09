@@ -1048,3 +1048,12 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts` passed on rerun with 1 file and 97 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 206 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `837c3d4`: Reject lead intake idempotency collisions.
+
+## 2026-08-09 Legacy Edge Outbox Idempotency Collision Hardening
+
+- Implementation slice: Hardened `OutboxRepository.enqueue` for the legacy `edge_outbox` compatibility path so a duplicate idempotency key is accepted only when conversation, event type, payload, and parked-vs-deliverable intent match the persisted row.
+- Implementation slice: Added PostgreSQL regression coverage proving true duplicate legacy outbox enqueues remain idempotent while changed payload semantics fail closed and preserve the original compatibility event.
+- Decision: Added DEC-096. Legacy outbox rows remain rollback/fallback evidence until decommission and must not silently alias changed events.
+- Verification: `npx vitest run tests/runtime.integration.test.ts` passed with 1 file and 98 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 207 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `5e8e3c4`: Reject legacy outbox idempotency collisions.

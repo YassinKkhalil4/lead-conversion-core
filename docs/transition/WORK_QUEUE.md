@@ -42,7 +42,7 @@ Remaining: broader real-export reconciliation checks and full reconciliation blo
 
 Status: locally_verified
 
-Deliverables: inbox receipt/claim/retry/dead-letter/replay, inbox dedupe keys that reject changed payload semantics, outbox commands/attempt history/provider failure classification, outbox idempotency keys that reject changed command semantics, scheduled jobs with retry and direct dead-letter outcomes, scheduled-job semantic keys that reject changed job semantics, audit service, bounded jittered retry backoff, bounded legacy outbox compatibility retries.
+Deliverables: inbox receipt/claim/retry/dead-letter/replay, inbox dedupe keys that reject changed payload semantics, outbox commands/attempt history/provider failure classification, outbox idempotency keys that reject changed command semantics, scheduled jobs with retry and direct dead-letter outcomes, scheduled-job semantic keys that reject changed job semantics, audit service, bounded jittered retry backoff, bounded legacy outbox compatibility retries, and legacy edge outbox semantic idempotency collision rejection.
 
 Dependencies: none for internal implementation.
 
