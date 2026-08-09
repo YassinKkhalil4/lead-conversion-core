@@ -977,3 +977,12 @@
 - Verification: `npx vitest run tests/migrate.test.ts tests/shell-scripts.test.ts` passed with 2 files and 25 tests before the full gate.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 198 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `78a53f3`: Harden migrator CLI arguments.
+
+## 2026-08-09 Backup Restore Script Argument Hardening
+
+- Implementation slice: Hardened `scripts/backup/backup-postgres.sh`, `scripts/backup/restore-postgres.sh`, and `scripts/backup/verify-restore.sh` so they reject all positional or flag arguments before reading required environment variables.
+- Implementation slice: Added executable shell-script coverage proving backup/restore argument rejection happens before secret-bearing env validation.
+- Decision: Added DEC-089. Backup and restore scripts are env-only commands because ignored arguments can mislead operators about the source database, target database, dump, checksum, or password file.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 1 file and 21 tests before the full gate.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 199 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `c5f8a4c`: Harden backup restore script arguments.
