@@ -4,42 +4,12 @@ Last updated: 2026-08-09
 
 Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
 
-Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, terminal runtime outbox failures, rejected n8n commands, cancelled Airtable projections, missing/non-pass Airtable reconciliation evidence, accepted-row Airtable business reconciliation coverage, contact opt-out preservation, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, n8n fallback inbox worker wiring independent of direct Meta enablement, n8n compatibility runtime readiness enforcement, cutover readiness failure when no direct-ingress target is selected, enabled/disabled n8n compatibility fallback deployment verification, deployment and shadow verifier probe identities being run-scoped to avoid durable-inbox collisions, deployment/shadow env-file loading using parsed assignments instead of shell `source`, duplicate deployment/shadow env keys failing closed before ambiguous overrides can change route flags or secrets, parsed env assignment temp files being explicitly chmodded private before secret-bearing values are written, parsed env values rejecting decoded NUL/newline characters before the NUL-delimited export stream is built, decommission blocking while n8n compatibility routes remain enabled, direct-ingress decommission stability measured from processing completion time, recent legacy-owned conversation activity blocking n8n/Typebot decommission, active legacy-only config snapshots blocking Typebot decommission, imported or detached qualification rows being excluded from Typebot decommission volume, n8n scheduled authority detection across durable job semantic identity fields, direct lead decommission stability requiring both website and Facebook lead evidence, Typebot removal requiring a published active configuration version, cutover/decommission readiness threshold arguments failing closed to non-negative integers, readiness threshold parsing accepting only canonical base-10 integer strings, unsafe readiness thresholds being rejected before JavaScript numeric precision loss, and invalid worker role names failing environment validation before the wrong worker loop can start.
+Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified parked legacy outbox rows, terminal runtime outbox failures, rejected n8n commands, cancelled Airtable projections, missing/non-pass Airtable reconciliation evidence, accepted-row Airtable business reconciliation coverage, contact opt-out preservation, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, n8n fallback inbox worker wiring independent of direct Meta enablement, n8n compatibility runtime readiness enforcement, cutover readiness failure when no direct-ingress target is selected, enabled/disabled n8n compatibility fallback deployment verification, deployment and shadow verifier probe identities being run-scoped to avoid durable-inbox collisions, deployment/shadow env-file loading using parsed assignments instead of shell `source`, duplicate deployment/shadow env keys failing closed before ambiguous overrides can change route flags or secrets, parsed env assignment temp files being explicitly chmodded private before secret-bearing values are written, parsed env values rejecting decoded NUL/newline characters before the NUL-delimited export stream is built, backup outputs being locked and refused when timestamped encrypted dump or checksum paths already exist, decommission blocking while n8n compatibility routes remain enabled, direct-ingress decommission stability measured from processing completion time, recent legacy-owned conversation activity blocking n8n/Typebot decommission, active legacy-only config snapshots blocking Typebot decommission, imported or detached qualification rows being excluded from Typebot decommission volume, n8n scheduled authority detection across durable job semantic identity fields, direct lead decommission stability requiring both website and Facebook lead evidence, Typebot removal requiring a published active configuration version, cutover/decommission readiness threshold arguments failing closed to non-negative integers, readiness threshold parsing accepting only canonical base-10 integer strings, unsafe readiness thresholds being rejected before JavaScript numeric precision loss, and invalid worker role names failing environment validation before the wrong worker loop can start.
 
 Files expected to change:
 
-- `docs/transition/STATUS.md`
-- `docs/transition/WORK_QUEUE.md`
-- `docs/transition/NEXT_ACTION.md`
-- `docs/transition/IMPLEMENTATION_LEDGER.md`
-- `docs/transition/TEST_EVIDENCE.md`
-- `src/worker-runner.ts`
-- `src/worker/runtime-worker-wiring.ts`
-- `tests/runtime-worker-wiring.test.ts`
-- `src/config/env.ts`
-- `src/services/cutover-readiness-service.ts`
-- `tests/env-contract.test.ts`
-- `tests/ingress-gating.test.ts`
-- `tests/runtime.integration.test.ts`
-- `scripts/verify-deployment.sh`
-- `scripts/shadow-sequence.sh`
-- `scripts/ops/read-env-file.py`
-- `docs/transition/DIRECT_INGRESS_PLAN.md`
-- `docs/owner-actions/06-staging-dns-and-access.md`
-- `docs/transition/RISKS.md`
-- `src/services/decommission-readiness-service.ts`
-- `scripts/cutover-readiness.ts`
-- `scripts/decommission-readiness.ts`
-- `tests/shell-scripts.test.ts`
-- `docs/transition/DECOMMISSION_RUNBOOK.md`
-- `docs/owner-actions/07-production-cutover.md`
-- `scripts/import-airtable.ts`
-- `scripts/reconcile-airtable.ts`
-- `tests/fixtures/airtable-export/Leads.json`
-- `tests/import-airtable.test.ts`
-- `tests/import-airtable.integration.test.ts`
-- `docs/transition/DATA_MIGRATION.md`
-- `docs/transition/DATA_RECONCILIATION.md`
+- None for staging verification until owner-supplied route access and credentials are available.
+- If targeted local hardening finds a defect before staging, change only the affected source/script/test files plus `docs/transition/STATUS.md`, `docs/transition/WORK_QUEUE.md`, `docs/transition/NEXT_ACTION.md`, `docs/transition/IMPLEMENTATION_LEDGER.md`, `docs/transition/TEST_EVIDENCE.md`, and `docs/transition/DECISIONS.md` when an architectural or operational decision changes.
 
 Required verification:
 
@@ -69,6 +39,6 @@ Known blockers:
 - Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
 - Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
 
-Last verified commit: `4639617` (`Reject control characters in operator env values`), with focused shell-script tests, `npm ci`, tracked artifact scan, TypeScript lint, full Vitest suite, production build, `dist/tests` exclusion check, moderate audit, smoke test, integration smoke, and `git diff --check` all passing. Docker-backed dump metadata inspection and restore smoke remain blocked by unavailable local Docker daemon.
+Last verified commit: `2b67fd1` (`Prevent backup output overwrite`), with focused shell-script tests, `bash -n scripts/backup/backup-postgres.sh`, `npm ci`, tracked artifact scan, TypeScript lint, full Vitest suite, production build, `dist/tests` exclusion check, moderate audit, smoke test, integration smoke, and `git diff --check` all passing. Docker-backed dump metadata inspection and restore smoke remain blocked by unavailable local Docker daemon.
 
 Git worktree clean when recorded: yes

@@ -879,3 +879,14 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 13 tests.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 185 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `4639617`: Reject control characters in operator env values.
+
+## 2026-08-09 Backup Output Overwrite Protection
+
+- Implementation slice: Hardened `scripts/backup/backup-postgres.sh` so each encrypted dump/checksum output reserves a timestamped lock directory before writing.
+- Implementation slice: Backup creation now refuses to overwrite existing encrypted dump or checksum paths for the selected timestamp and cleans up partial encrypted output/checksum files when backup exits before completion.
+- Implementation slice: Added shell-script static coverage for the output lock, existing-output refusal, partial-output cleanup, and successful-completion guard.
+- Decision: Added DEC-080. Timestamped backup outputs fail closed on collisions because second-precision filenames, concurrent runs, or stale checksum paths must not overwrite recovery evidence.
+- Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 14 tests before the full gate.
+- Verification: `bash -n scripts/backup/backup-postgres.sh` passed.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 186 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `2b67fd1`: Prevent backup output overwrite.

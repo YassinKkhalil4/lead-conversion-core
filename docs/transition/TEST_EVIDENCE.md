@@ -2755,3 +2755,53 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported.
+
+## 2026-08-09 Backup Output Overwrite Protection
+
+Command: `npx vitest run tests/shell-scripts.test.ts`
+
+Result: passed before full gate execution. Focused shell-script coverage ran 14 tests, including static coverage for timestamped backup output locking and existing encrypted dump/checksum refusal.
+
+Command: `bash -n scripts/backup/backup-postgres.sh`
+
+Result: passed. Backup script shell syntax is valid.
+
+Command: `npm ci`
+
+Result: passed. Installed 118 packages, audited 119 packages, and found 0 vulnerabilities.
+
+Command: `npm run artifacts:scan`
+
+Result: passed. Tracked artifact scan reported `tracked_artifact_scan=pass`.
+
+Command: `npm run lint`
+
+Result: passed. TypeScript compile check completed with no errors.
+
+Command: `npm test -- --silent`
+
+Result: passed. Vitest ran 17 files and 186 tests.
+
+Command: `npm run build`
+
+Result: passed. Production TypeScript build completed.
+
+Command: `test ! -d dist/tests`
+
+Result: passed. Production build output still excludes compiled test files.
+
+Command: `npm audit --audit-level=moderate`
+
+Result: passed. Audit found 0 vulnerabilities.
+
+Command: `npm run test:smoke`
+
+Result: passed. Smoke returned `ok=true`, with 9 questions, 22 options, and 7 messages.
+
+Command: `npm run test:integration`
+
+Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions checked.
+
+Command: `git diff --check`
+
+Result: passed. No whitespace errors were reported.
