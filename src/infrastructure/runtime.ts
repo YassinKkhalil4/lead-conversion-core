@@ -338,22 +338,43 @@ export class RuntimeOutboxRepository {
     payload: Record<string, unknown>;
     maxAttempts?: number;
   }): Promise<string> {
+    const aggregateKey = input.aggregateKey || '';
+    const maxAttempts = input.maxAttempts || 10;
+    const payloadJson = JSON.stringify(input.payload);
     const result = await client.query<{ outbox_command_id: string }>(
       `INSERT INTO runtime.outbox_commands
         (command_type, destination, idempotency_key, aggregate_key, payload_json, max_attempts)
        VALUES ($1, $2, $3, $4, $5::jsonb, $6)
-       ON CONFLICT (idempotency_key) DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key
+       ON CONFLICT (idempotency_key) DO NOTHING
        RETURNING outbox_command_id`,
       [
         input.commandType,
         input.destination,
         input.idempotencyKey,
-        input.aggregateKey || '',
-        JSON.stringify(input.payload),
-        input.maxAttempts || 10,
+        aggregateKey,
+        payloadJson,
+        maxAttempts,
       ],
     );
-    const id = result.rows[0]?.outbox_command_id;
+    let id = result.rows[0]?.outbox_command_id;
+    if (!id) {
+      const existing = await client.query<{ outbox_command_id: string; same_semantics: boolean }>(
+        `SELECT outbox_command_id,
+                command_type=$2
+            AND destination=$3
+            AND aggregate_key=$4
+            AND payload_json=$5::jsonb
+            AND max_attempts=$6 AS same_semantics
+         FROM runtime.outbox_commands
+         WHERE idempotency_key=$1`,
+        [input.idempotencyKey, input.commandType, input.destination, aggregateKey, payloadJson, maxAttempts],
+      );
+      const row = existing.rows[0];
+      if (row && !row.same_semantics) {
+        throw new Error(`outbox_idempotency_key_collision:${input.idempotencyKey}`);
+      }
+      id = row?.outbox_command_id;
+    }
     if (!id) throw new Error('outbox_command_not_created');
     return id;
   }
@@ -547,24 +568,48 @@ export class JobRepository {
     recurrence?: Record<string, unknown>;
     maxAttempts?: number;
   }): Promise<string> {
+    const aggregateKey = input.aggregateKey || '';
+    const payloadJson = JSON.stringify(input.payload || {});
+    const recurrenceJson = input.recurrence ? JSON.stringify(input.recurrence) : null;
+    const maxAttempts = input.maxAttempts || 10;
     const result = await client.query<{ scheduled_job_id: string }>(
       `INSERT INTO runtime.scheduled_jobs
         (job_key, job_type, aggregate_key, payload_json, due_at, timezone, recurrence_json, max_attempts)
        VALUES ($1, $2, $3, $4::jsonb, $5::timestamptz, $6, $7::jsonb, $8)
-       ON CONFLICT (job_key) DO UPDATE SET job_key=EXCLUDED.job_key
+       ON CONFLICT (job_key) DO NOTHING
        RETURNING scheduled_job_id`,
       [
         input.jobKey,
         input.jobType,
-        input.aggregateKey || '',
-        JSON.stringify(input.payload || {}),
+        aggregateKey,
+        payloadJson,
         input.dueAt,
         input.timezone,
-        input.recurrence ? JSON.stringify(input.recurrence) : null,
-        input.maxAttempts || 10,
+        recurrenceJson,
+        maxAttempts,
       ],
     );
-    const id = result.rows[0]?.scheduled_job_id;
+    let id = result.rows[0]?.scheduled_job_id;
+    if (!id) {
+      const existing = await client.query<{ scheduled_job_id: string; same_semantics: boolean }>(
+        `SELECT scheduled_job_id,
+                job_type=$2
+            AND aggregate_key=$3
+            AND payload_json=$4::jsonb
+            AND due_at=$5::timestamptz
+            AND timezone=$6
+            AND COALESCE(recurrence_json, 'null'::jsonb) = COALESCE($7::jsonb, 'null'::jsonb)
+            AND max_attempts=$8 AS same_semantics
+         FROM runtime.scheduled_jobs
+         WHERE job_key=$1`,
+        [input.jobKey, input.jobType, aggregateKey, payloadJson, input.dueAt, input.timezone, recurrenceJson, maxAttempts],
+      );
+      const row = existing.rows[0];
+      if (row && !row.same_semantics) {
+        throw new Error(`scheduled_job_key_collision:${input.jobKey}`);
+      }
+      id = row?.scheduled_job_id;
+    }
     if (!id) throw new Error('scheduled_job_not_created');
     return id;
   }

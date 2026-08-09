@@ -715,6 +715,37 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('1');
   });
 
+  it('rejects outbox idempotency key collisions with different command semantics', async () => {
+    const outbox = new runtime.RuntimeOutboxRepository();
+    const first = await outbox.enqueue(db.pool, {
+      commandType: 'whatsapp.send_message',
+      destination: '+201000000001',
+      idempotencyKey: 'message:collision-test',
+      aggregateKey: 'lead-collision',
+      payload: { text: 'first' },
+      maxAttempts: 5,
+    });
+    const duplicate = await outbox.enqueue(db.pool, {
+      commandType: 'whatsapp.send_message',
+      destination: '+201000000001',
+      idempotencyKey: 'message:collision-test',
+      aggregateKey: 'lead-collision',
+      payload: { text: 'first' },
+      maxAttempts: 5,
+    });
+    expect(duplicate).toBe(first);
+
+    await expect(outbox.enqueue(db.pool, {
+      commandType: 'whatsapp.send_message',
+      destination: '+201000000002',
+      idempotencyKey: 'message:collision-test',
+      aggregateKey: 'lead-collision',
+      payload: { text: 'changed' },
+      maxAttempts: 5,
+    })).rejects.toThrow(/outbox_idempotency_key_collision:message:collision-test/);
+    expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands WHERE idempotency_key=$1', ['message:collision-test'])).rows[0]?.count).toBe('1');
+  });
+
   it('prevents concurrent outbox claims, recovers expired leases, and avoids blind duplicate sends after ambiguous delivery', async () => {
     const outbox = new runtime.RuntimeOutboxRepository();
     const commandId = await enqueueOutbox();
@@ -807,6 +838,13 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       payload: { leadId: 'lead-1' },
     });
     expect(second).toBe(first);
+    await expect(jobs.schedule(db.pool, {
+      jobKey: 'followup:lead-1:slot-1',
+      jobType: 'followup',
+      dueAt,
+      timezone: 'Africa/Cairo',
+      payload: { leadId: 'lead-2' },
+    })).rejects.toThrow(/scheduled_job_key_collision:followup:lead-1:slot-1/);
     expect((await db.pool.query('SELECT count(*) FROM runtime.scheduled_jobs')).rows[0]?.count).toBe('1');
     await jobs.cancel('followup:lead-1:slot-1', 'superseded by operator');
     expect(await jobs.claim('scheduler-a')).toHaveLength(0);
