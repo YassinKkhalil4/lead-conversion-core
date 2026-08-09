@@ -861,3 +861,12 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts` passed with 12 tests.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 184 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `add8a1e`: Reject duplicate operator env keys.
+
+## 2026-08-09 Parsed Env Temp File Permissions
+
+- Implementation slice: Hardened `scripts/verify-deployment.sh` and `scripts/shadow-sequence.sh` so parsed env assignment temp files are chmodded `600` before secret-bearing values are written.
+- Implementation slice: Added static ingress and shell-script coverage proving both operator scripts preserve the private parsed-env temp-file permission step.
+- Decision update: Expanded DEC-079 to record private temp-file handling for parsed env assignments.
+- Verification: `npx vitest run tests/shell-scripts.test.ts tests/ingress-gating.test.ts` passed with 2 files and 20 tests.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 184 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `c39e7f4`: Protect parsed env temp files.

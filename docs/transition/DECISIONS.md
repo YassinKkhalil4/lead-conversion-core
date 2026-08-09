@@ -698,8 +698,8 @@ Date: 2026-08-09
 
 ## DEC-079: Operator Env Files Are Parsed, Not Sourced
 
-Decision: Operator shell scripts that need `.env` values load assignments through `scripts/ops/read-env-file.py`, exporting parsed `KEY=value` records without `source`, `eval`, shell command execution, or duplicate-key override behavior.
+Decision: Operator shell scripts that need `.env` values load assignments through `scripts/ops/read-env-file.py`, exporting parsed `KEY=value` records without `source`, `eval`, shell command execution, or duplicate-key override behavior. Temporary files that hold parsed env assignments are explicitly chmodded private before values are written.
 
-Reason: Deployment verification and shadow scripts read secret-bearing env files. Sourcing an env file can execute command substitutions or arbitrary shell content before verification begins, and duplicate route flags or secrets can make the effective operator configuration ambiguous. A safe parser keeps env loading compatible with simple dotenv syntax while failing closed on malformed or duplicate assignments.
+Reason: Deployment verification and shadow scripts read secret-bearing env files. Sourcing an env file can execute command substitutions or arbitrary shell content before verification begins, duplicate route flags or secrets can make the effective operator configuration ambiguous, and parsed assignment temp files can briefly contain secrets. A safe parser plus private temp files keeps env loading compatible with simple dotenv syntax while failing closed on malformed or duplicate assignments.
 
 Date: 2026-08-09
