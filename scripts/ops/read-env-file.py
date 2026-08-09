@@ -47,8 +47,12 @@ def parse_value(value: str) -> str:
             fail(f"Invalid quoted environment value: {error}")
         if not isinstance(parsed, str):
             fail("Quoted environment value did not parse as a string")
-        return parsed
-    return strip_inline_comment(value)
+        result = parsed
+    else:
+        result = strip_inline_comment(value)
+    if any(char in result for char in ("\0", "\n", "\r")):
+        fail("Environment values must not contain NUL or newline characters")
+    return result
 
 
 def main() -> None:

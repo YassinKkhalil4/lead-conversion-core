@@ -94,6 +94,23 @@ describe('shell scripts', () => {
     }
   });
 
+  it('rejects env values that decode to NUL or newline characters', () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-control-env.'));
+    try {
+      const nulEnvFile = join(root, 'nul.env');
+      const newlineEnvFile = join(root, 'newline.env');
+      writeFileSync(nulEnvFile, 'EDGE_SHARED_SECRET="prefix\\0suffix"\n');
+      writeFileSync(newlineEnvFile, 'EDGE_SHARED_SECRET="prefix\\nsuffix"\n');
+
+      for (const envFile of [nulEnvFile, newlineEnvFile]) {
+        expect(() => execFileSync('python3', ['scripts/ops/read-env-file.py', envFile], { stdio: 'pipe' }))
+          .toThrow(/Environment values must not contain NUL or newline characters/);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('keeps generated env secrets out of Python process arguments', () => {
     const script = readFileSync('scripts/generate-env.sh', 'utf8');
     expect(script).not.toContain('python3 - "$DB_PASSWORD" "$EDGE_SECRET" "$INTERNAL_SECRET"');
