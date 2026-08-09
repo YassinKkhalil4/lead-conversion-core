@@ -21,6 +21,13 @@ export function assertAppliedChecksum(input: {
   return 'valid';
 }
 
+export function parseArgs(argv: string[]): void {
+  for (const arg of argv) {
+    if (/[\u0000-\u001f\u007f]/.test(arg)) throw new Error('Invalid migrate argument');
+    throw new Error('Unknown migrate argument');
+  }
+}
+
 export async function runMigrations(): Promise<void> {
   const [{ pool, closePool }, { logger }] = await Promise.all([
     import('../src/db/pool.js'),
@@ -93,8 +100,13 @@ export async function runMigrations(): Promise<void> {
   }
 }
 
+export async function runCli(argv = process.argv.slice(2)): Promise<void> {
+  parseArgs(argv);
+  await runMigrations();
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
-  runMigrations().catch((error) => {
+  runCli().catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Migration failed: ${message}`);
     process.exitCode = 1;

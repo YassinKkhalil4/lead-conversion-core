@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertAppliedChecksum, checksumSql } from '../scripts/migrate.js';
+import { assertAppliedChecksum, checksumSql, parseArgs } from '../scripts/migrate.js';
 
 describe('migration checksums', () => {
   it('computes stable sha256 checksums', () => {
@@ -31,5 +31,12 @@ describe('migration checksums', () => {
       storedChecksum: null,
       currentChecksum: checksumSql('current'),
     })).toBe('needs_backfill');
+  });
+
+  it('rejects migration CLI arguments before opening PostgreSQL', () => {
+    expect(parseArgs([])).toBeUndefined();
+    expect(() => parseArgs(['--path=migrations'])).toThrow(/Unknown migrate argument/);
+    expect(() => parseArgs(['unexpected'])).toThrow(/Unknown migrate argument/);
+    expect(() => parseArgs(['unexpected\n'])).toThrow(/Invalid migrate argument/);
   });
 });

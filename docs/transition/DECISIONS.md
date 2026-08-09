@@ -767,3 +767,11 @@ Decision: `npm run seed` accepts no operator arguments and rejects unknown or co
 Reason: Seed mutates configuration authority. Silently ignoring typoed arguments such as an intended input path can publish the wrong seed source or create misleading bootstrap evidence.
 
 Date: 2026-08-09
+
+## DEC-088: Migrator CLI Is A Closed No-Argument Command
+
+Decision: `npm run migrate` and `npm run migrate:prod` accept no operator arguments and reject unknown or control-character-bearing arguments before importing database runtime modules or opening PostgreSQL.
+
+Reason: The migrator mutates schema authority. Ignoring typoed flags, alternate migration paths, or unsafe argument text can create misleading migration evidence or run against the wrong operator intent.
+
+Date: 2026-08-09
