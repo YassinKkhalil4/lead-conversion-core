@@ -957,3 +957,13 @@
 - Verification: `npx vitest run tests/runtime.integration.test.ts -t "seeds configuration|publishes immutable versioned configuration|activates and rolls back"` passed with 1 file, 3 tests, and 90 skipped by filter.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 196 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `a4f2b5e`: Publish seed config through versioned authority.
+
+## 2026-08-09 Seed CLI Argument Hardening
+
+- Implementation slice: Refactored `scripts/seed.ts` to export a pure no-argument parser, run only under direct CLI invocation, and keep pool cleanup in the wrapper.
+- Implementation slice: `npm run seed` now rejects unknown or control-character-bearing arguments before querying PostgreSQL or publishing seed configuration.
+- Implementation slice: Added shell-script parser coverage proving seed arguments fail closed while the existing PostgreSQL seed authority test remains green.
+- Decision: Added DEC-087. Seed is a closed no-argument bootstrap command because ignored arguments could publish the wrong source while appearing successful.
+- Verification: `npx vitest run tests/shell-scripts.test.ts tests/runtime.integration.test.ts -t "seed CLI|seeds configuration"` passed with 2 files, 2 tests, and 111 skipped by filter.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 197 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `28aba0d`: Harden seed CLI arguments.
