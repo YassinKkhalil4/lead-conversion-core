@@ -695,3 +695,11 @@ Decision: Deployment verification and shadow-sequence probes derive durable even
 Reason: Direct ingress, n8n compatibility, and shadow probes write through durable idempotency boundaries. Second-resolution event IDs can collide when operators rerun checks quickly, producing duplicate durable receipts that look like stale success. Run-scoped identities keep verification evidence tied to the current operator run without using customer data or secrets.
 
 Date: 2026-08-09
+
+## DEC-079: Operator Env Files Are Parsed, Not Sourced
+
+Decision: Operator shell scripts that need `.env` values load assignments through `scripts/ops/read-env-file.py`, exporting parsed `KEY=value` records without `source`, `eval`, or shell command execution.
+
+Reason: Deployment verification and shadow scripts read secret-bearing env files. Sourcing an env file can execute command substitutions or arbitrary shell content before verification begins. A safe parser keeps env loading compatible with simple dotenv syntax while failing closed on malformed assignments.
+
+Date: 2026-08-09

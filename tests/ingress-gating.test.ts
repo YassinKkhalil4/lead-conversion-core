@@ -479,6 +479,8 @@ describe('direct ingress route gates', () => {
     expect(script).toContain('-H "@$tmp_edge_header"');
     expect(script).not.toContain('set -a');
     expect(script).not.toContain('set +a');
+    expect(script).not.toContain('source "$ENV_FILE"');
+    expect(script).toContain('python3 scripts/ops/read-env-file.py "$file"');
     expect(script).not.toContain('status_request "$BASE/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=$META_WEBHOOK_VERIFY_TOKEN');
     expect(script).toContain('status_request --config "$tmp_meta_curl_config"');
     expect(script).toContain('status_request --config "$tmp_meta_post_config"');

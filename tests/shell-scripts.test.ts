@@ -30,17 +30,51 @@ describe('shell scripts', () => {
       '-c',
       "from pathlib import Path; compile(Path('scripts/backup/write-pg-service.py').read_text(), 'scripts/backup/write-pg-service.py', 'exec')",
     ], { stdio: 'pipe' });
+    execFileSync('python3', [
+      '-c',
+      "from pathlib import Path; compile(Path('scripts/ops/read-env-file.py').read_text(), 'scripts/ops/read-env-file.py', 'exec')",
+    ], { stdio: 'pipe' });
   });
 
   it('keeps shadow sequence secrets out of curl process arguments', () => {
     const script = readFileSync('scripts/shadow-sequence.sh', 'utf8');
     expect(script).not.toContain('set -a');
     expect(script).not.toContain('set +a');
+    expect(script).not.toContain('source .env');
     expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
     expect(script).not.toContain("-H 'X-Edge-Secret: $EDGE_SHARED_SECRET'");
     expect(script).toContain('-H "@$tmp_edge_header"');
+    expect(script).toContain('python3 scripts/ops/read-env-file.py "$file"');
     expect(script).toContain('SHADOW_SEQUENCE_RUN_ID="${SHADOW_SEQUENCE_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"');
     expect(script).not.toContain('local event="sequence-$(date +%s)-$COUNTER"');
+  });
+
+  it('loads env files without executing shell command substitutions', () => {
+    const root = mkdtempSync(join(tmpdir(), 'lead-core-safe-env.'));
+    try {
+      const marker = join(root, 'executed');
+      const envFile = join(root, 'operator.env');
+      writeFileSync(envFile, [
+        '# verifier env',
+        'DIRECT_LEAD_INGRESS_ENABLED=true',
+        `EDGE_SHARED_SECRET=$(touch ${marker})`,
+        'QUOTED_VALUE="hello world"',
+        'INLINE_COMMENT=value # ignored',
+        'export EXPORTED_VALUE=ok',
+      ].join('\n'));
+
+      const output = execFileSync('python3', ['scripts/ops/read-env-file.py', envFile]);
+      const assignments = output.toString('utf8').split('\0').filter(Boolean);
+
+      expect(assignments).toContain('DIRECT_LEAD_INGRESS_ENABLED=true');
+      expect(assignments).toContain(`EDGE_SHARED_SECRET=$(touch ${marker})`);
+      expect(assignments).toContain('QUOTED_VALUE=hello world');
+      expect(assignments).toContain('INLINE_COMMENT=value');
+      expect(assignments).toContain('EXPORTED_VALUE=ok');
+      expect(() => readFileSync(marker, 'utf8')).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('keeps generated env secrets out of Python process arguments', () => {

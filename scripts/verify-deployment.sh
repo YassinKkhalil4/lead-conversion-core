@@ -19,7 +19,7 @@ usage() {
 Usage: scripts/verify-deployment.sh [options]
 
 Options:
-  --env-file=PATH                 Environment file to source. Defaults to .env.
+  --env-file=PATH                 Environment file to load without shell execution. Defaults to .env.
   --base-url=URL                  Edge base URL. Defaults to http://127.0.0.1:$EDGE_PORT.
   --skip-ready                    Skip /ready check.
   --skip-shadow                   Skip /v1/shadow/evaluate check.
@@ -54,7 +54,21 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-source "$ENV_FILE"
+load_env_file() {
+  local file="$1"
+  local tmp_assignments
+  tmp_assignments="$(mktemp)"
+  if ! python3 scripts/ops/read-env-file.py "$file" > "$tmp_assignments"; then
+    rm -f "$tmp_assignments"
+    return 1
+  fi
+  while IFS= read -r -d '' assignment; do
+    export "$assignment"
+  done < "$tmp_assignments"
+  rm -f "$tmp_assignments"
+}
+
+load_env_file "$ENV_FILE"
 
 BASE="${BASE:-http://127.0.0.1:${EDGE_PORT:-8080}}"
 EXPECT_DIRECT_META="${EXPECT_DIRECT_META:-$([[ ${DIRECT_META_WEBHOOK_ENABLED:-false} == "true" ]] && echo enabled || echo disabled)}"
