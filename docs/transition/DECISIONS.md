@@ -727,3 +727,11 @@ Decision: `npm run calendar:reconcile` accepts only the closed command set `list
 Reason: Calendar reconciliation is an operator mutation path for ambiguous provider creates. A typoed flag, malformed UUID, unsafe provider event ID, or ambiguous numeric limit must fail before any PostgreSQL query or durable state transition can occur.
 
 Date: 2026-08-09
+
+## DEC-083: Versioned Configuration CLI Fails Closed On Ambiguous Arguments
+
+Decision: `npm run config` parses command arguments before constructing the configuration service, accepts only the closed command set `validate`, `diff`, `publish`, `active`, and `rollback`, rejects command-inappropriate or duplicate flags, rejects simultaneous `--input` and `--airtable-export` source selection, requires `--version` for rollback, and rejects empty or control-character-bearing source, client, actor, and version values.
+
+Reason: Configuration publish and rollback update immutable configuration records, active pointers, and legacy rollback snapshots. Ambiguous source selection or typoed operator flags must fail before PostgreSQL access so configuration authority remains explicit, diffable, and auditable.
+
+Date: 2026-08-09

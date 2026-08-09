@@ -308,4 +308,37 @@ describe('shell scripts', () => {
     expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason='])).toThrow(/Missing calendar reconciliation argument: --reason/);
     expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason=operator verified', '--operator-id=ops\ncalendar'])).toThrow(/Invalid calendar reconciliation argument: --operator-id/);
   });
+
+  it('fails versioned configuration CLI commands on ambiguous operator arguments before querying PostgreSQL', async () => {
+    Object.assign(process.env, cliEnv);
+    const { parseArgs: parseConfigArgs } = await import('../scripts/config.js');
+
+    expect(parseConfigArgs([], 'config/seed-real-estate.json')).toMatchObject({
+      command: 'validate',
+      sourcePath: join(process.cwd(), 'config/seed-real-estate.json'),
+      airtableExportDir: '',
+      clientRecordId: null,
+      actor: 'operator',
+    });
+    expect(parseConfigArgs(['publish', '--input=config/seed-real-estate.json', '--client-record-id=recCLIENT01', '--actor=ops-config'], 'config/default.json')).toMatchObject({
+      command: 'publish',
+      sourcePath: join(process.cwd(), 'config/seed-real-estate.json'),
+      clientRecordId: 'recCLIENT01',
+      actor: 'ops-config',
+    });
+    expect(parseConfigArgs(['rollback', '--version=version-1', '--actor=ops-config'], 'config/default.json')).toMatchObject({
+      command: 'rollback',
+      versionKey: 'version-1',
+      actor: 'ops-config',
+    });
+
+    expect(() => parseConfigArgs(['publish', '--input=config/a.json', '--airtable-export=exports/config'], 'config/default.json')).toThrow(/config_source_argument_conflict/);
+    expect(() => parseConfigArgs(['publish', '--input=config/a.json', '--input=config/b.json'], 'config/default.json')).toThrow(/Duplicate config argument/);
+    expect(() => parseConfigArgs(['rollback'], 'config/default.json')).toThrow(/rollback_requires_--version/);
+    expect(() => parseConfigArgs(['active', '--actor=ops-config'], 'config/default.json')).toThrow(/Unknown config argument/);
+    expect(() => parseConfigArgs(['validate', '--actor=ops-config'], 'config/default.json')).toThrow(/Unknown config argument/);
+    expect(() => parseConfigArgs(['publish', '--actor=ops\nconfig'], 'config/default.json')).toThrow(/Invalid config argument: --actor/);
+    expect(() => parseConfigArgs(['publish', '--client-record-id='], 'config/default.json')).toThrow(/Missing config argument: --client-record-id/);
+    expect(() => parseConfigArgs(['delete', '--version=version-1'], 'config/default.json')).toThrow(/unknown_config_command:delete/);
+  });
 });
