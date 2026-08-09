@@ -811,3 +811,13 @@
 - Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 parser tests and 8 skipped by filter before and after `npm ci`.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `0d690d7`: Require canonical readiness thresholds.
+
+## 2026-08-09 Readiness Threshold Safe Integer Enforcement
+
+- Implementation slice: Tightened readiness threshold parsing to use `Number.isSafeInteger` after canonical base-10 syntax validation, rejecting threshold values that would lose precision during JavaScript numeric conversion.
+- Implementation slice: Added focused parser tests for unsafe cutover and decommission threshold values above `Number.MAX_SAFE_INTEGER`.
+- Decision update: Expanded DEC-076 and runbooks to specify safe integers, not merely syntactic integers.
+- Verification: `npm run lint` passed.
+- Verification: `npx vitest run tests/shell-scripts.test.ts -t "readiness CLI"` passed with 2 parser tests and 8 skipped by filter before and after `npm ci`.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, and `npm run test:integration` passed; Vitest ran 17 files and 181 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `89fa366`: Reject unsafe readiness thresholds.
