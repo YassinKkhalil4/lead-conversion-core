@@ -842,3 +842,13 @@
 - Verification: `npx vitest run tests/ingress-gating.test.ts tests/shell-scripts.test.ts` passed with 2 files and 18 tests.
 - Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 182 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
 - Commit `cf86d71`: Scope deployment probe identities.
+
+## 2026-08-09 Operator Env File Safe Parsing
+
+- Implementation slice: Added `scripts/ops/read-env-file.py` to parse simple dotenv-style `KEY=value` assignments and emit NUL-delimited assignments for shell export without `source` or `eval`.
+- Implementation slice: Updated `scripts/verify-deployment.sh` and `scripts/shadow-sequence.sh` to load env files through the parser, fail closed on parse errors before exporting values, and continue passing sensitive curl inputs through private temporary files.
+- Implementation slice: Added shell-script coverage that compiles the parser, proves command substitutions remain literal data, prevents `source` regressions, and verifies the verifier still uses the safe loader.
+- Decision: Added DEC-079. Operator env files are parsed, not sourced, because these scripts load secret-bearing env files and must not execute env-file shell content.
+- Verification: `npx vitest run tests/shell-scripts.test.ts tests/ingress-gating.test.ts` passed with 2 files and 19 tests; `bash -n scripts/verify-deployment.sh` and `bash -n scripts/shadow-sequence.sh` passed.
+- Verification: `npm ci`, `npm run artifacts:scan`, `npm run lint`, `npm test -- --silent`, `npm run build`, `test ! -d dist/tests`, `npm audit --audit-level=moderate`, `npm run test:smoke`, `npm run test:integration`, and `git diff --check` passed; Vitest ran 17 files and 183 tests, audit found 0 vulnerabilities, tracked artifact scan passed, smoke returned `ok=true`, and integration smoke returned `ok=true`.
+- Commit `e784a57`: Parse operator env files safely.
