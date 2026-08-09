@@ -674,8 +674,8 @@ Date: 2026-08-01
 
 ## DEC-076: Readiness Threshold Arguments Are Non-Negative Integers
 
-Decision: `npm run cutover:readiness` and `npm run decommission:readiness` accept only canonical base-10 non-negative integer threshold strings and reject decimal, negative, empty, infinite, scientific-notation, hexadecimal, whitespace-padded, or otherwise non-numeric threshold values before querying PostgreSQL.
+Decision: `npm run cutover:readiness` and `npm run decommission:readiness` accept only canonical base-10 non-negative safe-integer threshold strings and reject decimal, negative, empty, infinite, unsafe, scientific-notation, hexadecimal, whitespace-padded, or otherwise non-numeric threshold values before querying PostgreSQL.
 
-Reason: Cutover and decommission thresholds represent counts, seconds, and whole-day windows used directly in PostgreSQL queue and interval checks. Operator typos and alternate JavaScript number syntaxes must fail closed at the parser boundary rather than producing ambiguous readiness evidence.
+Reason: Cutover and decommission thresholds represent counts, seconds, and whole-day windows used directly in PostgreSQL queue and interval checks. Operator typos, alternate JavaScript number syntaxes, and values that cannot be represented precisely must fail closed at the parser boundary rather than producing ambiguous readiness evidence.
 
 Date: 2026-08-09

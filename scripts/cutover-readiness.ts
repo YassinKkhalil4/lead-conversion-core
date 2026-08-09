@@ -13,7 +13,7 @@ const numericArguments = new Set([
 function parseNumberArg(name: string, value: string): number {
   if (!/^(0|[1-9]\d*)$/.test(value)) throw new Error(`Invalid numeric argument: ${name}`);
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) throw new Error(`Invalid numeric argument: ${name}`);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`Invalid numeric argument: ${name}`);
   return parsed;
 }
 

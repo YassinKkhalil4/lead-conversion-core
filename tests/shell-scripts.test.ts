@@ -156,5 +156,7 @@ describe('shell scripts', () => {
     expect(() => parseCutoverReadinessArgs(['--max-pending-outbox=1e3'])).toThrow(/Invalid numeric argument/);
     expect(() => parseDecommissionReadinessArgs(['--max-worker-heartbeat-age-seconds=0x10'])).toThrow(/Invalid numeric argument/);
     expect(() => parseCutoverReadinessArgs(['--max-pending-inbox= 1'])).toThrow(/Invalid numeric argument/);
+    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox=9007199254740993'])).toThrow(/Invalid numeric argument/);
+    expect(() => parseDecommissionReadinessArgs(['--min-completed-edge-qualifications=9007199254740993'])).toThrow(/Invalid numeric argument/);
   });
 });
