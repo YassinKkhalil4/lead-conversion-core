@@ -343,4 +343,18 @@ describe('shell scripts', () => {
     expect(() => parseConfigArgs(['publish', '--client-record-id='], 'config/default.json')).toThrow(/Missing config argument: --client-record-id/);
     expect(() => parseConfigArgs(['delete', '--version=version-1'], 'config/default.json')).toThrow(/unknown_config_command:delete/);
   });
+
+  it('fails legacy Airtable configuration sync CLI commands on ambiguous operator arguments before service use', async () => {
+    Object.assign(process.env, cliEnv);
+    const { parseArgs: parseSyncConfigArgs } = await import('../scripts/sync-config.js');
+
+    expect(parseSyncConfigArgs([])).toEqual({ clientRecordId: null });
+    expect(parseSyncConfigArgs(['--client-record-id=recCLIENT01'])).toEqual({ clientRecordId: 'recCLIENT01' });
+
+    expect(() => parseSyncConfigArgs(['recCLIENT01'])).toThrow(/Unknown sync-config argument/);
+    expect(() => parseSyncConfigArgs(['--client-record-id=recCLIENT01', '--client-record-id=recCLIENT02'])).toThrow(/Duplicate sync-config argument/);
+    expect(() => parseSyncConfigArgs(['--client-record-id='])).toThrow(/Missing sync-config argument: --client-record-id/);
+    expect(() => parseSyncConfigArgs(['--client-record-id=recCLIENT01\n'])).toThrow(/Invalid sync-config argument/);
+    expect(() => parseSyncConfigArgs(['--unknown=recCLIENT01'])).toThrow(/Unknown sync-config argument/);
+  });
 });

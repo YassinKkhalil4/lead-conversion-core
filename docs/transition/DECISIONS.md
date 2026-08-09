@@ -743,3 +743,11 @@ Decision: `npm run import:airtable` requires explicit `--input=<dir>`, accepts o
 Reason: Airtable import `--apply` writes raw records, entity maps, rejects, and target rows; reconciliation `--record-results` writes migration check evidence used by decommission readiness. Ambiguous operator input must fail closed so migration evidence remains traceable to one explicit source and one explicit import run.
 
 Date: 2026-08-09
+
+## DEC-085: Legacy Config Import And Airtable Sync Are Disabled Compatibility Paths
+
+Decision: `/internal/config/import`, `/internal/config/sync`, and `npm run sync-config` remain only as explicit legacy compatibility tooling. They are disabled by default behind `LEGACY_CONFIG_IMPORT_ENABLED=false` and `LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED=false`; live Airtable sync additionally requires `AIRTABLE_TOKEN`; normal config authority is versioned config publish and rollback.
+
+Reason: These legacy paths write `edge_config_snapshots` outside immutable `configuration.active_versions` and `configuration.versions`. Keeping them disabled by default preserves rollback tooling without allowing accidental Airtable or ad hoc config writes to become live authority.
+
+Date: 2026-08-09

@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { compileConfig } from '../domain/compiler.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
@@ -136,6 +137,7 @@ const ownershipSchema = z.object({
 });
 
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
+  const env = getEnv();
   const syncService = new ConfigSyncService();
   const configs = new ConfigRepository();
   const messageRequests = new MessageRequestService();
@@ -144,6 +146,10 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/internal/config/import', async (request: FastifyRequest, reply: FastifyReply) => {
     requireInternalSecret(request);
+    if (!env.LEGACY_CONFIG_IMPORT_ENABLED) {
+      reply.code(503);
+      return { ok: false, error: 'legacy_config_import_disabled' };
+    }
     const parsed = configImportSchema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400);
@@ -169,6 +175,10 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/internal/config/sync', async (request: FastifyRequest, reply: FastifyReply) => {
     requireInternalSecret(request);
+    if (!env.LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED) {
+      reply.code(503);
+      return { ok: false, error: 'legacy_airtable_config_sync_disabled' };
+    }
     const parsed = syncSchema.safeParse(request.body || {});
     if (!parsed.success) {
       reply.code(400);

@@ -40,6 +40,8 @@ const baseSchema = z.object({
   AIRTABLE_QUESTIONS_TABLE: z.string().default('Questions'),
   AIRTABLE_OPTIONS_TABLE: z.string().default('Question Options'),
   AIRTABLE_MESSAGES_TABLE: z.string().default('Conversation Messages'),
+  LEGACY_CONFIG_IMPORT_ENABLED: booleanString.default('false'),
+  LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: booleanString.default('false'),
   SEED_CONFIG_PATH: z.string().default('./config/seed-real-estate.json'),
 });
 
@@ -94,6 +96,8 @@ const schema = baseSchema.superRefine((env, ctx) => {
   }
 
   requireConfigured(env.GOOGLE_CALENDAR_ENABLED, 'GOOGLE_CALENDAR_ACCESS_TOKEN', 'GOOGLE_CALENDAR_ACCESS_TOKEN is required when GOOGLE_CALENDAR_ENABLED=true');
+
+  requireConfigured(env.LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED, 'AIRTABLE_TOKEN', 'AIRTABLE_TOKEN is required when LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED=true');
 });
 
 export type Env = z.infer<typeof schema>;

@@ -35,7 +35,25 @@ describe('environment contract', () => {
       DIRECT_META_WEBHOOK_ENABLED: false,
       DIRECT_META_SEND_ENABLED: false,
       GOOGLE_CALENDAR_ENABLED: false,
+      LEGACY_CONFIG_IMPORT_ENABLED: false,
+      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: false,
     });
+  });
+
+  it('keeps legacy configuration mutation paths disabled unless explicitly configured', () => {
+    expect(parseEnv({
+      ...baseEnv,
+      LEGACY_CONFIG_IMPORT_ENABLED: 'true',
+    }).LEGACY_CONFIG_IMPORT_ENABLED).toBe(true);
+    expect(() => parseEnv({
+      ...baseEnv,
+      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: 'true',
+    })).toThrow(/AIRTABLE_TOKEN/);
+    expect(parseEnv({
+      ...baseEnv,
+      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: 'true',
+      AIRTABLE_TOKEN: 'test_airtable_token',
+    }).LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED).toBe(true);
   });
 
   it('requires legacy outbox target configuration when the legacy worker is enabled', () => {

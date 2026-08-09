@@ -109,6 +109,40 @@ describe('direct ingress route gates', () => {
     }
   });
 
+  it('keeps legacy configuration import and Airtable sync disabled by default', async () => {
+    const app = await buildAppWithEnv({
+      DIRECT_META_WEBHOOK_ENABLED: 'false',
+      DIRECT_LEAD_INGRESS_ENABLED: 'false',
+      N8N_COMPAT_ROUTES_ENABLED: 'false',
+      ACTIVE_TURN_COMPAT_ENABLED: 'false',
+      RUNTIME_WORKER_ENABLED: 'false',
+      META_STATUS_PROCESSOR_ENABLED: 'false',
+      LEGACY_CONFIG_IMPORT_ENABLED: 'false',
+      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: 'false',
+    });
+    try {
+      const importResponse = await app.inject({
+        method: 'POST',
+        url: '/internal/config/import',
+        headers: { 'x-internal-secret': 'test_internal_secret_123456' },
+        payload: {},
+      });
+      expect(importResponse.statusCode).toBe(503);
+      expect(importResponse.json()).toEqual({ ok: false, error: 'legacy_config_import_disabled' });
+
+      const syncResponse = await app.inject({
+        method: 'POST',
+        url: '/internal/config/sync',
+        headers: { 'x-internal-secret': 'test_internal_secret_123456' },
+        payload: {},
+      });
+      expect(syncResponse.statusCode).toBe(503);
+      expect(syncResponse.json()).toEqual({ ok: false, error: 'legacy_airtable_config_sync_disabled' });
+    } finally {
+      await app.close();
+    }
+  });
+
   it('verifies disabled direct ingress routes through the deployment verification script', async () => {
     const app = await buildAppWithEnv({
       DIRECT_META_WEBHOOK_ENABLED: 'false',

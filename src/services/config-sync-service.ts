@@ -12,6 +12,9 @@ export class ConfigSyncService {
 
   async sync(clientRecordId: string | null = null): Promise<CompiledConfig> {
     const env = getEnv();
+    if (!env.LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED) {
+      throw new Error('legacy_airtable_config_sync_disabled');
+    }
     const [questions, options, messages] = await Promise.all([
       this.airtable.listAll(env.AIRTABLE_QUESTIONS_TABLE),
       this.airtable.listAll(env.AIRTABLE_OPTIONS_TABLE),
