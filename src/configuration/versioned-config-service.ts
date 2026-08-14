@@ -4,8 +4,6 @@ import { pool } from '../db/pool.js';
 import { compileConfig, type CompileInput } from '../domain/compiler.js';
 import type { CompiledConfig } from '../domain/types.js';
 import { sha256Hex, stableJson } from '../infrastructure/runtime.js';
-import { ConfigRepository } from '../repositories/config-repository.js';
-import { loadAirtableConfigExport, type AirtableConfigExportSummary } from './airtable-config-source.js';
 
 type Db = typeof pool | PoolClient;
 
@@ -42,11 +40,6 @@ export interface PublishConfigResult {
   activeScopeKey: string;
 }
 
-export interface LoadedAirtableConfig {
-  config: CompiledConfig;
-  summary: AirtableConfigExportSummary;
-}
-
 export interface ActiveConfigResult {
   configurationVersionId: string;
   versionKey: string;
@@ -81,7 +74,6 @@ export function diffCompiledConfigs(from: CompiledConfig | null, to: CompiledCon
 }
 
 export class VersionedConfigService {
-  constructor(private readonly legacyRepository = new ConfigRepository()) {}
 
   async loadAndCompile(sourcePath: string, clientRecordId?: string | null): Promise<CompiledConfig> {
     const raw = JSON.parse(await readFile(sourcePath, 'utf8')) as CompileInput;
@@ -89,25 +81,6 @@ export class VersionedConfigService {
       ...raw,
       clientRecordId: clientRecordId ?? raw.clientRecordId ?? null,
     });
-  }
-
-  async loadAndCompileAirtableExport(inputDir: string, clientRecordId?: string | null): Promise<LoadedAirtableConfig> {
-    const loaded = await loadAirtableConfigExport(inputDir, clientRecordId ?? null);
-    if (loaded.summary.missingTables.length > 0 || loaded.summary.rejectedRecords > 0) {
-      throw new Error(`airtable_config_export_invalid:${JSON.stringify({
-        missingTables: loaded.summary.missingTables,
-        rejectedRecords: loaded.summary.rejectedRecords,
-        rejected: loaded.summary.rejected.map((record) => ({
-          tableName: record.tableName,
-          recordId: record.recordId,
-          reason: record.reason,
-        })),
-      })}`);
-    }
-    return {
-      config: compileConfig(loaded.input),
-      summary: loaded.summary,
-    };
   }
 
   validate(config: CompiledConfig): ConfigValidationResult {
@@ -192,7 +165,6 @@ export class VersionedConfigService {
           activated_at=now()`,
         [scope, recordId, row.configuration_version_id, input.activatedBy],
       );
-      await this.legacyRepository.save(row.config_json, client);
       await client.query('COMMIT');
       const active = await this.getActiveMetadata(scope);
       if (!active) throw new Error('active_configuration_not_found_after_activation');
@@ -212,20 +184,6 @@ export class VersionedConfigService {
       publishedBy: input.publishedBy,
       sourceKind: input.sourceKind || 'seed_json',
     });
-  }
-
-  async publishAirtableExport(input: {
-    inputDir: string;
-    clientRecordId?: string | null;
-    publishedBy: string;
-  }): Promise<PublishConfigResult & { sourceSummary: AirtableConfigExportSummary }> {
-    const loaded = await this.loadAndCompileAirtableExport(input.inputDir, input.clientRecordId);
-    const published = await this.publishCompiled(loaded.config, {
-      sourcePath: input.inputDir,
-      publishedBy: input.publishedBy,
-      sourceKind: 'airtable_export',
-    });
-    return { ...published, sourceSummary: loaded.summary };
   }
 
   private async publishCompiled(config: CompiledConfig, input: {
@@ -278,7 +236,6 @@ export class VersionedConfigService {
           activated_at=now()`,
         [scope, config.clientRecordId || '', versionId, input.publishedBy],
       );
-      await this.legacyRepository.save(config, client);
       await client.query('COMMIT');
       return {
         configurationVersionId: versionId,

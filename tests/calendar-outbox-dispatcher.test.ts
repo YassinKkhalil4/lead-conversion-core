@@ -26,6 +26,22 @@ function command(overrides: Partial<ClaimedOutboxCommand> = {}): ClaimedOutboxCo
   };
 }
 
+
+function tokenResponse(token = 'test-google-access-token', expiresIn = 3600) {
+  return new Response(
+    JSON.stringify({ access_token: token, expires_in: expiresIn }),
+    { status: 200, headers: { 'content-type': 'application/json' } },
+  );
+}
+
+function googleAdapter() {
+  return new GoogleCalendarAdapter({
+    clientId: 'test-google-client-id',
+    clientSecret: 'test-google-client-secret',
+    refreshToken: 'test-google-refresh-token',
+  });
+}
+
 function calendarCommand() {
   return {
     calendarId: 'calendar-primary',
@@ -163,15 +179,18 @@ describe('CalendarOutboxDispatcher', () => {
   });
 
   it('requires real Google credentials when constructing the adapter', () => {
-    expect(() => new GoogleCalendarAdapter({ accessToken: '' })).toThrow('google_calendar_access_token_required');
+    expect(() => new GoogleCalendarAdapter({ clientId: '', clientSecret: 'secret', refreshToken: 'refresh' })).toThrow('google_calendar_clientId_required');
   });
 
   it('caps numeric Google retry-after hints', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ error: { message: 'rate limited' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'retry-after': '999999' } },
-    )));
-    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL | Request) => {
+      if (String(url).includes('oauth2.googleapis.com/token')) return tokenResponse();
+      return new Response(
+        JSON.stringify({ error: { message: 'rate limited' } }),
+        { status: 429, headers: { 'content-type': 'application/json', 'retry-after': '999999' } },
+      );
+    }));
+    const adapter = googleAdapter();
 
     await expect(adapter.checkAvailability(calendarCommand())).resolves.toEqual({
       outcome: 'retryable',
@@ -184,11 +203,14 @@ describe('CalendarOutboxDispatcher', () => {
   it('parses date-based Google retry-after hints', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-31T09:00:00.000Z'));
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ error: { message: 'try later' } }),
-      { status: 503, headers: { 'content-type': 'application/json', 'retry-after': 'Fri, 31 Jul 2026 09:02:00 GMT' } },
-    )));
-    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL | Request) => {
+      if (String(url).includes('oauth2.googleapis.com/token')) return tokenResponse();
+      return new Response(
+        JSON.stringify({ error: { message: 'try later' } }),
+        { status: 503, headers: { 'content-type': 'application/json', 'retry-after': 'Fri, 31 Jul 2026 09:02:00 GMT' } },
+      );
+    }));
+    const adapter = googleAdapter();
 
     await expect(adapter.createEvent(calendarCommand())).resolves.toEqual({
       outcome: 'retryable',
@@ -198,11 +220,121 @@ describe('CalendarOutboxDispatcher', () => {
     });
   });
 
+  it('refreshes once and caches Google access tokens across calls', async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url) === 'https://tokens.test/google') return tokenResponse('cached-token');
+      expect(String((init?.headers as Record<string, string> | undefined)?.authorization || '')).toBe('Bearer cached-token');
+      return new Response(JSON.stringify({
+        calendars: { 'calendar-primary': { busy: [] } },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    const adapter = new GoogleCalendarAdapter({
+      clientId: 'test-google-client-id',
+      clientSecret: 'test-google-client-secret',
+      refreshToken: 'test-google-refresh-token',
+      fetchImpl: fetchMock as typeof fetch,
+      tokenEndpoint: 'https://tokens.test/google',
+    });
+
+    await expect(adapter.checkAvailability(calendarCommand())).resolves.toMatchObject({ outcome: 'available' });
+    await expect(adapter.checkAvailability(calendarCommand())).resolves.toMatchObject({ outcome: 'available' });
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === 'https://tokens.test/google')).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('freeBusy'))).toHaveLength(2);
+  });
+
+  it('refreshes Google access tokens again after simulated expiry', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-31T09:00:00.000Z'));
+    const tokens = ['token-before-expiry', 'token-after-expiry'];
+    const calendarAuthorizations: string[] = [];
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url) === 'https://tokens.test/google') return tokenResponse(tokens.shift() || 'unexpected-token', 1);
+      calendarAuthorizations.push(String((init?.headers as Record<string, string> | undefined)?.authorization || ''));
+      return new Response(JSON.stringify({
+        calendars: { 'calendar-primary': { busy: [] } },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    const adapter = new GoogleCalendarAdapter({
+      clientId: 'test-google-client-id',
+      clientSecret: 'test-google-client-secret',
+      refreshToken: 'test-google-refresh-token',
+      fetchImpl: fetchMock as typeof fetch,
+      tokenEndpoint: 'https://tokens.test/google',
+      tokenRefreshLeewayMs: 0,
+    });
+
+    await expect(adapter.checkAvailability(calendarCommand())).resolves.toMatchObject({ outcome: 'available' });
+    vi.setSystemTime(new Date('2026-07-31T09:01:01.000Z'));
+    await expect(adapter.checkAvailability(calendarCommand())).resolves.toMatchObject({ outcome: 'available' });
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === 'https://tokens.test/google')).toHaveLength(2);
+    expect(calendarAuthorizations).toEqual(['Bearer token-before-expiry', 'Bearer token-after-expiry']);
+  });
+
+  it('refreshes Google access tokens and retries once after authorization failure', async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url) === 'https://tokens.test/google') return tokenResponse(fetchMock.mock.calls.length === 1 ? 'expired-token' : 'fresh-token');
+      const authorization = String((init?.headers as Record<string, string> | undefined)?.authorization || '');
+      if (authorization.includes('expired-token')) return new Response(JSON.stringify({ error: 'expired' }), { status: 401 });
+      return new Response(JSON.stringify({ id: 'google-event-after-refresh' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    const adapter = new GoogleCalendarAdapter({
+      clientId: 'test-google-client-id',
+      clientSecret: 'test-google-client-secret',
+      refreshToken: 'test-google-refresh-token',
+      fetchImpl: fetchMock as typeof fetch,
+      tokenEndpoint: 'https://tokens.test/google',
+    });
+
+    await expect(adapter.createEvent(calendarCommand())).resolves.toMatchObject({
+      outcome: 'created',
+      providerEventId: 'google-event-after-refresh',
+    });
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === 'https://tokens.test/google')).toHaveLength(2);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/events'))).toHaveLength(2);
+  });
+
+  it('classifies token endpoint failures without using a stale cached token', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-31T09:00:00.000Z'));
+    let tokenCalls = 0;
+    const calendarAuthorizations: string[] = [];
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url) === 'https://tokens.test/google') {
+        tokenCalls += 1;
+        if (tokenCalls === 1) return tokenResponse('stale-after-expiry', 1);
+        return new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400, headers: { 'content-type': 'application/json' } });
+      }
+      calendarAuthorizations.push(String((init?.headers as Record<string, string> | undefined)?.authorization || ''));
+      return new Response(JSON.stringify({ id: 'google-event-before-expiry' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    const adapter = new GoogleCalendarAdapter({
+      clientId: 'test-google-client-id',
+      clientSecret: 'test-google-client-secret',
+      refreshToken: 'test-google-refresh-token',
+      fetchImpl: fetchMock as typeof fetch,
+      tokenEndpoint: 'https://tokens.test/google',
+      tokenRefreshLeewayMs: 0,
+    });
+
+    await expect(adapter.createEvent(calendarCommand())).resolves.toMatchObject({ outcome: 'created' });
+    vi.setSystemTime(new Date('2026-07-31T09:01:01.000Z'));
+    await expect(adapter.createEvent(calendarCommand())).resolves.toEqual({
+      outcome: 'delivery_unknown',
+      error: 'google_calendar_create_network:Error: google_calendar_token_refresh_rejected:400',
+      providerResponse: {},
+    });
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === 'https://tokens.test/google')).toHaveLength(2);
+    expect(calendarAuthorizations).toEqual(['Bearer stale-after-expiry']);
+  });
+
   it('classifies Google free/busy network failures as retryable before event creation', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => {
       throw new Error('network unavailable');
     }));
-    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+    const adapter = googleAdapter();
 
     await expect(adapter.checkAvailability({
       calendarId: 'calendar-primary',
@@ -223,7 +355,7 @@ describe('CalendarOutboxDispatcher', () => {
     vi.stubGlobal('fetch', vi.fn(async () => {
       throw new Error('socket closed after write');
     }));
-    const adapter = new GoogleCalendarAdapter({ accessToken: 'test-google-access-token' });
+    const adapter = googleAdapter();
 
     await expect(adapter.createEvent({
       calendarId: 'calendar-primary',

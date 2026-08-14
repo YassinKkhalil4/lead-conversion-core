@@ -1,15 +1,20 @@
 import { PassThrough } from 'node:stream';
+import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
+import { getEnv } from './config/env.js';
 import { logger } from './config/logger.js';
 import { healthRoutes } from './routes/health.js';
-import { activeRoutes } from './routes/active.js';
 import { internalRoutes } from './routes/internal.js';
 import { leadIngressRoutes } from './routes/lead-ingress.js';
 import { metaWebhookRoutes } from './routes/meta-webhooks.js';
-import { n8nCompatRoutes } from './routes/n8n-compat.js';
-import { shadowRoutes } from './routes/shadow.js';
+
+function requiresRawWebhookBody(method: string, url: string): boolean {
+  if (method !== 'POST') return false;
+  return url.startsWith('/webhooks/meta/whatsapp') || url.startsWith('/webhooks/leads/facebook');
+}
 
 export async function buildApp() {
+  const env = getEnv();
   const app = Fastify({
     loggerInstance: logger,
     bodyLimit: 1_000_000,
@@ -17,7 +22,7 @@ export async function buildApp() {
   });
 
   app.addHook('preParsing', (request, _reply, payload, done) => {
-    if (request.method !== 'POST' || !request.url.startsWith('/webhooks/meta/whatsapp')) {
+    if (!requiresRawWebhookBody(request.method, request.url)) {
       done(null, payload);
       return;
     }
@@ -36,13 +41,16 @@ export async function buildApp() {
     done(null, replay);
   });
 
+  await app.register(rateLimit, {
+    global: false,
+    max: env.PUBLIC_INGRESS_RATE_LIMIT_MAX,
+    timeWindow: env.PUBLIC_INGRESS_RATE_LIMIT_WINDOW_MS,
+  });
+
   await app.register(healthRoutes);
-  await app.register(activeRoutes);
-  await app.register(shadowRoutes);
   await app.register(internalRoutes);
   await app.register(leadIngressRoutes);
   await app.register(metaWebhookRoutes);
-  await app.register(n8nCompatRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     request.log.error({ error }, 'Request failed');

@@ -18,7 +18,7 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 
 try {
   await app.listen({ host: env.EDGE_HOST, port: env.EDGE_PORT });
-  logger.info({ host: env.EDGE_HOST, port: env.EDGE_PORT, mode: env.EDGE_MODE }, 'Conversation Edge started');
+  logger.info({ host: env.EDGE_HOST, port: env.EDGE_PORT }, 'Lead conversion core started');
 } catch (error) {
   logger.error({ error }, 'Failed to start Conversation Edge');
   await closePool();

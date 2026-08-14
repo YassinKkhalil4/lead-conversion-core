@@ -39,206 +39,28 @@ const commandPayloadSchema = z.object({
   message: payloadSchema,
 });
 
-const assignmentNotificationSchema = z.object({
-  leadId: z.string().uuid(),
-  routingRunId: z.string().uuid(),
-  assignmentId: z.string().uuid(),
-  salespersonId: z.string().uuid(),
-  clientId: z.string().uuid(),
-  contactName: z.string().default(''),
-  contactPhoneE164: z.string().min(5),
-  projectName: z.string().default(''),
-  leadScore: z.number().int().nullable().optional(),
-  temperature: z.string().default(''),
-  phoneNumberId: z.string().default(''),
-});
-
-const routingAlertSchema = z.object({
-  leadId: z.string().uuid(),
-  routingRunId: z.string().uuid(),
-  clientId: z.string().uuid(),
-  companyName: z.string().default(''),
-  reason: z.string().min(1),
-  phoneNumberId: z.string().default(''),
-});
-
-const slaAssignmentReminderSchema = z.object({
-  slaJobId: z.string().uuid(),
-  leadId: z.string().uuid(),
-  assignmentId: z.string().uuid(),
-  salespersonId: z.string().uuid(),
-  contactName: z.string().default(''),
-  contactPhoneE164: z.string().min(5),
-  phoneNumberId: z.string().default(''),
-});
-
-const slaEscalationSchema = z.object({
-  slaJobId: z.string().uuid(),
-  slaType: z.enum(['assignment_ack_escalation', 'stale_qualified_escalation']),
-  leadId: z.string().uuid(),
-  assignmentId: z.string().default(''),
-  salespersonId: z.string().default(''),
-  contactName: z.string().default(''),
-  contactPhoneE164: z.string().min(5),
-  reason: z.string().min(1),
-  phoneNumberId: z.string().default(''),
-});
-
-const dailyReportSummarySchema = z.object({
-  leadIntakeCount: z.number().int().nonnegative(),
-  newLeadCount: z.number().int().nonnegative(),
-  qualifiedLeadCount: z.number().int().nonnegative(),
-  assignedLeadCount: z.number().int().nonnegative(),
-  acknowledgedAssignmentCount: z.number().int().nonnegative(),
-  unacknowledgedActiveAssignmentCount: z.number().int().nonnegative(),
-  slaEscalationCount: z.number().int().nonnegative(),
-  followupSentCount: z.number().int().nonnegative(),
-  followupCancelledCount: z.number().int().nonnegative(),
-  outboundMessageCount: z.number().int().nonnegative(),
-  deliveredMessageCount: z.number().int().nonnegative(),
-  failedMessageCount: z.number().int().nonnegative(),
-  deadLetterCount: z.number().int().nonnegative(),
-});
-
-const dailyReportSchema = z.object({
-  dailyReportId: z.string().uuid(),
-  clientId: z.string().uuid(),
-  companyName: z.string().default(''),
-  reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  timezone: z.string().min(1),
-  summary: dailyReportSummarySchema,
-  phoneNumberId: z.string().default(''),
-});
-
-function textLine(label: string, value: string): string {
-  return value ? `${label}: ${value}` : '';
-}
-
-function notificationPayload(command: ClaimedOutboxCommand): { phoneNumberId: string; message: SendMessageCommand['payload'] } | null {
-  if (command.commandType === 'salesperson.lead_assignment_notification') {
-    const parsed = assignmentNotificationSchema.safeParse(command.payload);
-    if (!parsed.success) return null;
-    const lines = [
-      'New lead assigned.',
-      textLine('Lead', parsed.data.contactName),
-      textLine('Phone', parsed.data.contactPhoneE164),
-      textLine('Project', parsed.data.projectName),
-      textLine('Score', parsed.data.leadScore === undefined || parsed.data.leadScore === null ? '' : String(parsed.data.leadScore)),
-      textLine('Temperature', parsed.data.temperature),
-      `Assignment ID: ${parsed.data.assignmentId}`,
-    ].filter(Boolean);
-    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
-  }
-  if (command.commandType === 'operator.routing_attention_required') {
-    const parsed = routingAlertSchema.safeParse(command.payload);
-    if (!parsed.success) return null;
-    const lines = [
-      'Routing attention required.',
-      textLine('Company', parsed.data.companyName),
-      `Reason: ${parsed.data.reason}`,
-      `Lead ID: ${parsed.data.leadId}`,
-      `Routing run ID: ${parsed.data.routingRunId}`,
-    ].filter(Boolean);
-    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
-  }
-  if (command.commandType === 'salesperson.sla_assignment_reminder') {
-    const parsed = slaAssignmentReminderSchema.safeParse(command.payload);
-    if (!parsed.success) return null;
-    const lines = [
-      'Lead assignment still needs acknowledgement.',
-      textLine('Lead', parsed.data.contactName),
-      textLine('Phone', parsed.data.contactPhoneE164),
-      `Assignment ID: ${parsed.data.assignmentId}`,
-      `SLA ID: ${parsed.data.slaJobId}`,
-    ].filter(Boolean);
-    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
-  }
-  if (command.commandType === 'operator.sla_escalation') {
-    const parsed = slaEscalationSchema.safeParse(command.payload);
-    if (!parsed.success) return null;
-    const lines = [
-      'SLA escalation.',
-      `Reason: ${parsed.data.reason}`,
-      textLine('Lead', parsed.data.contactName),
-      textLine('Phone', parsed.data.contactPhoneE164),
-      textLine('Salesperson ID', parsed.data.salespersonId),
-      textLine('Assignment ID', parsed.data.assignmentId),
-      `Lead ID: ${parsed.data.leadId}`,
-      `SLA ID: ${parsed.data.slaJobId}`,
-    ].filter(Boolean);
-    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
-  }
-  if (command.commandType === 'operator.daily_report') {
-    const parsed = dailyReportSchema.safeParse(command.payload);
-    if (!parsed.success) return null;
-    const summary = parsed.data.summary;
-    const lines = [
-      `Daily report for ${parsed.data.companyName || parsed.data.clientId}`,
-      `Date: ${parsed.data.reportDate} (${parsed.data.timezone})`,
-      `Lead intake: ${summary.leadIntakeCount}`,
-      `New leads: ${summary.newLeadCount}`,
-      `Qualified: ${summary.qualifiedLeadCount}`,
-      `Assigned: ${summary.assignedLeadCount}`,
-      `Acknowledged assignments: ${summary.acknowledgedAssignmentCount}`,
-      `Unacknowledged active assignments: ${summary.unacknowledgedActiveAssignmentCount}`,
-      `SLA escalations: ${summary.slaEscalationCount}`,
-      `Follow-ups sent/cancelled: ${summary.followupSentCount}/${summary.followupCancelledCount}`,
-      `Outbound delivered/failed: ${summary.deliveredMessageCount}/${summary.failedMessageCount}`,
-      `Dead letters: ${summary.deadLetterCount}`,
-      `Report ID: ${parsed.data.dailyReportId}`,
-    ];
-    return { phoneNumberId: parsed.data.phoneNumberId, message: { kind: 'text', text: lines.join('\n') } };
-  }
-  return null;
-}
-
 export class MessagingOutboxDispatcher {
   constructor(private readonly providers: { meta: MessageProvider }) {}
 
   async dispatch(command: ClaimedOutboxCommand): Promise<OutboxDispatchResult> {
-    if (![
-      'whatsapp.send_message',
-      'salesperson.lead_assignment_notification',
-      'operator.routing_attention_required',
-      'salesperson.sla_assignment_reminder',
-      'operator.sla_escalation',
-      'operator.daily_report',
-    ].includes(command.commandType)) {
+    if (command.commandType !== 'whatsapp.send_message') {
       return { outcome: 'permanently_failed', error: `unsupported_outbox_command:${command.commandType}` };
     }
 
-    let sendCommand: SendMessageCommand;
-    if (command.commandType === 'whatsapp.send_message') {
-      const parsed = commandPayloadSchema.safeParse(command.payload);
-      if (!parsed.success) {
-        return { outcome: 'permanently_failed', error: `invalid_whatsapp_send_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
-      }
-      sendCommand = {
-        destination: {
-          channel: 'whatsapp',
-          provider: parsed.data.provider,
-          phoneNumberId: parsed.data.phoneNumberId,
-          toE164: parsed.data.toE164 || command.destination,
-        },
-        payload: parsed.data.message,
-        idempotencyKey: command.idempotencyKey,
-      };
-    } else {
-      const mapped = notificationPayload(command);
-      if (!mapped) {
-        return { outcome: 'permanently_failed', error: `invalid_notification_payload:${command.commandType}` };
-      }
-      sendCommand = {
-        destination: {
-          channel: 'whatsapp',
-          provider: 'meta',
-          phoneNumberId: mapped.phoneNumberId,
-          toE164: command.destination,
-        },
-        payload: mapped.message,
-        idempotencyKey: command.idempotencyKey,
-      };
+    const parsed = commandPayloadSchema.safeParse(command.payload);
+    if (!parsed.success) {
+      return { outcome: 'permanently_failed', error: `invalid_whatsapp_send_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
     }
+    const sendCommand: SendMessageCommand = {
+      destination: {
+        channel: 'whatsapp',
+        provider: parsed.data.provider,
+        phoneNumberId: parsed.data.phoneNumberId,
+        toE164: parsed.data.toE164 || command.destination,
+      },
+      payload: parsed.data.message,
+      idempotencyKey: command.idempotencyKey,
+    };
 
     const result = await this.providers.meta.send(sendCommand);
     if (result.outcome === 'accepted') {

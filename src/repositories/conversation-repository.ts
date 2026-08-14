@@ -84,7 +84,7 @@ type ActiveConversationConfig = Pick<ConfigSnapshot, 'versionKey' | 'configurati
 
 function normalizeActiveConfig(activeConfig: ActiveConversationConfig): Pick<ConfigSnapshot, 'versionKey' | 'configurationVersionId'> {
   return typeof activeConfig === 'string'
-    ? { versionKey: activeConfig, configurationVersionId: null }
+    ? { versionKey: activeConfig, configurationVersionId: '' }
     : activeConfig;
 }
 

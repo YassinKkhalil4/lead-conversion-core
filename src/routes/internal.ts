@@ -1,27 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
-import { compileConfig } from '../domain/compiler.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
-import { ConfigSyncService } from '../services/config-sync-service.js';
 import { LeadIntakeService, leadIntakeSchema } from '../services/lead-intake-service.js';
 import { MessageRequestService } from '../services/message-request-service.js';
 import { requireInternalSecret } from './auth.js';
 
-const syncSchema = z.object({ clientRecordId: z.string().min(1).nullable().optional() });
-
-const airtableRecordSchema = z.object({
-  id: z.string().min(1),
-  fields: z.record(z.unknown()),
-});
-const configImportSchema = z.object({
-  clientRecordId: z.string().min(1).nullable().optional(),
-  industry: z.string().min(1).optional().default('real_estate'),
-  questions: z.array(airtableRecordSchema).min(1),
-  options: z.array(airtableRecordSchema),
-  messages: z.array(airtableRecordSchema).min(1),
-});
 const bootstrapSchema = z.object({
   clientRecordId: z.string().min(1),
   clientId: z.string().optional().default(''),
@@ -45,8 +29,6 @@ const bootstrapSchema = z.object({
   assignedSalespersonRecordId: z.string().optional().default(''),
   assignedSalespersonPhone: z.string().optional().default(''),
   lastInboundAt: z.string().datetime().optional(),
-  conversationEngine: z.enum(['legacy', 'edge']).optional().default('legacy'),
-  stateAuthority: z.enum(['legacy', 'edge']).optional().default('legacy'),
   migrateConfig: z.boolean().optional().default(false),
 });
 const controlSchema = z.object({
@@ -61,7 +43,7 @@ const controlSchema = z.object({
   currentStage: z.string().optional(),
   assignedSalespersonRecordId: z.string().optional(),
   assignedSalespersonPhone: z.string().optional(),
-  source: z.string().optional().default('n8n'),
+  source: z.string().optional().default('dashboard'),
   sourceEventId: z.string().optional().default(''),
 });
 const channelSchema = z.object({
@@ -127,72 +109,12 @@ const whatsappSendSchema = z.object({
   actorId: z.string().optional().default('internal-api'),
 });
 
-const ownershipSchema = z.object({
-  clientRecordId: z.string().min(1),
-  phoneNormalized: z.string().min(5),
-  conversationEngine: z.enum(['legacy', 'edge']),
-  stateAuthority: z.enum(['legacy', 'edge']),
-  reason: z.string().min(3),
-  changedBy: z.string().min(1),
-});
 
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
-  const env = getEnv();
-  const syncService = new ConfigSyncService();
   const configs = new ConfigRepository();
   const messageRequests = new MessageRequestService();
   const leadIntake = new LeadIntakeService();
 
-
-  app.post('/internal/config/import', async (request: FastifyRequest, reply: FastifyReply) => {
-    requireInternalSecret(request);
-    if (!env.LEGACY_CONFIG_IMPORT_ENABLED) {
-      reply.code(503);
-      return { ok: false, error: 'legacy_config_import_disabled' };
-    }
-    const parsed = configImportSchema.safeParse(request.body);
-    if (!parsed.success) {
-      reply.code(400);
-      return { ok: false, issues: parsed.error.issues };
-    }
-    const body = parsed.data;
-    const config = compileConfig({
-      clientRecordId: body.clientRecordId ?? null,
-      industry: body.industry,
-      questions: body.questions,
-      options: body.options,
-      messages: body.messages,
-    });
-    await configs.save(config);
-    return {
-      ok: true,
-      version: config.version,
-      clientRecordId: config.clientRecordId,
-      questions: config.questions.length,
-      messages: Object.keys(config.messages).length,
-    };
-  });
-
-  app.post('/internal/config/sync', async (request: FastifyRequest, reply: FastifyReply) => {
-    requireInternalSecret(request);
-    if (!env.LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED) {
-      reply.code(503);
-      return { ok: false, error: 'legacy_airtable_config_sync_disabled' };
-    }
-    const parsed = syncSchema.safeParse(request.body || {});
-    if (!parsed.success) {
-      reply.code(400);
-      return { ok: false, issues: parsed.error.issues };
-    }
-    const config = await syncService.sync(parsed.data.clientRecordId ?? null);
-    return {
-      ok: true,
-      version: config.version,
-      clientRecordId: config.clientRecordId,
-      questions: config.questions.length,
-      messages: Object.keys(config.messages).length,
-    };
-  });
 
   app.get('/internal/config/active', async (request: FastifyRequest, reply: FastifyReply) => {
     requireInternalSecret(request);
@@ -381,8 +303,8 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
         assigned_salesperson_phone=EXCLUDED.assigned_salesperson_phone,
         last_inbound_at=COALESCE(EXCLUDED.last_inbound_at,edge_conversations.last_inbound_at),
         conversation_window_expires_at=COALESCE(EXCLUDED.conversation_window_expires_at,edge_conversations.conversation_window_expires_at),
-        conversation_engine=EXCLUDED.conversation_engine,
-        state_authority=EXCLUDED.state_authority,
+        conversation_engine='edge',
+        state_authority='edge',
         config_version=CASE WHEN $27 THEN EXCLUDED.config_version ELSE edge_conversations.config_version END,
         configuration_version_id=CASE WHEN $27 THEN EXCLUDED.configuration_version_id ELSE edge_conversations.configuration_version_id END,
         state_version=edge_conversations.state_version+1,
@@ -394,7 +316,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
         body.currentStage, body.currentQuestionKey, body.preferredLanguage, JSON.stringify(body.answers),
         body.retryCount, body.status, body.humanTakeover, body.stopFollowUp, body.closedStatus,
         body.appointmentStatus, body.assignedSalespersonRecordId, body.assignedSalespersonPhone,
-        receivedAt, body.conversationEngine, body.stateAuthority, config.versionKey, config.configurationVersionId, body.migrateConfig,
+        receivedAt, 'edge', 'edge', config.versionKey, config.configurationVersionId, body.migrateConfig,
       ],
     );
     return { ok: true, conversation: result.rows[0] };
@@ -475,53 +397,6 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.post('/internal/conversations/ownership', async (request: FastifyRequest, reply: FastifyReply) => {
-    requireInternalSecret(request);
-    const parsed = ownershipSchema.safeParse(request.body);
-    if (!parsed.success) {
-      reply.code(400);
-      return { ok: false, issues: parsed.error.issues };
-    }
-    const body = parsed.data;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const current = await client.query(
-        `SELECT conversation_id,conversation_engine,state_authority FROM edge_conversations
-         WHERE client_record_id=$1 AND phone_normalized=$2 FOR UPDATE`,
-        [body.clientRecordId, body.phoneNormalized],
-      );
-      if (!current.rows[0]) {
-        await client.query('ROLLBACK');
-        reply.code(404);
-        return { ok: false, error: 'conversation_not_found' };
-      }
-      const row = current.rows[0];
-      await client.query(
-        `UPDATE edge_conversations SET conversation_engine=$3,state_authority=$4,
-         state_version=state_version+1,updated_at=now()
-         WHERE client_record_id=$1 AND phone_normalized=$2`,
-        [body.clientRecordId, body.phoneNormalized, body.conversationEngine, body.stateAuthority],
-      );
-      await client.query(
-        `INSERT INTO edge_ownership_audit (
-          conversation_id,previous_engine,new_engine,previous_authority,new_authority,reason,changed_by
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [
-          row.conversation_id, row.conversation_engine, body.conversationEngine,
-          row.state_authority, body.stateAuthority, body.reason, body.changedBy,
-        ],
-      );
-      await client.query('COMMIT');
-      return { ok: true, previous: row, current: body };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  });
-
   app.get('/internal/conversations/:clientRecordId/:phoneNormalized', async (request: FastifyRequest, reply: FastifyReply) => {
     requireInternalSecret(request);
     const params = z.object({ clientRecordId: z.string(), phoneNormalized: z.string() }).safeParse(request.params);
@@ -541,15 +416,6 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, error: 'conversation_not_found' };
     }
     return { ok: true, conversation: result.rows[0] };
-  });
-
-  app.get('/internal/outbox/summary', async (request: FastifyRequest) => {
-    requireInternalSecret(request);
-    const result = await pool.query(
-      `SELECT status,event_type,count(*)::int AS count,min(created_at) AS oldest
-       FROM edge_outbox GROUP BY status,event_type ORDER BY status,event_type`,
-    );
-    return { ok: true, rows: result.rows };
   });
 
   app.post('/internal/messages/whatsapp/send', async (request: FastifyRequest, reply: FastifyReply) => {

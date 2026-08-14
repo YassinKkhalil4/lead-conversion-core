@@ -1,7 +1,7 @@
 import { getEnv } from './config/env.js';
 import { logger } from './config/logger.js';
 import { closePool } from './db/pool.js';
-import type { ClaimedJob } from './infrastructure/runtime.js';
+import type { ClaimedJob, ClaimedOutboxCommand } from './infrastructure/runtime.js';
 import { GoogleCalendarAdapter } from './integrations/calendar/google-calendar-adapter.js';
 import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adapter.js';
 import { leadIngressInboxEventTypes } from './services/lead-ingress-inbox-processor.js';
@@ -11,7 +11,6 @@ import { ReportingService } from './services/reporting-service.js';
 import { SlaService } from './services/sla-service.js';
 import { CalendarOutboxDispatcher } from './worker/calendar-outbox-dispatcher.js';
 import { MessagingOutboxDispatcher } from './worker/messaging-outbox-dispatcher.js';
-import { OutboxWorker } from './worker/outbox-worker.js';
 import { RuntimeWorker } from './worker/runtime-worker.js';
 import { buildRuntimeInboxWiring } from './worker/runtime-worker-wiring.js';
 
@@ -37,20 +36,18 @@ const processRuntimeJob = (job: ClaimedJob) => {
   if (job.jobType === 'report.daily') return reportingService.process(job);
   return Promise.resolve({ outcome: 'dead_lettered' as const, reason: `unsupported_scheduled_job:${job.jobType}` });
 };
-const dispatchRuntimeOutbox = messagingDispatcher || calendarDispatcher
-  ? (command: Parameters<MessagingOutboxDispatcher['dispatch']>[0]) => {
-      if (command.commandType === 'calendar.create_event') {
-        return calendarDispatcher
-          ? calendarDispatcher.dispatch(command)
-          : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'calendar_dispatcher_disabled' });
-      }
-      return messagingDispatcher
-        ? messagingDispatcher.dispatch(command)
-        : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'messaging_dispatcher_disabled' });
-    }
-  : undefined;
+const dispatchRuntimeOutbox = (command: ClaimedOutboxCommand) => {
+  if (command.commandType === 'calendar.create_event') {
+    return calendarDispatcher
+      ? calendarDispatcher.dispatch(command)
+      : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'calendar_dispatcher_disabled' });
+  }
+  return messagingDispatcher
+    ? messagingDispatcher.dispatch(command)
+    : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'messaging_dispatcher_disabled' });
+};
 const runtimeHandlers = {
-  ...(dispatchRuntimeOutbox ? { dispatchOutbox: dispatchRuntimeOutbox } : {}),
+  dispatchOutbox: dispatchRuntimeOutbox,
   ...(inboxEventTypes.length > 0
     ? {
         processInbox: (event: Parameters<MetaInboxProcessor['process']>[0]) => {
@@ -65,12 +62,10 @@ const runtimeHandlers = {
     : {}),
   processJob: processRuntimeJob,
 };
-const worker = env.WORKER_KIND === 'runtime'
-  ? new RuntimeWorker(runtimeHandlers, { inboxEventTypes, inboxProviders })
-  : new OutboxWorker();
+const worker = new RuntimeWorker(runtimeHandlers, { inboxEventTypes, inboxProviders });
 
 async function shutdown(signal: string): Promise<void> {
-  logger.info({ signal }, 'Stopping outbox worker');
+  logger.info({ signal }, 'Stopping runtime worker');
   worker.stop();
   await closePool();
   process.exit(0);
@@ -80,7 +75,7 @@ process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
 worker.run().catch(async (error) => {
-  logger.error({ error }, 'Outbox worker crashed');
+  logger.error({ error }, 'Runtime worker crashed');
   await closePool();
   process.exit(1);
 });

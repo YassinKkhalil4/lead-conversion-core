@@ -11,7 +11,7 @@ export const metaInboxEventTypes = [
   'whatsapp.webhook_ignored',
 ];
 
-export const metaInboxProviders = ['meta', 'n8n'];
+export const metaInboxProviders = ['meta'];
 
 export class MetaInboxProcessor {
   constructor(

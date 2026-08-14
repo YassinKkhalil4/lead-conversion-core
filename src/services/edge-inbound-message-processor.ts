@@ -105,7 +105,7 @@ export class EdgeInboundMessageProcessor {
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
-    if (!['meta', 'n8n'].includes(event.provider) || event.eventType !== 'whatsapp.message_received') {
+    if (!['meta'].includes(event.provider) || event.eventType !== 'whatsapp.message_received') {
       return { outcome: 'ignored', reason: `unsupported_inbox_event:${event.provider}:${event.eventType}` };
     }
     const parsed = inboundMessageSchema.safeParse(event.payload);
@@ -136,11 +136,6 @@ export class EdgeInboundMessageProcessor {
         await client.query('ROLLBACK');
         return { outcome: 'ignored', reason: 'conversation_not_activated' };
       }
-      if (state.conversationEngine !== 'edge' || state.stateAuthority !== 'edge') {
-        await client.query('ROLLBACK');
-        return { outcome: 'ignored', reason: 'conversation_owned_by_legacy' };
-      }
-
       const duplicate = await client.query<{ status: string }>(
         'SELECT status FROM edge_active_turns WHERE client_record_id=$1 AND meta_message_id=$2 LIMIT 1',
         [state.clientRecordId, input.metaMessageId],
@@ -175,12 +170,12 @@ export class EdgeInboundMessageProcessor {
       if (decision.action === 'fallback') {
         await client.query(
           `UPDATE edge_active_turns
-           SET status='fallback', decision_json=$3::jsonb, duration_ms=$4, updated_at=now()
+           SET status='failed', decision_json=$3::jsonb, duration_ms=$4, updated_at=now()
            WHERE client_record_id=$1 AND meta_message_id=$2`,
           [state.clientRecordId, input.metaMessageId, JSON.stringify(decision), Number((performance.now() - started).toFixed(3))],
         );
         await client.query('COMMIT');
-        return { outcome: 'ignored', reason: 'typebot_fallback_required' };
+        return { outcome: 'dead_lettered', reason: 'edge_conversation_fallback_not_supported' };
       }
 
       decision.nextState.conversationId = state.conversationId;

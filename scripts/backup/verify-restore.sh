@@ -25,7 +25,7 @@ python3 scripts/backup/write-pg-service.py "$restore_target_database_url_file" "
 rm -f "$restore_target_database_url_file"
 
 migration_count="$(PGSERVICEFILE="$pg_service_file" psql "service=lead_core_restore_target" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM edge_schema_migrations")"
-config_count="$(PGSERVICEFILE="$pg_service_file" psql "service=lead_core_restore_target" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM edge_config_snapshots")"
+config_count="$(PGSERVICEFILE="$pg_service_file" psql "service=lead_core_restore_target" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM configuration.versions")"
 heartbeat_table="$(PGSERVICEFILE="$pg_service_file" psql "service=lead_core_restore_target" -v ON_ERROR_STOP=1 -tAc "SELECT to_regclass('runtime.worker_heartbeats') IS NOT NULL")"
 app_table_count="$(PGSERVICEFILE="$pg_service_file" psql "service=lead_core_restore_target" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema IN ('app','runtime','configuration','audit','migration')")"
 
@@ -41,5 +41,5 @@ fi
 
 echo "Restore verification queries passed"
 echo "edge_schema_migrations=$migration_count"
-echo "edge_config_snapshots=$config_count"
+echo "configuration_versions=$config_count"
 echo "new_schema_tables=$app_table_count"

@@ -42,7 +42,6 @@ describePg('readiness worker requirements with real PostgreSQL', () => {
     process.env.DATABASE_URL = databaseUrl;
     process.env.EDGE_SHARED_SECRET = env.EDGE_SHARED_SECRET;
     process.env.EDGE_INTERNAL_SECRET = env.EDGE_INTERNAL_SECRET;
-    process.env.OUTBOX_WORKER_ENABLED = 'false';
     process.env.RUNTIME_WORKER_ENABLED = 'true';
     process.env.WORKER_KIND = 'runtime';
     db = await import('../src/db/pool.js');
@@ -72,7 +71,6 @@ describePg('readiness worker requirements with real PostgreSQL', () => {
     expect(missing.json()).toMatchObject({
       ok: false,
       workerHeartbeats: [
-        { workerKind: 'outbox', required: false, ready: true },
         { workerKind: 'runtime', required: true, ready: false },
       ],
     });
@@ -87,7 +85,6 @@ describePg('readiness worker requirements with real PostgreSQL', () => {
     expect(disabledHeartbeat.json()).toMatchObject({
       ok: false,
       workerHeartbeats: [
-        { workerKind: 'outbox', required: false, ready: true },
         {
           workerKind: 'runtime',
           required: true,
@@ -108,7 +105,6 @@ describePg('readiness worker requirements with real PostgreSQL', () => {
     expect(ready.json()).toMatchObject({
       ok: true,
       workerHeartbeats: [
-        { workerKind: 'outbox', required: false, ready: true },
         { workerKind: 'runtime', required: true, ready: true, latestWorkerName: 'runtime-ready-test', operational: true },
       ],
     });

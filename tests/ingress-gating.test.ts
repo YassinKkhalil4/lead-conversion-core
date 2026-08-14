@@ -32,11 +32,10 @@ describe('direct ingress route gates', () => {
     vi.resetModules();
   });
 
-  it('requires explicit direct-ingress enablement while n8n compatibility remains separately available', async () => {
+  it('requires explicit direct-ingress enablement for public webhook families', async () => {
     const app = await buildAppWithEnv({
       DIRECT_META_WEBHOOK_ENABLED: 'false',
       DIRECT_LEAD_INGRESS_ENABLED: 'false',
-      N8N_COMPAT_ROUTES_ENABLED: 'true',
       RUNTIME_WORKER_ENABLED: 'true',
     });
     try {
@@ -62,28 +61,6 @@ describe('direct ingress route gates', () => {
       });
       expect(lead.statusCode).toBe(503);
       expect(lead.json()).toEqual({ ok: false, error: 'direct_lead_ingress_disabled' });
-
-      const compat = await app.inject({
-        method: 'POST',
-        url: '/compat/n8n/messages/whatsapp/inbound',
-        headers: { 'x-internal-secret': 'test_internal_secret_123456' },
-        payload: {},
-      });
-      expect(compat.statusCode).toBe(400);
-      expect(compat.json()).toMatchObject({ ok: false });
-
-      const activeCompat = await app.inject({
-        method: 'POST',
-        url: '/v1/turn',
-        headers: { 'x-edge-secret': 'test_shared_secret_123456' },
-        payload: {},
-      });
-      expect(activeCompat.statusCode).toBe(503);
-      expect(activeCompat.json()).toEqual({
-        ok: false,
-        handled: false,
-        error: 'active_turn_compat_disabled',
-      });
     } finally {
       await app.close();
     }
@@ -93,7 +70,6 @@ describe('direct ingress route gates', () => {
     const app = await buildAppWithEnv({
       DIRECT_META_WEBHOOK_ENABLED: 'true',
       DIRECT_LEAD_INGRESS_ENABLED: 'false',
-      N8N_COMPAT_ROUTES_ENABLED: 'false',
       RUNTIME_WORKER_ENABLED: 'true',
       META_STATUS_PROCESSOR_ENABLED: 'true',
     });
@@ -109,45 +85,10 @@ describe('direct ingress route gates', () => {
     }
   });
 
-  it('keeps legacy configuration import and Airtable sync disabled by default', async () => {
-    const app = await buildAppWithEnv({
-      DIRECT_META_WEBHOOK_ENABLED: 'false',
-      DIRECT_LEAD_INGRESS_ENABLED: 'false',
-      N8N_COMPAT_ROUTES_ENABLED: 'false',
-      ACTIVE_TURN_COMPAT_ENABLED: 'false',
-      RUNTIME_WORKER_ENABLED: 'false',
-      META_STATUS_PROCESSOR_ENABLED: 'false',
-      LEGACY_CONFIG_IMPORT_ENABLED: 'false',
-      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: 'false',
-    });
-    try {
-      const importResponse = await app.inject({
-        method: 'POST',
-        url: '/internal/config/import',
-        headers: { 'x-internal-secret': 'test_internal_secret_123456' },
-        payload: {},
-      });
-      expect(importResponse.statusCode).toBe(503);
-      expect(importResponse.json()).toEqual({ ok: false, error: 'legacy_config_import_disabled' });
-
-      const syncResponse = await app.inject({
-        method: 'POST',
-        url: '/internal/config/sync',
-        headers: { 'x-internal-secret': 'test_internal_secret_123456' },
-        payload: {},
-      });
-      expect(syncResponse.statusCode).toBe(503);
-      expect(syncResponse.json()).toEqual({ ok: false, error: 'legacy_airtable_config_sync_disabled' });
-    } finally {
-      await app.close();
-    }
-  });
-
   it('verifies disabled direct ingress routes through the deployment verification script', async () => {
     const app = await buildAppWithEnv({
       DIRECT_META_WEBHOOK_ENABLED: 'false',
       DIRECT_LEAD_INGRESS_ENABLED: 'false',
-      N8N_COMPAT_ROUTES_ENABLED: 'true',
       RUNTIME_WORKER_ENABLED: 'true',
     });
     const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-deployment.'));
@@ -159,14 +100,12 @@ describe('direct ingress route gates', () => {
       writeFileSync(envFile, [
         'DIRECT_META_WEBHOOK_ENABLED=false',
         'DIRECT_LEAD_INGRESS_ENABLED=false',
-        'N8N_COMPAT_ROUTES_ENABLED=true',
       ].join('\n'));
       const { stdout } = await execFileAsync('bash', [
         'scripts/verify-deployment.sh',
         `--env-file=${envFile}`,
         `--base-url=http://127.0.0.1:${address.port}`,
         '--skip-ready',
-        '--skip-shadow',
         '--check-direct-meta',
         '--check-direct-lead',
         '--expect-direct-meta=disabled',
@@ -242,7 +181,6 @@ describe('direct ingress route gates', () => {
         `--env-file=${envFile}`,
         `--base-url=http://127.0.0.1:${address.port}`,
         '--skip-ready',
-        '--skip-shadow',
         '--check-direct-lead',
         '--expect-direct-lead=enabled',
       ], {
@@ -340,7 +278,6 @@ describe('direct ingress route gates', () => {
         `--env-file=${envFile}`,
         `--base-url=http://127.0.0.1:${address.port}`,
         '--skip-ready',
-        '--skip-shadow',
         '--check-direct-meta',
         '--expect-direct-meta=enabled',
       ], {
@@ -366,146 +303,6 @@ describe('direct ingress route gates', () => {
     }
   });
 
-  it('verifies n8n compatibility fallback availability with a non-customer durable-receipt probe', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-n8n-compat.'));
-    let fallbackProbeVerified = false;
-    const server = createServer((request, response) => {
-      if (request.method === 'GET' && request.url === '/health') {
-        response.writeHead(200, { 'content-type': 'application/json' });
-        response.end('{"ok":true}');
-        return;
-      }
-      if (request.method === 'POST' && request.url === '/compat/n8n/messages/whatsapp/inbound') {
-        let body = '';
-        request.on('data', (chunk) => {
-          body += String(chunk);
-        });
-        request.on('end', () => {
-          if (request.headers['x-internal-secret'] !== 'test_internal_secret_123456') {
-            response.writeHead(401, { 'content-type': 'application/json' });
-            response.end('{"ok":false}');
-            return;
-          }
-          const payload = JSON.parse(body) as Record<string, unknown>;
-          fallbackProbeVerified = payload.sourceEventId === 'verify-n8n-compat-inbound-n8n-compat-test-run'
-            && payload.phoneNumberId === 'verify-deployment-phone-number'
-            && payload.rawPayload !== undefined;
-          response.writeHead(200, { 'content-type': 'application/json' });
-          response.end('{"ok":true,"received":1,"duplicate":false}');
-        });
-        return;
-      }
-      response.writeHead(404, { 'content-type': 'application/json' });
-      response.end('{"ok":false}');
-    });
-
-    try {
-      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-      const address = server.address();
-      if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
-      const envFile = join(root, 'verify.env');
-      writeFileSync(envFile, [
-        'EDGE_INTERNAL_SECRET=test_internal_secret_123456',
-        'N8N_COMPAT_ROUTES_ENABLED=true',
-      ].join('\n'));
-
-      const { stdout } = await execFileAsync('bash', [
-        'scripts/verify-deployment.sh',
-        `--env-file=${envFile}`,
-        `--base-url=http://127.0.0.1:${address.port}`,
-        '--skip-ready',
-        '--skip-shadow',
-        '--check-n8n-compat',
-        '--expect-n8n-compat=enabled',
-      ], {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          VERIFY_DEPLOYMENT_RUN_ID: 'n8n-compat-test-run',
-        },
-        timeout: 10_000,
-      });
-
-      expect(stdout).toContain('n8n compatibility inbound fallback (enabled):');
-      expect(fallbackProbeVerified).toBe(true);
-    } finally {
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-      }).catch(() => undefined);
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it('verifies disabled n8n compatibility fallback availability after internal authentication', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'lead-core-verify-n8n-compat-disabled.'));
-    let fallbackProbeVerified = false;
-    const server = createServer((request, response) => {
-      if (request.method === 'GET' && request.url === '/health') {
-        response.writeHead(200, { 'content-type': 'application/json' });
-        response.end('{"ok":true}');
-        return;
-      }
-      if (request.method === 'POST' && request.url === '/compat/n8n/messages/whatsapp/inbound') {
-        let body = '';
-        request.on('data', (chunk) => {
-          body += String(chunk);
-        });
-        request.on('end', () => {
-          if (request.headers['x-internal-secret'] !== 'test_internal_secret_123456') {
-            response.writeHead(401, { 'content-type': 'application/json' });
-            response.end('{"ok":false}');
-            return;
-          }
-          const payload = JSON.parse(body) as Record<string, unknown>;
-          fallbackProbeVerified = payload.sourceEventId === 'verify-n8n-compat-inbound-n8n-compat-disabled-test-run'
-            && payload.phoneNumberId === 'verify-deployment-phone-number'
-            && payload.rawPayload !== undefined;
-          response.writeHead(503, { 'content-type': 'application/json' });
-          response.end('{"ok":false,"error":"n8n_compat_routes_disabled"}');
-        });
-        return;
-      }
-      response.writeHead(404, { 'content-type': 'application/json' });
-      response.end('{"ok":false}');
-    });
-
-    try {
-      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-      const address = server.address();
-      if (!address || typeof address === 'string') throw new Error('test_server_address_unavailable');
-      const envFile = join(root, 'verify.env');
-      writeFileSync(envFile, [
-        'EDGE_INTERNAL_SECRET=test_internal_secret_123456',
-        'N8N_COMPAT_ROUTES_ENABLED=false',
-      ].join('\n'));
-
-      const { stdout } = await execFileAsync('bash', [
-        'scripts/verify-deployment.sh',
-        `--env-file=${envFile}`,
-        `--base-url=http://127.0.0.1:${address.port}`,
-        '--skip-ready',
-        '--skip-shadow',
-        '--check-n8n-compat',
-        '--expect-n8n-compat=disabled',
-      ], {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          VERIFY_DEPLOYMENT_RUN_ID: 'n8n-compat-disabled-test-run',
-        },
-        timeout: 10_000,
-      });
-
-      expect(stdout).toContain('n8n compatibility inbound fallback (disabled):');
-      expect(fallbackProbeVerified).toBe(true);
-    } finally {
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-      }).catch(() => undefined);
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
   it('keeps shared secrets out of verifier curl process arguments', () => {
     const script = readFileSync('scripts/verify-deployment.sh', 'utf8');
     expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
@@ -521,11 +318,8 @@ describe('direct ingress route gates', () => {
     expect(script).toContain('status_request --config "$tmp_meta_post_config"');
     expect(script).toContain('status_request --config "$tmp_meta_unsigned_post_config"');
     expect(script).not.toContain('python3 - "$META_APP_SECRET"');
-    expect(script).toContain('-H "@$tmp_internal_header"');
-    expect(script).not.toContain('-H "X-Internal-Secret: $EDGE_INTERNAL_SECRET"');
     expect(script).toContain('VERIFY_DEPLOYMENT_RUN_ID="${VERIFY_DEPLOYMENT_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"');
     expect(script).not.toContain('event="verify-direct-website-lead-invalid-$(date +%s)"');
     expect(script).not.toContain('event="verify-direct-facebook-lead-invalid-$(date +%s)"');
-    expect(script).not.toContain('event="verify-n8n-compat-inbound-$(date +%s)"');
   });
 });

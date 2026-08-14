@@ -16,18 +16,11 @@
     "migrate:prod": "node dist/scripts/migrate.js",
     "seed": "tsx scripts/seed.ts",
     "seed:prod": "node dist/scripts/seed.js",
-    "import:airtable": "tsx scripts/import-airtable.ts",
-    "reconcile:airtable": "tsx scripts/reconcile-airtable.ts",
     "calendar:reconcile": "tsx scripts/calendar-reconcile.ts",
     "calendar:reconcile:prod": "node dist/scripts/calendar-reconcile.js",
-    "cutover:readiness": "tsx scripts/cutover-readiness.ts",
-    "cutover:readiness:prod": "node dist/scripts/cutover-readiness.js",
-    "decommission:readiness": "tsx scripts/decommission-readiness.ts",
-    "decommission:readiness:prod": "node dist/scripts/decommission-readiness.js",
     "dump:inspect": "scripts/ops/inspect-dump-metadata.sh",
     "dump:restore-smoke": "scripts/ops/restore-dump-smoke.sh",
     "artifacts:scan": "scripts/ops/scan-tracked-artifacts.sh",
-    "sync-config": "tsx scripts/sync-config.ts",
     "config": "tsx scripts/config.ts",
     "config:prod": "node dist/scripts/config.js",
     "test": "vitest run",
@@ -44,7 +37,8 @@
     "pg": "^8.13.3",
     "pino": "^9.6.0",
     "prom-client": "^15.1.3",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "@fastify/rate-limit": "^10.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

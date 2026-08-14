@@ -288,7 +288,7 @@ export class MetaStatusProcessor {
   constructor(private readonly audit = new AuditRepository()) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
-    if (!['meta', 'n8n'].includes(event.provider) || event.eventType !== 'whatsapp.message_status') {
+    if (!['meta'].includes(event.provider) || event.eventType !== 'whatsapp.message_status') {
       return { outcome: 'ignored', reason: `unsupported_inbox_event:${event.provider}:${event.eventType}` };
     }
     const parsed = storedStatusSchema.safeParse(event.payload);

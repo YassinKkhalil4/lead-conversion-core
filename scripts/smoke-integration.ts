@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { compileConfig, type CompileInput } from '../src/domain/compiler.js';
 import { evaluateConversation } from '../src/domain/engine.js';
-import { compareParity } from '../src/services/parity.js';
 import type { ConversationState } from '../src/domain/types.js';
 
 function parseArgs(argv = process.argv.slice(2)): void {
@@ -28,7 +27,7 @@ const base: ConversationState = {
   status: 'in_qualification', humanTakeover: false, stopFollowUp: false, closedStatus: '',
   appointmentStatus: '', assignedSalespersonRecordId: '', assignedSalespersonPhone: '',
   lastInboundAt: '2026-07-28T00:00:00.000Z', conversationWindowExpiresAt: '2026-07-29T00:00:00.000Z',
-  conversationEngine: 'legacy', stateAuthority: 'legacy', configVersion: config.version, stateVersion: 0,
+  conversationEngine: 'edge', stateAuthority: 'edge', configVersion: config.version, stateVersion: 0,
 };
 
 const suppressed: Array<Partial<ConversationState>> = [
@@ -59,21 +58,14 @@ const retry = evaluateConversation({
 assert.equal(retry.parseSource, 'raw_fallback');
 assert.match(retry.nextState.answers.qualification_notes || '', /unparsed answer/);
 
-const parity = compareParity(
-  {
-    ...retry,
-    text: 'Question',
-    messageKind: 'buttons',
-    interactiveOptions: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
-  },
-  { text: 'Question', messageKind: 'buttons', interactiveOptionIds: ['a', 'b'], interactiveOptionLabels: ['A', 'B'] },
-);
-assert.equal(parity.status, 'match');
+assert.equal(retry.messageKind, 'text');
+assert.equal(typeof retry.text, 'string');
+assert.ok(retry.text.length > 0);
 
 console.log(JSON.stringify({
   ok: true,
   stopConditionsChecked: suppressed.length,
   rawFallbackNotes: true,
-  structuralParity: true,
+  deterministicReplyShape: true,
   configVersion: config.version,
 }, null, 2));

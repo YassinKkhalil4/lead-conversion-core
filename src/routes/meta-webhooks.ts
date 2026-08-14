@@ -11,6 +11,17 @@ const challengeSchema = z.object({
   'hub.challenge': z.string().optional(),
 });
 
+
+function rateLimitConfig() {
+  const env = getEnv();
+  return {
+    rateLimit: {
+      max: env.PUBLIC_INGRESS_RATE_LIMIT_MAX,
+      timeWindow: env.PUBLIC_INGRESS_RATE_LIMIT_WINDOW_MS,
+    },
+  };
+}
+
 function publicHeaders(request: FastifyRequest): Record<string, unknown> {
   return {
     'content-type': request.headers['content-type'] || '',
@@ -41,7 +52,7 @@ export async function metaWebhookRoutes(app: FastifyInstance): Promise<void> {
     return parsed.data['hub.challenge'] || '';
   });
 
-  app.post('/webhooks/meta/whatsapp', async (request: RawBodyRequest, reply: FastifyReply) => {
+  app.post('/webhooks/meta/whatsapp', { config: rateLimitConfig() }, async (request: RawBodyRequest, reply: FastifyReply) => {
     if (!getEnv().DIRECT_META_WEBHOOK_ENABLED) {
       reply.code(503);
       return { ok: false, error: 'direct_meta_webhook_disabled' };

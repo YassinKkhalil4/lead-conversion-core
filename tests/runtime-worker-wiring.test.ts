@@ -17,14 +17,15 @@ async function loadWiring() {
 }
 
 describe('runtime worker wiring', () => {
-  it('wires n8n compatibility inbox processors independently of direct Meta webhook processing', async () => {
+  it('wires direct Meta webhook processors only for Meta providers', async () => {
     const { parseEnv, buildRuntimeInboxWiring } = await loadWiring();
     const env = parseEnv({
       ...baseEnv,
       RUNTIME_WORKER_ENABLED: 'true',
-      N8N_COMPAT_ROUTES_ENABLED: 'true',
-      DIRECT_META_WEBHOOK_ENABLED: 'false',
-      META_STATUS_PROCESSOR_ENABLED: 'false',
+      DIRECT_META_WEBHOOK_ENABLED: 'true',
+      META_STATUS_PROCESSOR_ENABLED: 'true',
+      META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token',
+      META_APP_SECRET: 'test_meta_app_secret',
       DIRECT_LEAD_INGRESS_ENABLED: 'false',
     });
 
@@ -32,7 +33,7 @@ describe('runtime worker wiring', () => {
 
     expect(wiring.metaInboxProcessor).toBeDefined();
     expect(wiring.leadIngressInboxProcessor).toBeUndefined();
-    expect(wiring.inboxProviders).toEqual(['meta', 'n8n']);
+    expect(wiring.inboxProviders).toEqual(['meta']);
     expect(wiring.inboxEventTypes).toEqual([
       'whatsapp.message_status',
       'whatsapp.message_received',
@@ -47,8 +48,9 @@ describe('runtime worker wiring', () => {
       ...baseEnv,
       RUNTIME_WORKER_ENABLED: 'true',
       DIRECT_LEAD_INGRESS_ENABLED: 'true',
+      META_APP_SECRET: 'test_meta_app_secret',
       META_STATUS_PROCESSOR_ENABLED: 'false',
-      N8N_COMPAT_ROUTES_ENABLED: 'false',
+      DIRECT_META_WEBHOOK_ENABLED: 'false',
     });
 
     const wiring = buildRuntimeInboxWiring(env);

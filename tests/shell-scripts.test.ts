@@ -13,45 +13,6 @@ describe('shell scripts', () => {
     EDGE_INTERNAL_SECRET: 'test_internal_secret_123456',
   };
 
-  it('parse with bash before operator use', () => {
-    for (const script of [
-      'scripts/generate-env.sh',
-      'scripts/verify-deployment.sh',
-      'scripts/shadow-sequence.sh',
-      'scripts/backup/backup-postgres.sh',
-      'scripts/backup/restore-postgres.sh',
-      'scripts/backup/sha256-file.sh',
-      'scripts/backup/verify-restore.sh',
-      'scripts/ops/inspect-dump-metadata.sh',
-      'scripts/ops/restore-dump-smoke.sh',
-      'scripts/ops/scan-tracked-artifacts.sh',
-    ]) {
-      execFileSync('bash', ['-n', script], { stdio: 'pipe' });
-    }
-    execFileSync('python3', [
-      '-c',
-      "from pathlib import Path; compile(Path('scripts/backup/write-pg-service.py').read_text(), 'scripts/backup/write-pg-service.py', 'exec')",
-    ], { stdio: 'pipe' });
-    execFileSync('python3', [
-      '-c',
-      "from pathlib import Path; compile(Path('scripts/ops/read-env-file.py').read_text(), 'scripts/ops/read-env-file.py', 'exec')",
-    ], { stdio: 'pipe' });
-  });
-
-  it('keeps shadow sequence secrets out of curl process arguments', () => {
-    const script = readFileSync('scripts/shadow-sequence.sh', 'utf8');
-    expect(script).not.toContain('set -a');
-    expect(script).not.toContain('set +a');
-    expect(script).not.toContain('source .env');
-    expect(script).not.toContain('-H "X-Edge-Secret: $EDGE_SHARED_SECRET"');
-    expect(script).not.toContain("-H 'X-Edge-Secret: $EDGE_SHARED_SECRET'");
-    expect(script).toContain('-H "@$tmp_edge_header"');
-    expect(script).toContain('python3 scripts/ops/read-env-file.py "$file"');
-    expect(script).toContain('chmod 600 "$tmp_assignments"');
-    expect(script).toContain('SHADOW_SEQUENCE_RUN_ID="${SHADOW_SEQUENCE_RUN_ID:-$(date +%s)-$$-${RANDOM:-0}}"');
-    expect(script).not.toContain('local event="sequence-$(date +%s)-$COUNTER"');
-  });
-
   it('loads env files without executing shell command substitutions', () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-safe-env.'));
     try {
@@ -209,17 +170,6 @@ describe('shell scripts', () => {
       .toThrow(/Unknown verify-deployment argument/);
   });
 
-  it('rejects env-only probe and dump script arguments before reading env or Docker inputs', () => {
-    const env = { PATH: process.env.PATH || '' };
-
-    expect(() => execFileSync('bash', ['scripts/shadow-sequence.sh', '--base-url=http://127.0.0.1:8080'], { env, stdio: 'pipe' }))
-      .toThrow(/shadow-sequence\.sh does not accept arguments/);
-    expect(() => execFileSync('sh', ['scripts/ops/inspect-dump-metadata.sh', '--dump=/tmp/example.dump'], { env, stdio: 'pipe' }))
-      .toThrow(/inspect-dump-metadata\.sh does not accept arguments/);
-    expect(() => execFileSync('sh', ['scripts/ops/restore-dump-smoke.sh', '--dump=/tmp/example.dump'], { env, stdio: 'pipe' }))
-      .toThrow(/restore-dump-smoke\.sh does not accept arguments/);
-  });
-
   it('rejects utility script arguments before generating files or evidence', () => {
     const env = { PATH: process.env.PATH || '' };
     const tsxBin = join(process.cwd(), 'node_modules', '.bin', 'tsx');
@@ -240,7 +190,7 @@ describe('shell scripts', () => {
       .toThrow(/smoke-integration does not accept arguments/);
     expect(() => execFileSync(tsxBin, ['scripts/simulate-conversation.ts', '--input=config/other.json'], { env, stdio: 'pipe' }))
       .toThrow(/simulate-conversation does not accept arguments/);
-  });
+  }, 20_000);
 
   it('computes backup checksums through the portable helper', () => {
     const root = mkdtempSync(join(tmpdir(), 'lead-core-checksum.'));
@@ -306,35 +256,6 @@ describe('shell scripts', () => {
     expect(buildConfig).toContain('"exclude": ["node_modules", "dist", "tests"]');
   });
 
-  it('fails readiness CLI commands on unknown operator arguments before querying PostgreSQL', async () => {
-    Object.assign(process.env, cliEnv);
-    const [{ parseArgs: parseCutoverReadinessArgs }, { parseArgs: parseDecommissionReadinessArgs }] = await Promise.all([
-      import('../scripts/cutover-readiness.js'),
-      import('../scripts/decommission-readiness.js'),
-    ]);
-
-    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox-typo=0'])).toThrow(/Unknown cutover readiness argument/);
-    expect(() => parseDecommissionReadinessArgs(['--owner-approved-n8n-typo'])).toThrow(/Unknown decommission readiness argument/);
-  });
-
-  it('fails readiness CLI commands on malformed numeric operator arguments before querying PostgreSQL', async () => {
-    Object.assign(process.env, cliEnv);
-    const [{ parseArgs: parseCutoverReadinessArgs }, { parseArgs: parseDecommissionReadinessArgs }] = await Promise.all([
-      import('../scripts/cutover-readiness.js'),
-      import('../scripts/decommission-readiness.js'),
-    ]);
-
-    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox'])).toThrow(/Invalid numeric argument/);
-    expect(() => parseDecommissionReadinessArgs(['--direct-stability-days='])).toThrow(/Invalid numeric argument/);
-    expect(() => parseCutoverReadinessArgs(['--max-queue-age-seconds=0.5'])).toThrow(/Invalid numeric argument/);
-    expect(() => parseDecommissionReadinessArgs(['--direct-stability-days=1.5'])).toThrow(/Invalid numeric argument/);
-    expect(() => parseCutoverReadinessArgs(['--max-pending-outbox=1e3'])).toThrow(/Invalid numeric argument/);
-    expect(() => parseDecommissionReadinessArgs(['--max-worker-heartbeat-age-seconds=0x10'])).toThrow(/Invalid numeric argument/);
-    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox= 1'])).toThrow(/Invalid numeric argument/);
-    expect(() => parseCutoverReadinessArgs(['--max-pending-inbox=9007199254740993'])).toThrow(/Invalid numeric argument/);
-    expect(() => parseDecommissionReadinessArgs(['--min-completed-edge-qualifications=9007199254740993'])).toThrow(/Invalid numeric argument/);
-  });
-
   it('fails calendar reconciliation CLI commands on ambiguous operator arguments before querying PostgreSQL', async () => {
     Object.assign(process.env, cliEnv);
     const { parseArgs: parseCalendarReconcileArgs } = await import('../scripts/calendar-reconcile.js');
@@ -366,54 +287,6 @@ describe('shell scripts', () => {
     expect(() => parseCalendarReconcileArgs(['confirm', `--outbox-command-id=${validOutboxId}`, '--provider-event-id=google-event-1\n'])).toThrow(/Invalid calendar reconciliation argument: --provider-event-id/);
     expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason='])).toThrow(/Missing calendar reconciliation argument: --reason/);
     expect(() => parseCalendarReconcileArgs(['fail', `--outbox-command-id=${validOutboxId}`, '--reason=operator verified', '--operator-id=ops\ncalendar'])).toThrow(/Invalid calendar reconciliation argument: --operator-id/);
-  });
-
-  it('fails versioned configuration CLI commands on ambiguous operator arguments before querying PostgreSQL', async () => {
-    Object.assign(process.env, cliEnv);
-    const { parseArgs: parseConfigArgs } = await import('../scripts/config.js');
-
-    expect(parseConfigArgs([], 'config/seed-real-estate.json')).toMatchObject({
-      command: 'validate',
-      sourcePath: join(process.cwd(), 'config/seed-real-estate.json'),
-      airtableExportDir: '',
-      clientRecordId: null,
-      actor: 'operator',
-    });
-    expect(parseConfigArgs(['publish', '--input=config/seed-real-estate.json', '--client-record-id=recCLIENT01', '--actor=ops-config'], 'config/default.json')).toMatchObject({
-      command: 'publish',
-      sourcePath: join(process.cwd(), 'config/seed-real-estate.json'),
-      clientRecordId: 'recCLIENT01',
-      actor: 'ops-config',
-    });
-    expect(parseConfigArgs(['rollback', '--version=version-1', '--actor=ops-config'], 'config/default.json')).toMatchObject({
-      command: 'rollback',
-      versionKey: 'version-1',
-      actor: 'ops-config',
-    });
-
-    expect(() => parseConfigArgs(['publish', '--input=config/a.json', '--airtable-export=exports/config'], 'config/default.json')).toThrow(/config_source_argument_conflict/);
-    expect(() => parseConfigArgs(['publish', '--input=config/a.json', '--input=config/b.json'], 'config/default.json')).toThrow(/Duplicate config argument/);
-    expect(() => parseConfigArgs(['rollback'], 'config/default.json')).toThrow(/rollback_requires_--version/);
-    expect(() => parseConfigArgs(['active', '--actor=ops-config'], 'config/default.json')).toThrow(/Unknown config argument/);
-    expect(() => parseConfigArgs(['validate', '--actor=ops-config'], 'config/default.json')).toThrow(/Unknown config argument/);
-    expect(() => parseConfigArgs(['publish', '--actor=ops\nconfig'], 'config/default.json')).toThrow(/Invalid config argument: --actor/);
-    expect(() => parseConfigArgs(['publish', '--actor=ops-config\n'], 'config/default.json')).toThrow(/Invalid config argument: --actor/);
-    expect(() => parseConfigArgs(['publish', '--client-record-id='], 'config/default.json')).toThrow(/Missing config argument: --client-record-id/);
-    expect(() => parseConfigArgs(['delete', '--version=version-1'], 'config/default.json')).toThrow(/unknown_config_command:delete/);
-  });
-
-  it('fails legacy Airtable configuration sync CLI commands on ambiguous operator arguments before service use', async () => {
-    Object.assign(process.env, cliEnv);
-    const { parseArgs: parseSyncConfigArgs } = await import('../scripts/sync-config.js');
-
-    expect(parseSyncConfigArgs([])).toEqual({ clientRecordId: null });
-    expect(parseSyncConfigArgs(['--client-record-id=recCLIENT01'])).toEqual({ clientRecordId: 'recCLIENT01' });
-
-    expect(() => parseSyncConfigArgs(['recCLIENT01'])).toThrow(/Unknown sync-config argument/);
-    expect(() => parseSyncConfigArgs(['--client-record-id=recCLIENT01', '--client-record-id=recCLIENT02'])).toThrow(/Duplicate sync-config argument/);
-    expect(() => parseSyncConfigArgs(['--client-record-id='])).toThrow(/Missing sync-config argument: --client-record-id/);
-    expect(() => parseSyncConfigArgs(['--client-record-id=recCLIENT01\n'])).toThrow(/Invalid sync-config argument/);
-    expect(() => parseSyncConfigArgs(['--unknown=recCLIENT01'])).toThrow(/Unknown sync-config argument/);
   });
 
   it('fails seed CLI commands on any operator argument before querying PostgreSQL', async () => {

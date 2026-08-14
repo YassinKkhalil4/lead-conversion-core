@@ -31,45 +31,13 @@ describe('environment contract', () => {
 
   it('allows disabled external integrations to have blank credentials', () => {
     expect(parseEnv(baseEnv)).toMatchObject({
-      OUTBOX_WORKER_ENABLED: false,
       DIRECT_META_WEBHOOK_ENABLED: false,
       DIRECT_META_SEND_ENABLED: false,
+      DIRECT_LEAD_INGRESS_ENABLED: false,
       GOOGLE_CALENDAR_ENABLED: false,
-      LEGACY_CONFIG_IMPORT_ENABLED: false,
-      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: false,
+      RUNTIME_WORKER_ENABLED: false,
+      WORKER_KIND: 'runtime',
     });
-  });
-
-  it('keeps legacy configuration mutation paths disabled unless explicitly configured', () => {
-    expect(parseEnv({
-      ...baseEnv,
-      LEGACY_CONFIG_IMPORT_ENABLED: 'true',
-    }).LEGACY_CONFIG_IMPORT_ENABLED).toBe(true);
-    expect(() => parseEnv({
-      ...baseEnv,
-      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: 'true',
-    })).toThrow(/AIRTABLE_TOKEN/);
-    expect(parseEnv({
-      ...baseEnv,
-      LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED: 'true',
-      AIRTABLE_TOKEN: 'test_airtable_token',
-    }).LEGACY_AIRTABLE_CONFIG_SYNC_ENABLED).toBe(true);
-  });
-
-  it('requires legacy outbox target configuration when the legacy worker is enabled', () => {
-    expect(() => parseEnv({ ...baseEnv, OUTBOX_WORKER_ENABLED: 'true' })).toThrow(/OUTBOX_TARGET_URL/);
-    expect(() => parseEnv({
-      ...baseEnv,
-      OUTBOX_WORKER_ENABLED: 'true',
-      OUTBOX_TARGET_URL: 'https://n8n.example.test/webhook',
-      OUTBOX_TARGET_SECRET: 'short',
-    })).toThrow(/OUTBOX_TARGET_SECRET/);
-    expect(parseEnv({
-      ...baseEnv,
-      OUTBOX_WORKER_ENABLED: 'true',
-      OUTBOX_TARGET_URL: 'https://n8n.example.test/webhook',
-      OUTBOX_TARGET_SECRET: 'test_outbox_secret_123456',
-    }).OUTBOX_WORKER_ENABLED).toBe(true);
   });
 
   it('rejects unknown worker kinds before a worker can start the wrong role', () => {
@@ -77,7 +45,7 @@ describe('environment contract', () => {
     expect(parseEnv({ ...baseEnv, WORKER_KIND: 'runtime' }).WORKER_KIND).toBe('runtime');
   });
 
-  it('requires Meta webhook verification secrets before direct webhooks can be enabled', () => {
+  it('requires Meta webhook verification secrets and runtime processing before direct Meta webhooks can be enabled', () => {
     expect(() => parseEnv({ ...baseEnv, DIRECT_META_WEBHOOK_ENABLED: 'true' })).toThrow(/META_WEBHOOK_VERIFY_TOKEN/);
     expect(() => parseEnv({
       ...baseEnv,
@@ -102,51 +70,48 @@ describe('environment contract', () => {
     }).DIRECT_META_WEBHOOK_ENABLED).toBe(true);
   });
 
-  it('requires the runtime worker before direct lead ingress can be enabled', () => {
+  it('requires the runtime worker and Meta app secret before direct lead ingress can be enabled', () => {
     expect(() => parseEnv({ ...baseEnv, DIRECT_LEAD_INGRESS_ENABLED: 'true' })).toThrow(/RUNTIME_WORKER_ENABLED/);
+    expect(() => parseEnv({
+      ...baseEnv,
+      DIRECT_LEAD_INGRESS_ENABLED: 'true',
+      RUNTIME_WORKER_ENABLED: 'true',
+    })).toThrow(/META_APP_SECRET/);
     expect(parseEnv({
       ...baseEnv,
       DIRECT_LEAD_INGRESS_ENABLED: 'true',
       RUNTIME_WORKER_ENABLED: 'true',
+      META_APP_SECRET: 'test_meta_app_secret',
     })).toMatchObject({
       DIRECT_LEAD_INGRESS_ENABLED: true,
       RUNTIME_WORKER_ENABLED: true,
     });
   });
 
-  it('requires the runtime worker before n8n compatibility callback routes can be enabled', () => {
-    expect(() => parseEnv({ ...baseEnv, N8N_COMPAT_ROUTES_ENABLED: 'true' })).toThrow(/RUNTIME_WORKER_ENABLED/);
-    expect(parseEnv({
-      ...baseEnv,
-      N8N_COMPAT_ROUTES_ENABLED: 'true',
-      RUNTIME_WORKER_ENABLED: 'true',
-    })).toMatchObject({
-      N8N_COMPAT_ROUTES_ENABLED: true,
-      RUNTIME_WORKER_ENABLED: true,
-    });
-  });
-
-  it('requires Meta send credentials before direct sends or active-turn compatibility can be enabled', () => {
+  it('requires Meta send credentials before direct WhatsApp sends can be enabled', () => {
     expect(() => parseEnv({ ...baseEnv, DIRECT_META_SEND_ENABLED: 'true' })).toThrow(/META_WA_ACCESS_TOKEN/);
-    expect(() => parseEnv({ ...baseEnv, ACTIVE_TURN_COMPAT_ENABLED: 'true' })).toThrow(/DIRECT_META_SEND_ENABLED/);
     expect(parseEnv({
       ...baseEnv,
       DIRECT_META_SEND_ENABLED: 'true',
-      ACTIVE_TURN_COMPAT_ENABLED: 'true',
       META_WA_ACCESS_TOKEN: 'test_meta_access_token',
       META_WA_PHONE_NUMBER_ID: 'test_phone_number_id',
-    })).toMatchObject({
-      DIRECT_META_SEND_ENABLED: true,
-      ACTIVE_TURN_COMPAT_ENABLED: true,
-    });
+    })).toMatchObject({ DIRECT_META_SEND_ENABLED: true });
   });
 
-  it('requires Google Calendar credentials before calendar dispatch can be enabled', () => {
-    expect(() => parseEnv({ ...baseEnv, GOOGLE_CALENDAR_ENABLED: 'true' })).toThrow(/GOOGLE_CALENDAR_ACCESS_TOKEN/);
+  it('requires Google OAuth refresh credentials before calendar dispatch can be enabled', () => {
+    expect(() => parseEnv({ ...baseEnv, GOOGLE_CALENDAR_ENABLED: 'true' })).toThrow(/GOOGLE_CLIENT_ID/);
+    expect(() => parseEnv({
+      ...baseEnv,
+      GOOGLE_CALENDAR_ENABLED: 'true',
+      GOOGLE_CLIENT_ID: 'test_google_client_id',
+      GOOGLE_CLIENT_SECRET: 'test_google_client_secret',
+    })).toThrow(/GOOGLE_REFRESH_TOKEN/);
     expect(parseEnv({
       ...baseEnv,
       GOOGLE_CALENDAR_ENABLED: 'true',
-      GOOGLE_CALENDAR_ACCESS_TOKEN: 'test_google_access_token',
+      GOOGLE_CLIENT_ID: 'test_google_client_id',
+      GOOGLE_CLIENT_SECRET: 'test_google_client_secret',
+      GOOGLE_REFRESH_TOKEN: 'test_google_refresh_token',
     }).GOOGLE_CALENDAR_ENABLED).toBe(true);
   });
 });

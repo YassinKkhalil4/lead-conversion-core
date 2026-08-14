@@ -45,7 +45,7 @@ export class SalespersonCommandProcessor {
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
-    if (!['n8n', 'meta'].includes(event.provider) || event.eventType !== 'salesperson.command_received') {
+    if (!['meta'].includes(event.provider) || event.eventType !== 'salesperson.command_received') {
       return { outcome: 'ignored', reason: `unsupported_inbox_event:${event.provider}:${event.eventType}` };
     }
     const parsed = commandPayloadSchema.safeParse(event.payload);

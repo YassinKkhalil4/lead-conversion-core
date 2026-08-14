@@ -55,7 +55,6 @@ export interface LeadIntakeResult {
   intakeEventId: string;
   duplicate: boolean;
   idempotencyKey: string;
-  projectionOutboxCommandId: string;
   firstContact: {
     suppressed: boolean;
     suppressionReason: string;
@@ -220,20 +219,6 @@ export class LeadIntakeService {
         intakeEventId = row?.intake_event_id || '';
       }
       if (!intakeEventId) throw new Error('lead_intake_event_not_created');
-      const projectionOutboxCommandId = await this.outbox.enqueue(client, {
-        commandType: 'airtable.project_lead_visibility',
-        destination: 'airtable:leads',
-        idempotencyKey: `airtable.project_lead_visibility:${idempotencyKey}`,
-        aggregateKey: leadId,
-        payload: {
-          leadId,
-          clientId,
-          contactId: contactRow.contact_id,
-          provider: parsed.provider,
-          providerExternalId,
-          sourcePayloadHash: payloadHash,
-        },
-      });
 
       let firstContact: LeadIntakeResult['firstContact'] = null;
       if (parsed.firstContact) {
@@ -336,7 +321,6 @@ export class LeadIntakeService {
         intakeEventId,
         duplicate: !insertedIntakeEvent,
         idempotencyKey,
-        projectionOutboxCommandId,
         firstContact,
       };
     } catch (error) {

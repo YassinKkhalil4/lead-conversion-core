@@ -5,6 +5,7 @@ import { getEnv } from '../config/env.js';
 import { metricsRegistry } from '../config/metrics.js';
 import { pool } from '../db/pool.js';
 import { workerHeartbeatOperationalState, type WorkerKind } from '../services/worker-heartbeat-readiness.js';
+import { requireInternalSecret } from './auth.js';
 
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/health', async () => ({ ok: true }));
@@ -34,11 +35,10 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
       }>(
         `SELECT DISTINCT ON (worker_kind) worker_name, worker_kind, heartbeat_at, metadata_json
          FROM runtime.worker_heartbeats
-         WHERE worker_kind IN ('outbox','runtime')
+         WHERE worker_kind IN ('runtime')
          ORDER BY worker_kind, heartbeat_at DESC`,
       ).catch(() => ({ rows: [] as Array<{ worker_name: string; worker_kind: string; heartbeat_at: Date; metadata_json: Record<string, unknown> }> }));
       const requiredWorkers = [
-        { workerKind: 'outbox' as const, required: env.OUTBOX_WORKER_ENABLED },
         { workerKind: 'runtime' as const, required: env.RUNTIME_WORKER_ENABLED },
       ];
       const workerHeartbeats = requiredWorkers.map((requiredWorker) => {
@@ -77,7 +77,8 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get('/metrics', async (_request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/metrics', async (request: FastifyRequest, reply: FastifyReply) => {
+    requireInternalSecret(request);
     reply.header('Content-Type', metricsRegistry.contentType);
     return metricsRegistry.metrics();
   });

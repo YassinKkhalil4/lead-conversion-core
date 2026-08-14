@@ -8,7 +8,7 @@ fi
 
 : "${DUMP_PATH:?DUMP_PATH is required}"
 POSTGRES_DOCKER_IMAGE="${POSTGRES_DOCKER_IMAGE:-postgres:16-alpine}"
-COUNT_TABLES="${COUNT_TABLES:-edge_schema_migrations,edge_conversations,edge_outbox,workflow_entity,credentials_entity,execution_entity}"
+COUNT_TABLES="${COUNT_TABLES:-edge_schema_migrations,edge_conversations,configuration.versions,app.clients,runtime.outbox_commands,runtime.inbox_events}"
 
 if [ ! -r "$DUMP_PATH" ]; then
   echo "Dump path is not readable" >&2

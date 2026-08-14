@@ -12,7 +12,7 @@ import {
 
 type RuntimeWiringEnv = Pick<
   Env,
-  'META_STATUS_PROCESSOR_ENABLED' | 'N8N_COMPAT_ROUTES_ENABLED' | 'DIRECT_LEAD_INGRESS_ENABLED'
+  'META_STATUS_PROCESSOR_ENABLED' | 'DIRECT_META_WEBHOOK_ENABLED' | 'DIRECT_LEAD_INGRESS_ENABLED'
 >;
 
 export interface RuntimeInboxWiring {
@@ -27,7 +27,7 @@ function unique(values: string[]): string[] {
 }
 
 export function buildRuntimeInboxWiring(env: RuntimeWiringEnv): RuntimeInboxWiring {
-  const metaInboxProcessor = env.META_STATUS_PROCESSOR_ENABLED || env.N8N_COMPAT_ROUTES_ENABLED
+  const metaInboxProcessor = env.META_STATUS_PROCESSOR_ENABLED || env.DIRECT_META_WEBHOOK_ENABLED
     ? new MetaInboxProcessor()
     : undefined;
   const leadIngressInboxProcessor = env.DIRECT_LEAD_INGRESS_ENABLED

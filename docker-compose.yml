@@ -41,22 +41,7 @@ services:
     ports:
       - "127.0.0.1:${EDGE_HOST_PORT:-8082}:${EDGE_PORT:-8080}"
     command: ["npm", "start"]
-    networks: [edge, n8n]
-
-  lead-core-worker:
-    build: .
-    restart: unless-stopped
-    env_file: ${LEAD_CORE_ENV_FILE:-.env}
-    environment:
-      DATABASE_URL: postgresql://${EDGE_POSTGRES_USER:-lead_os_edge_app}:${EDGE_POSTGRES_PASSWORD}@lead-core-postgres:5432/${EDGE_POSTGRES_DB:-lead_os_edge}
-      WORKER_KIND: outbox
-    depends_on:
-      lead-core-postgres:
-        condition: service_healthy
-      lead-core-migrate:
-        condition: service_completed_successfully
-    command: ["npm", "run", "worker"]
-    networks: [edge, n8n]
+    networks: [edge]
 
   lead-core-runtime-worker:
     build: .
@@ -71,7 +56,7 @@ services:
       lead-core-migrate:
         condition: service_completed_successfully
     command: ["npm", "run", "worker"]
-    networks: [edge, n8n]
+    networks: [edge]
 
   lead-core-backup:
     build: .
@@ -92,9 +77,6 @@ services:
 networks:
   edge:
     name: conversation-edge
-  n8n:
-    external: true
-    name: ${N8N_DOCKER_NETWORK:-n8n_default}
 
 volumes:
   edge_postgres_data:

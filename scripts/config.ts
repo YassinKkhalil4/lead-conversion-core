@@ -2,14 +2,13 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { getEnv } from '../src/config/env.js';
 import { closePool } from '../src/db/pool.js';
-import { diffCompiledConfigs, VersionedConfigService } from '../src/configuration/versioned-config-service.js';
+import { VersionedConfigService } from '../src/configuration/versioned-config-service.js';
 
 type ConfigCommand = 'validate' | 'diff' | 'publish' | 'active' | 'rollback';
 
 export interface ConfigCliArgs {
   command: ConfigCommand;
   sourcePath: string;
-  airtableExportDir: string;
   clientRecordId: string | null;
   actor: string;
   versionKey?: string;
@@ -47,16 +46,14 @@ export function parseArgs(argv: string[], defaultSeedConfigPath: string): Config
   if (!commands.has(command as ConfigCommand)) throw new Error(`unknown_config_command:${command}`);
   const rest = argv[0]?.startsWith('--') ? argv : argv.slice(1);
   const allowedByCommand: Record<ConfigCommand, Set<string>> = {
-    validate: new Set(['--input', '--airtable-export', '--client-record-id']),
-    diff: new Set(['--input', '--airtable-export', '--client-record-id']),
-    publish: new Set(['--input', '--airtable-export', '--client-record-id', '--actor']),
+    validate: new Set(['--input', '--client-record-id']),
+    diff: new Set(['--input', '--client-record-id']),
+    publish: new Set(['--input', '--client-record-id', '--actor']),
     active: new Set(['--client-record-id']),
     rollback: new Set(['--version', '--client-record-id', '--actor']),
   };
   const args = parseKeyValueArgs(rest, allowedByCommand[command as ConfigCommand]);
   const input = optionalValue(args, '--input');
-  const airtableExport = optionalValue(args, '--airtable-export');
-  if (input && airtableExport) throw new Error('config_source_argument_conflict');
   const clientRecordId = optionalValue(args, '--client-record-id') ?? null;
   const actor = optionalValue(args, '--actor') || 'operator';
   const versionKey = optionalValue(args, '--version');
@@ -64,7 +61,6 @@ export function parseArgs(argv: string[], defaultSeedConfigPath: string): Config
   return {
     command: command as ConfigCommand,
     sourcePath: resolve(process.cwd(), input || defaultSeedConfigPath),
-    airtableExportDir: airtableExport ? resolve(process.cwd(), airtableExport) : '',
     clientRecordId,
     actor,
     ...(versionKey ? { versionKey } : {}),
@@ -76,33 +72,15 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   const service = new VersionedConfigService();
 
   if (args.command === 'validate') {
-    if (args.airtableExportDir) {
-      const loaded = await service.loadAndCompileAirtableExport(args.airtableExportDir, args.clientRecordId);
-      console.log(JSON.stringify({ ...service.validate(loaded.config), sourceSummary: loaded.summary }, null, 2));
-      return;
-    }
     const config = await service.loadAndCompile(args.sourcePath, args.clientRecordId);
     console.log(JSON.stringify(service.validate(config), null, 2));
     return;
   }
   if (args.command === 'diff') {
-    if (args.airtableExportDir) {
-      const loaded = await service.loadAndCompileAirtableExport(args.airtableExportDir, args.clientRecordId);
-      console.log(JSON.stringify(diffCompiledConfigs(await service.getActive(service.scopeKey(loaded.config.clientRecordId)), loaded.config), null, 2));
-      return;
-    }
     console.log(JSON.stringify(await service.diff(args.sourcePath, args.clientRecordId), null, 2));
     return;
   }
   if (args.command === 'publish') {
-    if (args.airtableExportDir) {
-      console.log(JSON.stringify(await service.publishAirtableExport({
-        inputDir: args.airtableExportDir,
-        clientRecordId: args.clientRecordId,
-        publishedBy: args.actor,
-      }), null, 2));
-      return;
-    }
     console.log(JSON.stringify(await service.publish({
       sourcePath: args.sourcePath,
       clientRecordId: args.clientRecordId,
