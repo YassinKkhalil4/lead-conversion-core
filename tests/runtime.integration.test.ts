@@ -4689,6 +4689,81 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     }
   });
 
+  it('rejects inbound app message provider ID collisions without moving conversation state', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'N8NCOLLISION',
+      phone: '+201099999986',
+      phoneNumberId: 'phone-number-id-mp08-n8n-collision',
+    });
+    await db.pool.query(
+      `INSERT INTO app.messages
+        (lead_id, client_id, contact_id, direction, channel, from_address,
+         message_text, message_type, provider_message_id, state)
+       VALUES ($1, $2, $3, 'inbound', 'whatsapp', '+201099999986',
+         'Original imported provider text', 'text', 'n8n-provider-message-collision', 'delivered')`,
+      [seeded.leadId, seeded.clientId, seeded.contactId],
+    );
+
+    const inbox = new runtime.InboxRepository();
+    const receipt = await inbox.receive({
+      provider: 'n8n',
+      eventType: 'whatsapp.message_received',
+      externalEventId: 'n8n-provider-collision-002',
+      rawBody: Buffer.from('{"sourceEventId":"n8n-provider-collision-002"}'),
+      headers: { 'x-internal-secret': 'present' },
+      payload: {
+        webhookType: 'whatsapp.message_received',
+        clientRecordId: 'recMP08N8NCOLLISION',
+        phoneNumberId: 'phone-number-id-mp08-n8n-collision',
+        metaMessageId: 'n8n-provider-message-collision',
+        from: '+201099999986',
+        messageType: 'text',
+        messageText: 'Changed provider text',
+        receivedAt: '2026-07-30T03:15:00.000Z',
+        profileName: 'n8n Collision Lead',
+        rawMessage: { workflow: 'sanitized-n8n-collision' },
+      },
+      signatureValid: true,
+      aggregateKey: '+201099999986',
+    });
+    expect(receipt.duplicate).toBe(false);
+
+    const processor = new metaInbox.MetaInboxProcessor();
+    const worker = new runtimeWorker.RuntimeWorker(
+      { processInbox: (event) => processor.process(event) },
+      { enabled: true, batchSize: 10 },
+    );
+    expect(await worker.tick()).toBe(1);
+
+    expect((await db.pool.query(
+      `SELECT status, last_error
+       FROM runtime.inbox_events
+       WHERE provider='n8n' AND external_event_id='n8n-provider-collision-002'`,
+    )).rows[0]).toMatchObject({
+      status: 'retryable',
+      last_error: 'Error: inbound_message_provider_id_collision:n8n-provider-message-collision',
+    });
+    expect((await db.pool.query(
+      `SELECT current_stage, current_question_key, answers_json
+       FROM edge_conversations
+       WHERE lead_id=$1`,
+      [seeded.leadId],
+    )).rows[0]).toEqual({
+      current_stage: 'asking_location',
+      current_question_key: 'q_location',
+      answers_json: {},
+    });
+    expect((await db.pool.query(
+      "SELECT count(*) FROM app.messages WHERE provider_message_id='n8n-provider-message-collision'",
+    )).rows[0]?.count).toBe('1');
+    expect((await db.pool.query(
+      "SELECT message_text FROM app.messages WHERE provider_message_id='n8n-provider-message-collision'",
+    )).rows[0]?.message_text).toBe('Original imported provider text');
+    expect((await db.pool.query(
+      "SELECT count(*) FROM edge_active_turns WHERE meta_message_id='n8n-provider-message-collision'",
+    )).rows[0]?.count).toBe('0');
+  });
+
   it('durably receives n8n-compatible callbacks before client relationship resolution', async () => {
     const app = await appModule.buildApp();
     try {

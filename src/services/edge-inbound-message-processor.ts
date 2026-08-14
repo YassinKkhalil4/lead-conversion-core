@@ -436,13 +436,20 @@ export class EdgeInboundMessageProcessor {
       event: ClaimedInboxEvent;
     },
   ): Promise<void> {
-    await client.query(
+    const rawPayload = JSON.stringify({
+      provider: input.event.provider,
+      inboxEventId: input.event.inboxEventId,
+      phoneNumberId: input.input.phoneNumberId,
+      messageOptionId: input.input.messageOptionId,
+      rawMessage: input.input.rawMessage,
+    });
+    const inserted = await client.query<{ message_id: string }>(
       `INSERT INTO app.messages
         (conversation_id, lead_id, client_id, contact_id, direction, channel,
          from_address, message_text, message_type, provider_message_id, state, raw_payload)
        VALUES ($1,$2,$3,$4,'inbound','whatsapp',$5,$6,$7,$8,'delivered',$9::jsonb)
        ON CONFLICT (client_id, provider_message_id) WHERE provider_message_id <> ''
-       DO UPDATE SET conversation_id=EXCLUDED.conversation_id
+       DO NOTHING
        RETURNING message_id`,
       [
         input.appConversationId,
@@ -453,15 +460,39 @@ export class EdgeInboundMessageProcessor {
         input.input.messageText,
         input.input.messageType,
         input.input.metaMessageId,
-        JSON.stringify({
-          provider: input.event.provider,
-          inboxEventId: input.event.inboxEventId,
-          phoneNumberId: input.input.phoneNumberId,
-          messageOptionId: input.input.messageOptionId,
-          rawMessage: input.input.rawMessage,
-        }),
+        rawPayload,
       ],
     );
+    if (inserted.rows[0]) return;
+
+    const existing = await client.query<{ message_id: string }>(
+      `SELECT message_id
+       FROM app.messages
+       WHERE client_id=$1
+         AND provider_message_id=$2
+         AND conversation_id IS NOT DISTINCT FROM $3::uuid
+         AND lead_id IS NOT DISTINCT FROM $4::uuid
+         AND contact_id IS NOT DISTINCT FROM $5::uuid
+         AND direction='inbound'
+         AND channel='whatsapp'
+         AND from_address=$6
+         AND message_text=$7
+         AND message_type=$8
+         AND state='delivered'`,
+      [
+        input.target.clientId,
+        input.input.metaMessageId,
+        input.appConversationId,
+        input.target.leadId,
+        input.target.contactId,
+        input.input.from,
+        input.input.messageText,
+        input.input.messageType,
+      ],
+    );
+    if (!existing.rows[0]) {
+      throw new Error(`inbound_message_provider_id_collision:${input.input.metaMessageId}`);
+    }
   }
 
   private async persistQualificationEvents(
