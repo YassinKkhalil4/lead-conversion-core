@@ -11,6 +11,7 @@ import { ReportingService } from './services/reporting-service.js';
 import { SlaService } from './services/sla-service.js';
 import { CalendarOutboxDispatcher } from './worker/calendar-outbox-dispatcher.js';
 import { MessagingOutboxDispatcher } from './worker/messaging-outbox-dispatcher.js';
+import { NotificationOutboxDispatcher, isNotificationCommandType } from './worker/notification-outbox-dispatcher.js';
 import { RuntimeWorker } from './worker/runtime-worker.js';
 import { buildRuntimeInboxWiring } from './worker/runtime-worker-wiring.js';
 
@@ -21,6 +22,7 @@ const messagingDispatcher = env.DIRECT_META_SEND_ENABLED
 const calendarDispatcher = env.GOOGLE_CALENDAR_ENABLED
   ? new CalendarOutboxDispatcher({ calendar: GoogleCalendarAdapter.fromEnv() })
   : undefined;
+const notificationDispatcher = new NotificationOutboxDispatcher();
 const {
   metaInboxProcessor,
   leadIngressInboxProcessor,
@@ -41,6 +43,9 @@ const dispatchRuntimeOutbox = (command: ClaimedOutboxCommand) => {
     return calendarDispatcher
       ? calendarDispatcher.dispatch(command)
       : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'calendar_dispatcher_disabled' });
+  }
+  if (isNotificationCommandType(command.commandType)) {
+    return notificationDispatcher.dispatch(command);
   }
   return messagingDispatcher
     ? messagingDispatcher.dispatch(command)

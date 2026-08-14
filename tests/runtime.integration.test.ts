@@ -57,6 +57,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
   let versionedConfig: typeof import('../src/configuration/versioned-config-service.js');
   let configRepository: typeof import('../src/repositories/config-repository.js');
   let conversationRepository: typeof import('../src/repositories/conversation-repository.js');
+  let notificationDispatcher: typeof import('../src/worker/notification-outbox-dispatcher.js');
   let appModule: typeof import('../src/app.js');
 
   beforeAll(async () => {
@@ -94,6 +95,7 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     versionedConfig = await import('../src/configuration/versioned-config-service.js');
     configRepository = await import('../src/repositories/config-repository.js');
     conversationRepository = await import('../src/repositories/conversation-repository.js');
+    notificationDispatcher = await import('../src/worker/notification-outbox-dispatcher.js');
     appModule = await import('../src/app.js');
   }, 30_000);
 
@@ -1591,6 +1593,95 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
       expect((await db.pool.query('SELECT count(*) FROM runtime.outbox_commands')).rows[0]?.count).toBe('0');
       expect((await db.pool.query("SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.takeover.inbound.1'")).rows[0]?.status).toBe('suppressed');
       expect((await db.pool.query("SELECT payload_json->>'reason' AS reason FROM audit.events WHERE event_type='conversation.reply_suppressed'")).rows[0]?.reason).toBe('human_takeover');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('queues fallback reply, sets takeover, creates operator notification, and avoids dead letters', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'FALLBACK',
+      phone: '+201099999996',
+      phoneNumberId: 'phone-number-id-mp08-fallback',
+      currentStage: 'unknown_legacy_stage',
+      currentQuestionKey: 'unknown_legacy_question',
+    });
+    const app = await appModule.buildApp();
+    try {
+      const payload = metaInboundPayload({
+        providerMessageId: 'wamid.mp08.fallback.inbound.1',
+        from: '+201099999996',
+        phoneNumberId: 'phone-number-id-mp08-fallback',
+        text: 'I need help',
+      });
+      const signed = signedMetaWebhook(payload);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/meta/whatsapp',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signed.signature,
+        },
+        payload: signed.rawBody,
+      });
+      expect(response.statusCode).toBe(200);
+
+      const processor = new metaInbox.MetaInboxProcessor();
+      const inboxWorker = new runtimeWorker.RuntimeWorker(
+        { processInbox: (event) => processor.process(event) },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await inboxWorker.tick()).toBe(1);
+
+      expect((await db.pool.query(
+        `SELECT human_takeover, current_stage, source
+         FROM edge_lead_controls
+         WHERE client_record_id='recMP08FALLBACK' AND phone_normalized='+201099999996'`,
+      )).rows[0]).toEqual({
+        human_takeover: true,
+        current_stage: 'human_takeover',
+        source: 'edge_inbound_message',
+      });
+      expect((await db.pool.query(
+        "SELECT status FROM edge_active_turns WHERE meta_message_id='wamid.mp08.fallback.inbound.1'",
+      )).rows[0]?.status).toBe('queued');
+      expect((await db.pool.query(
+        "SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message' AND aggregate_key=$1",
+        [seeded.leadId],
+      )).rows[0]?.count).toBe('1');
+      expect((await db.pool.query(
+        "SELECT count(*) FROM runtime.outbox_commands WHERE command_type='operator.routing_attention_required' AND aggregate_key=$1",
+        [seeded.leadId],
+      )).rows[0]?.count).toBe('1');
+
+      const dispatcher = new notificationDispatcher.NotificationOutboxDispatcher();
+      const outboxWorker = new runtimeWorker.RuntimeWorker(
+        {
+          dispatchOutbox: (command) => {
+            if (notificationDispatcher.isNotificationCommandType(command.commandType)) return dispatcher.dispatch(command);
+            return Promise.resolve({ outcome: 'delivered' as const, providerMessageId: 'wamid.fallback.reply.accepted' });
+          },
+        },
+        { enabled: true, batchSize: 10 },
+      );
+      expect(await outboxWorker.tick()).toBe(2);
+
+      expect((await db.pool.query(
+        `SELECT recipient_type, notification_type, payload_json->>'reason' AS reason
+         FROM app.notifications
+         WHERE client_id=$1`,
+        [seeded.clientId],
+      )).rows).toEqual([
+        {
+          recipient_type: 'operator',
+          notification_type: 'operator.routing_attention_required',
+          reason: 'edge_conversation_fallback_handoff',
+        },
+      ]);
+      expect((await db.pool.query(
+        "SELECT count(*) FROM audit.events WHERE event_type='conversation.fallback_handoff_requested'",
+      )).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM runtime.dead_letters')).rows[0]?.count).toBe('0');
     } finally {
       await app.close();
     }

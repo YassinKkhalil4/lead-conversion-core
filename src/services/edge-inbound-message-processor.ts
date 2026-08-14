@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConversationRepository } from '../repositories/conversation-repository.js';
 import { evaluateConversation } from '../domain/engine.js';
-import type { ConversationState, ReplyDecision } from '../domain/types.js';
+import { renderTemplate } from '../domain/render.js';
+import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
 import { pool } from '../db/pool.js';
 import {
   AuditRepository,
@@ -92,6 +93,19 @@ function optOutDecision(state: ConversationState): ReplyDecision {
   };
 }
 
+function fallbackMessageText(config: CompiledConfig, state: ConversationState): string {
+  const language: Language = state.preferredLanguage || 'Arabic';
+  const fallback = config.messages.fallback;
+  if (!fallback) return language === 'English'
+    ? 'One of our team members will continue this conversation shortly.'
+    : 'أحد أعضاء فريقنا هيكمل المحادثة معاك قريب.';
+  return renderTemplate(fallback.texts[language], {
+    lead_name: state.leadName,
+    company_name: state.companyName,
+    project_name: state.projectName,
+  }, language);
+}
+
 export class EdgeInboundMessageProcessor {
   constructor(
     private readonly configs = new ConfigRepository(),
@@ -168,14 +182,157 @@ export class EdgeInboundMessageProcessor {
           });
 
       if (decision.action === 'fallback') {
+        const target = await this.resolveAppLead(client, state.leadId);
+        if (!target) {
+          await client.query('ROLLBACK');
+          return { outcome: 'retryable', error: 'app_lead_not_found_for_fallback_handoff' };
+        }
+        const fallbackState: ConversationState = {
+          ...state,
+          humanTakeover: true,
+          currentStage: 'human_takeover',
+          currentQuestionKey: '',
+          stateVersion: state.stateVersion + 1,
+        };
+        const fallbackDecision: ReplyDecision = {
+          ...decision,
+          replyKey: 'fallback',
+          text: fallbackMessageText(config, state),
+          messageKind: 'text',
+          stageAfter: fallbackState.currentStage,
+          outboxEvents: [
+            ...decision.outboxEvents,
+            { eventType: 'fallback_handoff_requested', payload: { originalReplyKey: decision.replyKey } },
+          ],
+          nextState: fallbackState,
+        };
+
+        await this.conversations.update(client, fallbackState);
+        await client.query(
+          `INSERT INTO edge_message_events (
+            conversation_id, client_record_id, direction, external_event_id, meta_message_id,
+            message_type, message_text, option_id, raw_payload
+          ) VALUES ($1,$2,'inbound',$3,$4,$5,$6,$7,$8::jsonb)
+          ON CONFLICT (client_record_id, meta_message_id) WHERE meta_message_id <> '' DO NOTHING`,
+          [
+            state.conversationId,
+            state.clientRecordId,
+            event.inboxEventId,
+            input.metaMessageId,
+            input.messageType,
+            input.messageText,
+            input.messageOptionId,
+            JSON.stringify(input.rawMessage),
+          ],
+        );
+        const appConversationId = await this.upsertAppConversation(client, fallbackState, target);
+        await this.persistInboundAppMessage(client, {
+          appConversationId,
+          target,
+          input,
+          event,
+        });
+        await this.persistControlSnapshot(client, fallbackState, event.inboxEventId);
+
+        const payload = toMessagingPayload(fallbackDecision);
+        const idempotencyKey = `whatsapp.send:${target.clientId}:fallback:${event.inboxEventId}:${sha256Hex(stableJson(payload)).slice(0, 24)}`;
+        const message = await client.query<{ message_id: string }>(
+          `INSERT INTO app.messages
+            (conversation_id, lead_id, client_id, contact_id, direction, channel, to_address,
+             message_text, message_type, state, raw_payload, idempotency_key)
+           VALUES ($1, $2, $3, $4, 'outbound', 'whatsapp', $5, $6, $7, 'queued', $8::jsonb, $9)
+           ON CONFLICT (client_id, idempotency_key) WHERE idempotency_key <> ''
+           DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key
+           RETURNING message_id`,
+          [
+            appConversationId,
+            target.leadId,
+            target.clientId,
+            target.contactId,
+            input.from,
+            fallbackDecision.text,
+            payload.kind,
+            JSON.stringify({
+              provider: 'meta',
+              phoneNumberId: input.phoneNumberId,
+              toE164: input.from,
+              message: payload,
+              idempotencyKey,
+              source: 'edge_fallback_handoff',
+            }),
+            idempotencyKey,
+          ],
+        );
+        const messageId = message.rows[0]?.message_id || '';
+        if (!messageId) throw new Error('edge_fallback_message_not_created');
+        const outboxCommandId = await this.outbox.enqueue(client, {
+          commandType: 'whatsapp.send_message',
+          destination: input.from,
+          idempotencyKey,
+          aggregateKey: target.leadId,
+          payload: {
+            provider: 'meta',
+            phoneNumberId: input.phoneNumberId,
+            toE164: input.from,
+            message: payload,
+            messageId,
+            leadId: target.leadId,
+          },
+        });
+        const manager = await client.query<{ manager_phone_e164: string; company_name: string }>(
+          'SELECT manager_phone_e164, company_name FROM app.clients WHERE client_id=$1',
+          [target.clientId],
+        );
+        const notificationCommandId = await this.outbox.enqueue(client, {
+          commandType: 'operator.routing_attention_required',
+          destination: manager.rows[0]?.manager_phone_e164 || 'dashboard',
+          idempotencyKey: `operator.routing_attention:fallback:${event.inboxEventId}`,
+          aggregateKey: target.leadId,
+          payload: {
+            leadId: target.leadId,
+            clientId: target.clientId,
+            companyName: manager.rows[0]?.company_name || state.companyName,
+            reason: 'edge_conversation_fallback_handoff',
+            originalReplyKey: decision.replyKey,
+          },
+        });
+        await this.audit.record(client, {
+          eventType: 'conversation.fallback_handoff_requested',
+          actorType: 'worker',
+          actorId: 'edge-inbound-message-processor',
+          aggregateType: 'lead',
+          aggregateId: target.leadId,
+          correlationId: event.dedupeKey,
+          causationId: event.inboxEventId,
+          payload: {
+            provider: event.provider,
+            originalReplyKey: decision.replyKey,
+            replyQueued: true,
+            notificationQueued: true,
+          },
+          before: {
+            currentStage: state.currentStage,
+            humanTakeover: state.humanTakeover,
+          },
+          after: {
+            currentStage: fallbackState.currentStage,
+            humanTakeover: fallbackState.humanTakeover,
+          },
+        });
         await client.query(
           `UPDATE edge_active_turns
-           SET status='failed', decision_json=$3::jsonb, duration_ms=$4, updated_at=now()
+           SET status='queued', decision_json=$3::jsonb, duration_ms=$4, send_response_json=$5::jsonb, updated_at=now()
            WHERE client_record_id=$1 AND meta_message_id=$2`,
-          [state.clientRecordId, input.metaMessageId, JSON.stringify(decision), Number((performance.now() - started).toFixed(3))],
+          [
+            state.clientRecordId,
+            input.metaMessageId,
+            JSON.stringify(fallbackDecision),
+            Number((performance.now() - started).toFixed(3)),
+            JSON.stringify({ messageId, outboxCommandId, notificationCommandId }),
+          ],
         );
         await client.query('COMMIT');
-        return { outcome: 'dead_lettered', reason: 'edge_conversation_fallback_not_supported' };
+        return { outcome: 'processed' };
       }
 
       decision.nextState.conversationId = state.conversationId;
