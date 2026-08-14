@@ -1,44 +1,32 @@
 # Next Action
 
-Last updated: 2026-08-09
+Last updated: 2026-08-15
 
-Current mini-project: MP-12 Direct ingress, rollout, fallback removal, and decommission preparation
+Current mini-project: Big-bang production owner verification.
 
-Exact next implementation task: Run staging MP-12 verification only after the owner supplies staging route access and provider/source credentials; enable only the approved direct route plus its required runtime worker flags. Before staging, perform only targeted local hardening if a newly identified readiness/runbook defect appears; the current local audit has classified legacy edge outbox idempotency-key reuse with changed compatibility event semantics as a fail-closed collision, lead-intake source-event reuse with changed provider/source payload semantics as a fail-closed collision, appointment booking source-event reuse with changed slot/actor semantics as a fail-closed collision, durable inbox provider dedupe key reuse with changed payload semantics as a fail-closed collision, durable outbox and scheduled-job idempotency key reuse with changed semantics as a fail-closed collision, parked legacy outbox rows, terminal runtime outbox failures, rejected n8n commands, cancelled Airtable projections, missing/non-pass Airtable reconciliation evidence, accepted-row Airtable business reconciliation coverage, contact opt-out preservation, historical n8n delivery-status outcomes, direct Meta enabled/disabled deployment verification, disabled direct-ingress verifier credential independence, n8n fallback inbox worker wiring independent of direct Meta enablement, n8n compatibility runtime readiness enforcement, cutover readiness failure when no direct-ingress target is selected, enabled/disabled n8n compatibility fallback deployment verification, deployment and shadow verifier probe identities being run-scoped to avoid durable-inbox collisions, deployment/shadow env-file loading using parsed assignments instead of shell `source`, duplicate deployment/shadow env keys failing closed before ambiguous overrides can change route flags or secrets, parsed env assignment temp files being explicitly chmodded private before secret-bearing values are written, parsed env values rejecting decoded NUL/newline characters before the NUL-delimited export stream is built, deployment verifier CLI arguments failing closed before env loading or durable probes, shadow-sequence and Docker dump smoke wrappers rejecting all CLI arguments before env/Docker use, generate-env/artifact-scan/smoke/integration/simulation utilities rejecting unexpected arguments before writing files or producing evidence, checksum helper argument validation accepting exactly one safe readable path, backup/restore scripts rejecting positional or flag arguments before reading secret-bearing env, backup outputs being locked and refused when timestamped encrypted dump or checksum paths already exist, encrypted backup dumps requiring checksum verification before restore by default, migrator CLI arguments failing closed before PostgreSQL access, calendar reconciliation operator arguments failing closed before PostgreSQL access, configuration publish/rollback operator arguments failing closed before service construction, seed bootstrap publishing through immutable versioned configuration authority instead of legacy-only snapshots, seed CLI arguments failing closed before PostgreSQL access, legacy config import/Airtable sync mutation paths being disabled by default behind explicit compatibility flags, Airtable import/reconciliation operator arguments failing closed before source-file load or PostgreSQL access, decommission blocking while n8n compatibility routes remain enabled, direct-ingress decommission stability measured from processing completion time, recent legacy-owned conversation activity blocking n8n/Typebot decommission, active legacy-only config snapshots blocking Typebot decommission, imported or detached qualification rows being excluded from Typebot decommission volume, n8n scheduled authority detection across durable job semantic identity fields, direct lead decommission stability requiring both website and Facebook lead evidence, Typebot removal requiring a published active configuration version, cutover/decommission readiness threshold arguments failing closed to non-negative integers, readiness threshold parsing accepting only canonical base-10 integer strings, unsafe readiness thresholds being rejected before JavaScript numeric precision loss, and invalid worker role names failing environment validation before the wrong worker loop can start.
+Exact next implementation task: push the verified cleanup branch, then wait for owner-controlled live verification inputs. No gradual cutover or in-app compatibility path remains in this plan.
 
-Files expected to change:
+Files expected to change next:
 
-- None for staging verification until owner-supplied route access and credentials are available.
-- If targeted local hardening finds a defect before staging, change only the affected source/script/test files plus `docs/transition/STATUS.md`, `docs/transition/WORK_QUEUE.md`, `docs/transition/NEXT_ACTION.md`, `docs/transition/IMPLEMENTATION_LEDGER.md`, `docs/transition/TEST_EVIDENCE.md`, and `docs/transition/DECISIONS.md` when an architectural or operational decision changes.
+- None for local implementation unless a live verification defect is found.
+- If live verification exposes a defect, change only the affected source, migration, test, script, or transition document files.
 
-Required verification:
+Required verification before production traffic switch:
 
-- `git status --short`
-- `git log --oneline --decorate -10`
-- `git show --stat 7ba47c2`
-- `git show --stat df90f61`
-- `git show --stat d0e751a`
-- `npm ci`
-- `npm run lint`
-- `npm test`
-- `npm run build`
-- `npm audit --audit-level=moderate`
-- `npm run test:smoke`
-- `npm run artifacts:scan`
-- Focused PostgreSQL/API tests for any changed readiness or inbox path
-- `scripts/verify-deployment.sh --base-url=<staging-url> --check-direct-meta --check-direct-lead --check-n8n-compat --expect-direct-meta=<enabled|disabled> --expect-direct-lead=<enabled|disabled> --expect-n8n-compat=<enabled|disabled>` when staging owner inputs are available
-- `npm run cutover:readiness -- --max-pending-inbox=0 --max-pending-outbox=0 --max-pending-scheduled-jobs=0 --max-queue-age-seconds=300`
-- `npm run decommission:readiness` with only evidence-backed owner flags
+- Confirm the pushed branch matches the locally verified commit.
+- Run live Meta webhook verification with owner-supplied rotated credentials and the approved production/staging webhook target.
+- Run live Google Calendar verification with owner-supplied OAuth refresh credentials and target calendar IDs.
+- Confirm a restorable PostgreSQL backup exists for rollback.
+- Obtain owner approval for the production webhook/DNS routing change.
 
 Known blockers:
 
-- Complete real Airtable export is unavailable for production reconciliation.
-- Docker daemon is unavailable for image run and Docker-based dump metadata inspection.
-- Rotated Meta credentials, approved templates, and staging webhook access are unavailable for live WhatsApp verification.
-- Real website/Facebook lead source configuration is unavailable for live lead intake verification.
-- Google Calendar credentials and calendar IDs are unavailable for live calendar verification.
-- Owner approval is unavailable for production cutover and for destructive n8n, Typebot, Airtable, MinIO, database, volume, or route removal.
+- Live Meta verification requires owner-supplied rotated credentials and webhook control.
+- Live Google Calendar verification requires owner-supplied OAuth refresh credentials and calendar IDs.
+- Production traffic switch requires owner approval and Meta webhook/DNS routing control.
 
-Last verified commit: `5e8e3c4` (`Reject legacy outbox idempotency collisions`), with focused runtime PostgreSQL integration tests, `npm ci`, tracked artifact scan, TypeScript lint, full Vitest suite, production build, `dist/tests` exclusion check, moderate audit, smoke test, integration smoke, and `git diff --check` all passing. Docker-backed dump metadata inspection and restore smoke remain blocked by unavailable local Docker daemon.
+Rollback model: restore the last approved PostgreSQL backup and repoint Meta webhook/DNS routing back to the previous production stack. The application no longer carries n8n, Typebot, Airtable, shadow, active-turn, or legacy outbox compatibility routes as rollback machinery.
 
-Git worktree clean when recorded: yes
+Last locally verified base commit before this cleanup: `698570a` (`Reject inbound message provider ID collisions with changed semantics`).
+
+Git worktree clean when recorded: pending commit/push of the verified big-bang cleanup slice.
