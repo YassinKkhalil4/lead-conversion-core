@@ -13,11 +13,16 @@ const notificationCommandTypes = [
 
 type NotificationCommandType = typeof notificationCommandTypes[number];
 
+const optionalUuid = z.preprocess(
+  (value) => value === '' ? undefined : value,
+  z.string().uuid().optional(),
+);
+
 const notificationPayloadSchema = z.object({
-  clientId: z.string().uuid().optional(),
-  leadId: z.string().uuid().optional(),
-  assignmentId: z.string().uuid().optional(),
-  salespersonId: z.string().uuid().optional(),
+  clientId: optionalUuid,
+  leadId: optionalUuid,
+  assignmentId: optionalUuid,
+  salespersonId: optionalUuid,
 }).passthrough();
 
 export function isNotificationCommandType(commandType: string): commandType is NotificationCommandType {
@@ -85,6 +90,9 @@ export class NotificationOutboxDispatcher {
     }
 
     const recipient = recipientType(command.commandType);
+    if (recipient === 'salesperson' && !parsed.data.salespersonId) {
+      return { outcome: 'permanently_failed', error: 'notification_salesperson_id_required' };
+    }
     const result = await pool.query<{ notification_id: string }>(
       `INSERT INTO app.notifications
         (source_outbox_command_id, client_id, recipient_type, recipient_id, notification_type, payload_json, priority)

@@ -177,4 +177,49 @@ describePg('NotificationOutboxDispatcher with real PostgreSQL', () => {
     });
     expect((await db.pool.query('SELECT count(*) FROM app.notifications')).rows[0]?.count).toBe('0');
   });
+
+  it('persists operator SLA escalations with empty assignment and salesperson ids by resolving from lead', async () => {
+    const dispatcher = new dispatcherModule.NotificationOutboxDispatcher();
+    const command = await persistedCommand('operator.sla_escalation', {
+      leadId,
+      assignmentId: '',
+      salespersonId: '',
+      reason: 'stale_qualified_lead',
+    });
+
+    await expect(dispatcher.dispatch(command)).resolves.toMatchObject({ outcome: 'delivered' });
+    expect((await db.pool.query(
+      `SELECT client_id, recipient_type, recipient_id, notification_type, payload_json
+       FROM app.notifications`,
+    )).rows).toEqual([
+      {
+        client_id: clientId,
+        recipient_type: 'operator',
+        recipient_id: null,
+        notification_type: 'operator.sla_escalation',
+        payload_json: {
+          leadId,
+          assignmentId: '',
+          salespersonId: '',
+          reason: 'stale_qualified_lead',
+        },
+      },
+    ]);
+  });
+
+  it('fails closed when salesperson notifications have an empty salesperson id', async () => {
+    const dispatcher = new dispatcherModule.NotificationOutboxDispatcher();
+    const command = await persistedCommand('salesperson.sla_assignment_reminder', {
+      leadId,
+      assignmentId,
+      salespersonId: '',
+      slaJobId: '11111111-1111-4111-8111-111111111111',
+    });
+
+    await expect(dispatcher.dispatch(command)).resolves.toEqual({
+      outcome: 'permanently_failed',
+      error: 'notification_salesperson_id_required',
+    });
+    expect((await db.pool.query('SELECT count(*) FROM app.notifications')).rows[0]?.count).toBe('0');
+  });
 });
