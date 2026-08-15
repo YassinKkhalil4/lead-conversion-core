@@ -1,6 +1,7 @@
 services:
   lead-core-postgres:
     image: postgres:16-alpine
+    mem_limit: 512m
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${EDGE_POSTGRES_DB:-lead_os_edge}
@@ -29,6 +30,7 @@ services:
 
   lead-core-api:
     build: .
+    mem_limit: 384m
     restart: unless-stopped
     env_file: ${LEAD_CORE_ENV_FILE:-.env}
     environment:
@@ -45,6 +47,7 @@ services:
 
   lead-core-runtime-worker:
     build: .
+    mem_limit: 384m
     restart: unless-stopped
     env_file: ${LEAD_CORE_ENV_FILE:-.env}
     environment:
@@ -67,6 +70,7 @@ services:
       BACKUP_DIR: /backups
     volumes:
       - lead_core_backups:/backups
+      - ./secrets/backup_encryption_password:/run/secrets/backup_encryption_password:ro
     depends_on:
       lead-core-postgres:
         condition: service_healthy
@@ -76,7 +80,7 @@ services:
 
 networks:
   edge:
-    name: conversation-edge
+    name: ${LEAD_CORE_NETWORK:-leadcorev3-edge}
 
 volumes:
   edge_postgres_data:
