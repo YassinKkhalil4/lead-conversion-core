@@ -1,8 +1,18 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { DashboardDirectoryService } from '../../services/dashboard/directory-service.js';
+import { DashboardLeadActionService } from '../../services/dashboard/lead-action-service.js';
+import { DashboardLeadDetailService } from '../../services/dashboard/lead-detail-service.js';
+import { DashboardLeadListService } from '../../services/dashboard/lead-list-service.js';
+import { DashboardNotificationService } from '../../services/dashboard/notification-service.js';
 import { DashboardSessionService } from '../../services/dashboard/session-service.js';
+import { DashboardSummaryService } from '../../services/dashboard/summary-service.js';
 import { DashboardUserService } from '../../services/dashboard/user-service.js';
 import { dashboardAuthRoutes } from './auth.js';
 import { createAuthHook, sendDashboardError } from './context.js';
+import { dashboardDirectoryRoutes } from './directory.js';
+import { dashboardLeadRoutes } from './leads.js';
+import { dashboardNotificationRoutes } from './notifications.js';
+import { dashboardSummaryRoutes } from './summary.js';
 import { dashboardUserRoutes } from './users.js';
 
 /**
@@ -13,6 +23,12 @@ import { dashboardUserRoutes } from './users.js';
 export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   const sessions = new DashboardSessionService();
   const users = new DashboardUserService();
+  const list = new DashboardLeadListService();
+  const detail = new DashboardLeadDetailService(list);
+  const actions = new DashboardLeadActionService(list);
+  const notifications = new DashboardNotificationService();
+  const directory = new DashboardDirectoryService();
+  const summary = new DashboardSummaryService();
 
   app.decorateRequest('dashboardSession', null);
   app.addHook('preHandler', createAuthHook(sessions));
@@ -22,4 +38,8 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
 
   await dashboardAuthRoutes(app, { sessions, users });
   await dashboardUserRoutes(app, { users });
+  await dashboardLeadRoutes(app, { list, detail, actions });
+  await dashboardNotificationRoutes(app, { notifications });
+  await dashboardDirectoryRoutes(app, { directory });
+  await dashboardSummaryRoutes(app, { summary });
 }
