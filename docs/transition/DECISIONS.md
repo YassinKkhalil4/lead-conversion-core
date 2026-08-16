@@ -839,3 +839,27 @@ Decision: The legacy `edge_outbox` compatibility repository may suppress a dupli
 Reason: Legacy outbox rows remain part of rollback and fallback evidence until decommission. Silently ignoring a changed compatibility event can hide shadow/active-turn defects and leave fallback evidence disagreeing with the event the caller believes was queued.
 
 Date: 2026-08-09
+
+## DEC-097: Dashboard Sessions Are Opaque Server-Side Tokens, Not JWTs
+
+Decision: Dashboard authentication uses 32-byte random tokens stored as SHA-256 digests in `app.sessions`, compared with `timingSafeEqual`. Tokens are returned in the login body for mobile clients and set as an `HttpOnly; SameSite=Lax` cookie for web clients. No JWT or other self-describing token is issued.
+
+Reason: A revoked or role-changed account must stop working immediately. Server-side sessions let logout, password change, and deactivation revoke access in one statement, which a stateless signed token cannot do without a second revocation store. The database is already the durable authority for every other runtime decision.
+
+Date: 2026-08-16
+
+## DEC-098: Dashboard Client Scoping Belongs In The SQL WHERE Clause
+
+Decision: Every dashboard query is scoped by `client_id` inside its `WHERE` clause through the single `leadVisibilitySql` helper. No dashboard query may materialise another client's rows and filter them in application code, and no `client_id` is accepted from the client.
+
+Reason: Multi-tenant isolation that depends on post-query filtering fails open whenever a new code path forgets the filter. Scoping in SQL makes the isolation a property of the query itself, and it is asserted by explicit cross-client tests for every list endpoint.
+
+Date: 2026-08-16
+
+## DEC-099: The Reply Session Window Is Derived From Messages, Not `app.leads`
+
+Decision: The 24-hour WhatsApp session window and lead recency are derived from `app.messages` and `app.conversations.conversation_window_expires_at`. The `app.leads.last_message_at` and `app.leads.first_reply_at` columns are not read as authorities.
+
+Reason: The conversation runtime never writes those two lead columns, so they are null in practice. Reading them would have closed the reply window permanently and forced template-only replies. The conversation engine is out of scope for this work, so the dashboard reads the log that is actually maintained instead of changing the writer.
+
+Date: 2026-08-16

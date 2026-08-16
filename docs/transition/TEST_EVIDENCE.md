@@ -3593,3 +3593,21 @@ Result: passed. Integration smoke returned `ok=true`, with 12 stop conditions ch
 Command: `git diff --check`
 
 Result: passed. No whitespace errors were reported before the implementation commit.
+
+## 2026-08-16 Dashboard API
+
+Command: `npx vitest run tests/dashboard-api.integration.test.ts`
+
+Result: passed with 1 file and 36 tests against a disposable PostgreSQL cluster seeded with two tenants. Coverage includes login success and failure, five-attempt login rate limiting with `retry-after`, session expiry, logout revocation, refresh, cookie and bearer session resolution, role restrictions for salesperson/manager/admin, salesperson lead visibility including unassigned and reassigned leads, acknowledge cancelling both SLA scheduled jobs and writing an audit row, lead close cancelling follow-ups, human takeover writing the engine control overlay, the reply 24-hour session window with template fallback and retry idempotency, notification read state, push token registration, the `LISTEN/NOTIFY` realtime stream, Arabic contact search, and explicit cross-client isolation for every list endpoint.
+
+Command: `npm run lint`
+
+Result: passed. `tsc --noEmit` reported no errors.
+
+Command: `npm test`
+
+Result: passed. Vitest ran 19 files and 183 tests.
+
+Command: `npm run build`
+
+Result: passed. `tsc -p tsconfig.build.json` emitted `dist` without errors.

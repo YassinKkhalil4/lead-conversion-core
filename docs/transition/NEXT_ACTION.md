@@ -1,15 +1,19 @@
 # Next Action
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
 
-Current mini-project: Big-bang production owner verification.
+Current mini-project: Lead management dashboard. The backend `/api/*` surface is complete and locally verified; the Expo client is the next slice.
 
-Exact next implementation task: push the verified cleanup branch, then wait for owner-controlled live verification inputs. No gradual cutover or in-app compatibility path remains in this plan.
+Exact next implementation task: build the Expo app (web, iOS, Android) against the documented `/api/*` surface, starting with login and the lead inbox, then lead detail. The backend is a deliberate review checkpoint and should be reviewed before UI work begins.
 
 Files expected to change next:
 
-- None for local implementation unless a live verification defect is found.
-- If live verification exposes a defect, change only the affected source, migration, test, script, or transition document files.
+- New Expo application files outside this repository's `src/`, plus the top-level README covering per-platform builds.
+- Backend files change again only if UI integration exposes a defect in the `/api/*` surface.
+
+Still owner-controlled from the earlier cutover mini-project:
+
+- Live Meta and Google Calendar verification, production DNS/webhook authority, and the production traffic switch remain external-owner actions. They do not block dashboard implementation.
 
 Required verification before production traffic switch:
 
