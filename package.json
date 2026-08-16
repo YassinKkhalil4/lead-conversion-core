@@ -16,6 +16,8 @@
     "migrate:prod": "node dist/scripts/migrate.js",
     "seed": "tsx scripts/seed.ts",
     "seed:prod": "node dist/scripts/seed.js",
+    "user:create": "tsx scripts/create-dashboard-user.ts",
+    "user:create:prod": "node dist/scripts/create-dashboard-user.js",
     "calendar:reconcile": "tsx scripts/calendar-reconcile.ts",
     "calendar:reconcile:prod": "node dist/scripts/calendar-reconcile.js",
     "dump:inspect": "scripts/ops/inspect-dump-metadata.sh",
@@ -33,12 +35,13 @@
     "restore:postgres": "scripts/backup/restore-postgres.sh"
   },
   "dependencies": {
+    "@fastify/rate-limit": "^10.3.0",
+    "@node-rs/argon2": "^2.1.0",
     "fastify": "^5.2.1",
     "pg": "^8.13.3",
     "pino": "^9.6.0",
     "prom-client": "^15.1.3",
-    "zod": "^3.24.2",
-    "@fastify/rate-limit": "^10.3.0"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

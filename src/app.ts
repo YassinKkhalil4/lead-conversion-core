@@ -3,6 +3,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
 import { getEnv } from './config/env.js';
 import { logger } from './config/logger.js';
+import { dashboardRoutes } from './routes/dashboard/index.js';
 import { healthRoutes } from './routes/health.js';
 import { internalRoutes } from './routes/internal.js';
 import { leadIngressRoutes } from './routes/lead-ingress.js';
@@ -51,6 +52,9 @@ export async function buildApp() {
   await app.register(internalRoutes);
   await app.register(leadIngressRoutes);
   await app.register(metaWebhookRoutes);
+  if (env.DASHBOARD_API_ENABLED) {
+    await app.register(dashboardRoutes);
+  }
 
   app.setErrorHandler((error, request, reply) => {
     request.log.error({ error }, 'Request failed');
