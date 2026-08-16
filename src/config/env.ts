@@ -31,6 +31,12 @@ const baseSchema = z.object({
   GOOGLE_REFRESH_TOKEN: z.string().optional().default(''),
   PUBLIC_INGRESS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   PUBLIC_INGRESS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  DASHBOARD_API_ENABLED: booleanString.default('false'),
+  DASHBOARD_SESSION_TTL_DAYS: z.coerce.number().int().positive().max(365).default(30),
+  DASHBOARD_SESSION_COOKIE_NAME: z.string().min(1).default('lcc_session'),
+  DASHBOARD_SESSION_COOKIE_SECURE: booleanString.default('true'),
+  DASHBOARD_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  DASHBOARD_LOGIN_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
   SEED_CONFIG_PATH: z.string().default('./config/seed-real-estate.json'),
 });
 
