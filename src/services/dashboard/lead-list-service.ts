@@ -34,6 +34,16 @@ export interface LeadListItem {
   provider: string;
   stopFollowUp: boolean;
   closedStatus: string;
+  /** Sales pipeline stage, independent of the engine's `status`. */
+  pipelineStage: string;
+  /** '' when the conversation has not settled on a language yet. */
+  preferredLanguage: string;
+  /**
+   * The most recent qualification session's answers, keyed by question. Present
+   * on the list so a queue row can summarise what the lead wants without
+   * fetching the full detail payload per row.
+   */
+  qualificationAnswers: Record<string, string>;
   firstReceivedAt: string | null;
   firstContactedAt: string | null;
   lastMessageAt: string | null;
@@ -76,6 +86,9 @@ interface LeadRow {
   provider: string;
   stop_follow_up: boolean;
   closed_status: string;
+  pipeline_stage: string;
+  preferred_language: string;
+  qualification_answers: Record<string, string> | null;
   first_received_at: Date | null;
   first_contacted_at: Date | null;
   created_at: Date;
@@ -128,7 +141,7 @@ const LEAD_FROM = `
     WHERE m.lead_id = l.lead_id
   ) msg ON true
   LEFT JOIN LATERAL (
-    SELECT conv.human_takeover, conv.last_inbound_at, conv.conversation_window_expires_at
+    SELECT conv.human_takeover, conv.preferred_language, conv.last_inbound_at, conv.conversation_window_expires_at
     FROM app.conversations conv
     WHERE conv.lead_id = l.lead_id
     ORDER BY conv.opened_at DESC
@@ -149,11 +162,25 @@ const LEAD_FROM = `
     ORDER BY s.created_at DESC
     LIMIT 1
   ) sr ON true
+  LEFT JOIN LATERAL (
+    SELECT jsonb_object_agg(
+             qa.question_key,
+             COALESCE(NULLIF(qa.normalized_value, ''), qa.raw_value)
+           ) AS answers
+    FROM app.qualification_answers qa
+    WHERE qa.qualification_session_id = (
+      SELECT qs.qualification_session_id
+      FROM app.qualification_sessions qs
+      WHERE qs.lead_id = l.lead_id
+      ORDER BY qs.started_at DESC, qs.qualification_session_id DESC
+      LIMIT 1
+    )
+  ) qual ON true
 `;
 
 export const LEAD_SELECT_COLUMNS = `
   l.lead_id, l.client_id, l.status, l.current_stage, l.temperature, l.lead_score,
-  l.source, l.provider, l.stop_follow_up, l.closed_status,
+  l.source, l.provider, l.stop_follow_up, l.closed_status, l.pipeline_stage,
   l.first_received_at, l.first_contacted_at, l.created_at,
   COALESCE(msg.last_message_at, l.last_message_at) AS last_message_at,
   COALESCE(msg.last_inbound_at, conv.last_inbound_at) AS last_inbound_at,
@@ -167,6 +194,8 @@ export const LEAD_SELECT_COLUMNS = `
     COALESCE(msg.last_inbound_at, conv.last_inbound_at) + interval '24 hours'
   ) > now() AS session_window_open,
   COALESCE(conv.human_takeover, false) AS human_takeover,
+  COALESCE(conv.preferred_language, '') AS preferred_language,
+  COALESCE(qual.answers, '{}'::jsonb) AS qualification_answers,
   COALESCE(msg.message_count, 0) AS message_count,
   ct.contact_id, ct.name AS contact_name, ct.phone_e164 AS contact_phone, ct.email AS contact_email,
   p.project_id, p.project_name, p.location AS project_location,
@@ -193,6 +222,9 @@ export function toLeadListItem(row: LeadRow): LeadListItem {
     provider: row.provider,
     stopFollowUp: row.stop_follow_up,
     closedStatus: row.closed_status,
+    pipelineStage: row.pipeline_stage,
+    preferredLanguage: row.preferred_language ?? '',
+    qualificationAnswers: row.qualification_answers ?? {},
     firstReceivedAt: iso(row.first_received_at),
     firstContactedAt: iso(row.first_contacted_at),
     lastMessageAt: iso(row.last_message_at),

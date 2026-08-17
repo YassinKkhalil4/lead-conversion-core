@@ -651,6 +651,105 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
   });
 
+  describe('lead list projections', () => {
+    it('returns the latest session\'s qualification answers on every list row', async () => {
+      const token = await login(tenantA.adminEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/leads?limit=100', headers: authed(token) });
+      expect(response.statusCode).toBe(200);
+
+      const qualified = response
+        .json()
+        .leads.find((lead: { leadId: string }) => lead.leadId === tenantA.leadId);
+      expect(qualified.qualificationAnswers).toMatchObject({
+        q_location: 'New Cairo',
+        q_budget: '5000000',
+      });
+
+      // A lead with no qualification session gets an empty object, never null,
+      // so the caller never has to guard before reading a key.
+      const unqualified = response
+        .json()
+        .leads.find((lead: { leadId: string }) => lead.leadId === tenantA.otherLeadId);
+      expect(unqualified.qualificationAnswers).toEqual({});
+    });
+
+    it('answers from the most recent session when a lead has been re-qualified', async () => {
+      const session = await db.pool.query<{ qualification_session_id: string }>(
+        `INSERT INTO app.qualification_sessions (lead_id, status, started_at)
+         VALUES ($1, 'completed', now() + interval '1 hour')
+         RETURNING qualification_session_id`,
+        [tenantA.leadId],
+      );
+      await db.pool.query(
+        `INSERT INTO app.qualification_answers (qualification_session_id, question_key, normalized_value, raw_value)
+         VALUES ($1, 'q_location', 'Sheikh Zayed', 'الشيخ زايد')`,
+        [session.rows[0]!.qualification_session_id],
+      );
+
+      const token = await login(tenantA.adminEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/leads?limit=100', headers: authed(token) });
+      const lead = response.json().leads.find((entry: { leadId: string }) => entry.leadId === tenantA.leadId);
+      expect(lead.qualificationAnswers.q_location).toBe('Sheikh Zayed');
+      expect(lead.qualificationAnswers.q_budget).toBeUndefined();
+    });
+
+    it('falls back to the raw value when a normalized value was never stored', async () => {
+      const session = await db.pool.query<{ qualification_session_id: string }>(
+        'SELECT qualification_session_id FROM app.qualification_sessions WHERE lead_id = $1 LIMIT 1',
+        [tenantA.leadId],
+      );
+      await db.pool.query(
+        `INSERT INTO app.qualification_answers (qualification_session_id, question_key, normalized_value, raw_value)
+         VALUES ($1, 'q_unit_type', '', 'تاون هاوس')`,
+        [session.rows[0]!.qualification_session_id],
+      );
+
+      const token = await login(tenantA.adminEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/leads?limit=100', headers: authed(token) });
+      const lead = response.json().leads.find((entry: { leadId: string }) => entry.leadId === tenantA.leadId);
+      expect(lead.qualificationAnswers.q_unit_type).toBe('تاون هاوس');
+    });
+
+    it('exposes the preferred language and pipeline stage on list and detail', async () => {
+      await db.pool.query(
+        `INSERT INTO app.conversations (client_id, contact_id, lead_id, preferred_language)
+         VALUES ($1, $2, $3, 'Arabic')`,
+        [tenantA.clientId, tenantA.contactId, tenantA.leadId],
+      );
+
+      const token = await login(tenantA.adminEmail);
+      const list = await app.inject({ method: 'GET', url: '/api/leads?limit=100', headers: authed(token) });
+      const listed = list.json().leads.find((entry: { leadId: string }) => entry.leadId === tenantA.leadId);
+      expect(listed.preferredLanguage).toBe('Arabic');
+      expect(listed.pipelineStage).toBe('new');
+
+      const detail = await app.inject({
+        method: 'GET',
+        url: `/api/leads/${tenantA.leadId}`,
+        headers: authed(token),
+      });
+      expect(detail.json().lead.preferredLanguage).toBe('Arabic');
+      expect(detail.json().lead.pipelineStage).toBe('new');
+    });
+
+    it('reports an empty language rather than null when none was recorded', async () => {
+      const token = await login(tenantA.adminEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/leads?limit=100', headers: authed(token) });
+      const lead = response.json().leads.find((entry: { leadId: string }) => entry.leadId === tenantA.otherLeadId);
+      expect(lead.preferredLanguage).toBe('');
+    });
+
+    it('never exposes another client\'s answers through the list projection', async () => {
+      const token = await login(tenantA.adminEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/leads?limit=100', headers: authed(token) });
+      const leadIds = response.json().leads.map((entry: { leadId: string }) => entry.leadId);
+      expect(leadIds).not.toContain(tenantB.leadId);
+      for (const lead of response.json().leads) {
+        expect(lead.clientId).toBe(tenantA.clientId);
+      }
+    });
+  });
+
   describe('lead detail', () => {
     it('returns qualification answers in configured order with skipped questions kept visible', async () => {
       const token = await login(tenantA.adminEmail);
