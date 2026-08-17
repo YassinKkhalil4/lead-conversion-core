@@ -41,13 +41,13 @@ export function ErrorState({
         marginVertical: space.xl,
         padding: space.lg,
         gap: space.sm,
-        backgroundColor: color.dangerWash,
+        backgroundColor: color.alertWash,
         borderLeftWidth: 3,
-        borderLeftColor: color.danger,
+        borderLeftColor: color.alert,
         borderRadius: radius.sm,
       }}
     >
-      <Text size="small" weight="semibold" style={{ color: color.danger }}>
+      <Text size="small" weight="semibold" style={{ color: color.alert }}>
         {title}
       </Text>
       <Text size="small" tone="muted">
@@ -55,7 +55,7 @@ export function ErrorState({
       </Text>
       {onRetry ? (
         <Pressable onPress={onRetry} hitSlop={hitSlop} style={{ paddingTop: space.xs }}>
-          <Text size="small" weight="semibold" tone="accent">
+          <Text size="small" weight="semibold" style={{ textDecorationLine: 'underline' }}>
             {retryLabel}
           </Text>
         </Pressable>
@@ -78,12 +78,12 @@ export function InlineNotice({
       style={{
         paddingHorizontal: space.xl,
         paddingVertical: space.md,
-        backgroundColor: isWarning ? color.dangerWash : color.surfaceSunken,
+        backgroundColor: isWarning ? color.alertWash : color.surfaceSunken,
         borderBottomWidth: 1,
-        borderBottomColor: isWarning ? color.danger : color.hairline,
+        borderBottomColor: isWarning ? color.alert : color.hairline,
       }}
     >
-      <Text size="small" style={{ color: isWarning ? color.danger : color.inkMuted }}>
+      <Text size="small" style={{ color: isWarning ? color.alert : color.inkMuted }}>
         {text}
       </Text>
     </View>

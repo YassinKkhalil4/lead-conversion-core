@@ -4,15 +4,15 @@ import { isArabic } from '@/i18n/direction';
 
 type Size = keyof typeof fontSize;
 type Weight = keyof typeof fontWeight;
-type Tone = 'default' | 'muted' | 'faint' | 'inverse' | 'accent' | 'danger';
+type Tone = 'default' | 'muted' | 'faint' | 'inverse' | 'alert' | 'warning';
 
 const tone: Record<Tone, string> = {
   default: color.ink,
   muted: color.inkMuted,
   faint: color.inkFaint,
   inverse: color.inkInverse,
-  accent: color.accent,
-  danger: color.danger,
+  alert: color.alert,
+  warning: color.warning,
 };
 
 export interface AppTextProps extends TextProps {

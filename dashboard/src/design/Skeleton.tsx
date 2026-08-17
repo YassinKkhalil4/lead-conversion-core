@@ -48,7 +48,7 @@ export function LeadRowSkeleton() {
   return (
     <View
       style={{
-        height: rowHeight.lead,
+        height: rowHeight.standard,
         paddingHorizontal: space.xl,
         paddingVertical: space.lg,
         borderBottomWidth: 1,

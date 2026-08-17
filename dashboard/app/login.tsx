@@ -162,7 +162,7 @@ function Field({
               color: color.ink,
               backgroundColor: color.surface,
               borderWidth: 1,
-              borderColor: error ? color.danger : color.hairlineStrong,
+              borderColor: error ? color.alert : color.hairlineStrong,
               borderRadius: radius.md,
               paddingHorizontal: space.lg,
               minHeight: 46,
@@ -171,7 +171,7 @@ function Field({
         )}
       />
       {error ? (
-        <Text size="micro" style={{ color: color.danger }}>
+        <Text size="micro" style={{ color: color.alert }}>
           {error}
         </Text>
       ) : null}
