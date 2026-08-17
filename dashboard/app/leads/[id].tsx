@@ -7,9 +7,10 @@ import { Button } from '@/design/Button';
 import { DetailSkeleton } from '@/design/Skeleton';
 import { ErrorState, InlineNotice } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, radius, space } from '@/design/tokens';
+import { color, hitSlop, radius, space } from '@/design/tokens';
+import { CallPrep } from '@/leads/detail/CallPrep';
+import { Collapsible } from '@/leads/detail/Collapsible';
 import { ConversationTab } from '@/leads/detail/ConversationTab';
-import { LeadHeader } from '@/leads/detail/Header';
 import { ActivityTab, QualificationTab, RoutingTab, ScoreTab } from '@/leads/detail/sections';
 import {
   useAcknowledge,
@@ -19,19 +20,16 @@ import {
   useStopFollowUp,
   useTakeover,
 } from '@/leads/hooks';
-
-const TABS = ['Conversation', 'Qualification', 'Score', 'Routing', 'Activity'] as const;
-type Tab = (typeof TABS)[number];
+import { classify } from '@/leads/queue';
 
 const CLOSE_REASONS = ['won', 'lost', 'not_interested', 'unreachable', 'duplicate'];
 
-export default function LeadDetailScreen() {
+export default function CallPrepScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const leadId = String(id ?? '');
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [tab, setTab] = useState<Tab>('Conversation');
   const [closing, setClosing] = useState(false);
   const [actionError, setActionError] = useState<unknown>(null);
 
@@ -54,11 +52,7 @@ export default function LeadDetailScreen() {
     const explained = explain(query.error, 'Loading this lead');
     return (
       <View style={{ flex: 1, backgroundColor: color.paper, paddingTop: insets.top + space.xl }}>
-        <Pressable onPress={() => router.back()} style={{ paddingHorizontal: space.xl, paddingBottom: space.lg }}>
-          <Text size="small" tone="accent" weight="semibold">
-            ← Inbox
-          </Text>
-        </Pressable>
+        <BackLink onPress={() => router.back()} />
         <ErrorState title={explained.title} detail={explained.detail} onRetry={() => void query.refetch()} />
       </View>
     );
@@ -66,10 +60,7 @@ export default function LeadDetailScreen() {
 
   const detail = query.data;
   const lead = detail.lead;
-  const needsAcknowledgement = Boolean(
-    lead.assignment && lead.assignment.status === 'assigned' && !lead.assignment.acknowledgedAt,
-  );
-  const acknowledgedOffline = acknowledge.isPaused;
+  const ranked = classify(lead);
   const actionExplained = actionError ? explain(actionError, 'That action') : null;
 
   const run = async (operation: () => Promise<unknown>) => {
@@ -81,52 +72,35 @@ export default function LeadDetailScreen() {
     }
   };
 
+  const inboundCount = detail.messages.filter((message) => message.direction === 'inbound').length;
+  const answered = detail.qualification.answers.filter((answer) => answer.answered).length;
+
   return (
     <View style={{ flex: 1, backgroundColor: color.paper }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: insets.top }}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: insets.top + space.sm }}
         refreshControl={
           <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={color.inkMuted} />
         }
       >
-        <LeadHeader lead={lead} onBack={() => router.back()} />
+        <View style={{ backgroundColor: color.surface }}>
+          <BackLink onPress={() => router.back()} />
+        </View>
 
-        {acknowledgedOffline ? (
+        {acknowledge.isPaused ? (
           <InlineNotice text="Acknowledgement saved on this device. It will be sent as soon as you are back online." />
         ) : null}
         {actionExplained ? <ErrorState title={actionExplained.title} detail={actionExplained.detail} /> : null}
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ backgroundColor: color.surface, borderBottomWidth: 1, borderBottomColor: color.hairline }}
-          contentContainerStyle={{ paddingHorizontal: space.lg }}
-        >
-          {TABS.map((name) => {
-            const active = tab === name;
-            return (
-              <Pressable
-                key={name}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                onPress={() => setTab(name)}
-                style={{
-                  paddingHorizontal: space.lg,
-                  paddingVertical: space.lg,
-                  borderBottomWidth: 2,
-                  borderBottomColor: active ? color.accent : 'transparent',
-                }}
-              >
-                <Text size="small" weight={active ? 'semibold' : 'regular'} tone={active ? 'accent' : 'muted'}>
-                  {name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <CallPrep
+          lead={lead}
+          answers={detail.qualification.answers}
+          waitingSeconds={ranked.needsAcknowledgement ? ranked.waitingSeconds : null}
+          acknowledging={acknowledge.isPending}
+          onAcknowledge={() => void run(() => acknowledge.mutateAsync(leadId))}
+        />
 
-        {tab === 'Conversation' ? (
+        {/* Everything below here is reference material and starts closed. */}
+        <Collapsible title="Conversation" note={`${detail.messages.length} messages · ${inboundCount} from them`}>
           <ConversationTab
             lead={lead}
             messages={detail.messages}
@@ -136,59 +110,68 @@ export default function LeadDetailScreen() {
               await reply.mutateAsync({ requestKey, payload: { kind: 'text', text } });
             }}
           />
-        ) : null}
-        {tab === 'Qualification' ? <QualificationTab qualification={detail.qualification} /> : null}
-        {tab === 'Score' ? <ScoreTab scoreRun={detail.latestScoreRun} /> : null}
-        {tab === 'Routing' ? <RoutingTab routingRun={detail.latestRoutingRun} /> : null}
-        {tab === 'Activity' ? <ActivityTab activity={detail.activity} /> : null}
+        </Collapsible>
 
-        <View style={{ height: space.xxxl }} />
-      </ScrollView>
+        <Collapsible title="Qualification" note={`${answered} of ${detail.qualification.answers.length} answered`}>
+          <QualificationTab qualification={detail.qualification} />
+        </Collapsible>
 
-      {/* Actions live at the bottom, within thumb reach. */}
-      <View
-        style={{
-          borderTopWidth: 1,
-          borderTopColor: color.hairline,
-          backgroundColor: color.surface,
-          paddingHorizontal: space.lg,
-          paddingTop: space.lg,
-          paddingBottom: insets.bottom + space.lg,
-          gap: space.md,
-        }}
-      >
-        {needsAcknowledgement ? (
+        <Collapsible
+          title="Why this score"
+          note={detail.latestScoreRun ? `${detail.latestScoreRun.score} · ${detail.latestScoreRun.temperature}` : 'not scored'}
+        >
+          <ScoreTab scoreRun={detail.latestScoreRun} />
+        </Collapsible>
+
+        <Collapsible
+          title="Why you got this lead"
+          note={
+            detail.latestRoutingRun
+              ? `${detail.latestRoutingRun.candidates.length} candidates considered`
+              : 'not routed'
+          }
+        >
+          <RoutingTab routingRun={detail.latestRoutingRun} />
+        </Collapsible>
+
+        <Collapsible title="Activity" note={`${detail.activity.length} events`}>
+          <ActivityTab activity={detail.activity} />
+        </Collapsible>
+
+        {/* Secondary actions are text controls, not buttons: they are rare and
+            must not compete with the one action above. */}
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: color.hairline,
+            paddingHorizontal: space.xl,
+            paddingVertical: space.xl,
+            gap: space.lg,
+          }}
+        >
           <Button
-            label={acknowledge.isPending ? 'Acknowledging…' : 'Acknowledge assignment'}
-            variant="primary"
-            grow
-            busy={acknowledge.isPending}
-            onPress={() => void run(() => acknowledge.mutateAsync(leadId))}
-          />
-        ) : null}
-        <View style={{ flexDirection: 'row', gap: space.md }}>
-          <Button
-            label={lead.humanTakeover ? 'Hand back' : 'Take over'}
-            grow
+            label={lead.humanTakeover ? 'Hand back to the bot' : 'Take over the conversation'}
+            variant="text"
             busy={takeover.isPending}
             onPress={() => void run(() => takeover.mutateAsync(!lead.humanTakeover))}
           />
           <Button
-            label="Stop follow-up"
-            grow
+            label={lead.stopFollowUp ? 'Follow-ups already stopped' : 'Stop follow-ups'}
+            variant="text"
             disabled={lead.stopFollowUp}
             busy={stopFollowUp.isPending}
             onPress={() => void run(() => stopFollowUp.mutateAsync('stopped_from_dashboard'))}
           />
           <Button
-            label="Close"
-            variant="danger"
-            grow
+            label={lead.status === 'closed' ? `Closed — ${lead.closedStatus}` : 'Close this lead'}
+            variant="text"
             disabled={lead.status === 'closed'}
             onPress={() => setClosing(true)}
           />
         </View>
-      </View>
+
+        <View style={{ height: insets.bottom + space.xl }} />
+      </ScrollView>
 
       <Modal visible={closing} transparent animationType="fade" onRequestClose={() => setClosing(false)}>
         <Pressable
@@ -224,10 +207,26 @@ export default function LeadDetailScreen() {
                 }}
               />
             ))}
-            <Button label="Cancel" variant="quiet" grow onPress={() => setClosing(false)} />
+            <Button label="Cancel" variant="text" grow onPress={() => setClosing(false)} />
           </Pressable>
         </Pressable>
       </Modal>
     </View>
+  );
+}
+
+function BackLink({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel="Back to the queue"
+      style={{ paddingHorizontal: space.xl, paddingVertical: space.md }}
+    >
+      <Text size="small" weight="semibold" tone="muted">
+        ← Queue
+      </Text>
+    </Pressable>
   );
 }

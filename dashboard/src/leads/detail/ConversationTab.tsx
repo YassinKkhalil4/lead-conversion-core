@@ -155,9 +155,9 @@ function MessageBubble({ message, showDay }: { message: Message; showDay: boolea
         <View
           style={{
             maxWidth: '86%',
-            backgroundColor: outbound ? color.accentWash : color.surface,
+            backgroundColor: outbound ? color.surfaceSunken : color.surface,
             borderWidth: 1,
-            borderColor: outbound ? color.accentWash : color.hairline,
+            borderColor: outbound ? color.surfaceSunken : color.hairline,
             borderRadius: radius.md,
             paddingHorizontal: space.lg,
             paddingVertical: space.md,
@@ -181,7 +181,7 @@ function MessageBubble({ message, showDay }: { message: Message; showDay: boolea
               {clock(message.createdAt)}
             </Text>
             {outbound ? (
-              <Text size="micro" numeric style={{ color: failed ? color.danger : color.inkFaint }}>
+              <Text size="micro" numeric style={{ color: failed ? color.alert : color.inkFaint }}>
                 {deliveryLabel(message.state)}
               </Text>
             ) : null}

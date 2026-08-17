@@ -4,6 +4,7 @@ import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
 import { color, radius, space } from '@/design/tokens';
 import { eventLabel, factorLabel, questionLabel } from '@/leads/labels';
+import { indexAnswers, skipReason } from '@/leads/qualification';
 import { ageAgo, timestamp } from '@/time/format';
 
 function SectionHeading({ title, note }: { title: string; note?: string }) {
@@ -51,14 +52,16 @@ export function QualificationTab({ qualification }: { qualification: LeadDetail[
     );
   }
 
+  const byKey = indexAnswers(answers);
+
   return (
     <View>
       <SectionHeading
         title="Qualification"
         note={`${answered} of ${answers.length} answered · session ${qualification.status.replace(/_/g, ' ')}`}
       />
-      {answers.map((answer: QualificationAnswer, index) => (
-        <Row key={answer.questionKey} last={index === answers.length - 1}>
+      {answers.map((answer: QualificationAnswer, position) => (
+        <Row key={answer.questionKey} last={position === answers.length - 1}>
           <View style={{ flexDirection: 'row', gap: space.lg, alignItems: 'flex-start' }}>
             <Text size="small" tone="faint" numeric style={{ width: 18 }}>
               {answer.order}
@@ -80,7 +83,7 @@ export function QualificationTab({ qualification }: { qualification: LeadDetail[
                 </>
               ) : (
                 <Text size="small" tone="faint">
-                  Not answered — skipped or not reached
+                  {skipReason(answer.questionKey, byKey)}
                 </Text>
               )}
             </View>
@@ -167,8 +170,8 @@ function MatchFlag({ label, matched }: { label: string; matched: boolean }) {
           height: 8,
           borderRadius: 2,
           borderWidth: 1,
-          borderColor: matched ? color.ok : color.inkFaint,
-          backgroundColor: matched ? color.ok : 'transparent',
+          borderColor: matched ? color.ink : color.inkFaint,
+          backgroundColor: matched ? color.ink : 'transparent',
         }}
       />
       <Text size="micro" style={{ color: matched ? color.ink : color.inkFaint }}>
@@ -215,13 +218,13 @@ export function RoutingTab({ routingRun }: { routingRun: RoutingRun | null }) {
                 {candidate.selected ? (
                   <View
                     style={{
-                      backgroundColor: color.accentWash,
+                      backgroundColor: color.surfaceSunken,
                       borderRadius: radius.sm,
                       paddingHorizontal: space.md,
                       paddingVertical: 2,
                     }}
                   >
-                    <Text size="micro" weight="bold" tone="accent">
+                    <Text size="micro" weight="bold">
                       SELECTED
                     </Text>
                   </View>
