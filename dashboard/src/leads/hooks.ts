@@ -23,6 +23,22 @@ export function useLeadList(filters: LeadFilters) {
   });
 }
 
+/**
+ * Every unacknowledged assignment, fetched separately from the paginated list.
+ *
+ * Ranking happens on the client, so an assignment sitting on page three of a
+ * chronologically ordered list would stay invisible until someone scrolled to
+ * it — exactly the failure this queue exists to prevent.
+ */
+export function useUnacknowledgedLeads(filters: LeadFilters) {
+  const scoped: LeadFilters = { ...filters, unacknowledged: true };
+  return useQuery({
+    queryKey: ['leads', 'unacknowledged', scoped] as const,
+    queryFn: () => api.listLeads(scoped, { limit: 50, offset: 0 }),
+    refetchInterval: 60_000,
+  });
+}
+
 export function useLeadDetail(leadId: string) {
   return useQuery({
     queryKey: leadKeys.detail(leadId),

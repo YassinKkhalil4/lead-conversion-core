@@ -30,6 +30,27 @@ export function age(iso: string | null | undefined, now: Date = new Date()): str
   return format(parsed, 'd MMM');
 }
 
+/**
+ * The queue clock. Minutes under an hour, hours and minutes under a day, an
+ * absolute weekday and time beyond that: `41m`, `2h 14m`, `Tue 14:20`.
+ *
+ * Minutes are kept alongside hours because the difference between 2h 05m and
+ * 2h 55m is what decides whether a lead is still worth calling today.
+ */
+export function queueClock(iso: string | null | undefined, now: Date = new Date()): string {
+  const parsed = parse(iso);
+  if (!parsed) return '—';
+  const seconds = differenceInSeconds(now, parsed);
+  if (seconds < 60) return 'now';
+  if (seconds < HOUR) return `${Math.floor(seconds / MINUTE)}m`;
+  if (seconds < DAY) {
+    const hours = Math.floor(seconds / HOUR);
+    const minutes = Math.floor((seconds % HOUR) / MINUTE);
+    return minutes === 0 ? `${hours}h` : `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  }
+  return format(parsed, 'EEE HH:mm');
+}
+
 /** Same rule as `age`, phrased for prose. */
 export function ageAgo(iso: string | null | undefined, now: Date = new Date()): string {
   const parsed = parse(iso);
