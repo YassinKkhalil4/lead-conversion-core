@@ -15,6 +15,7 @@ interface LeadRecord {
   client_id: string;
   contact_id: string;
   status: string;
+  pipeline_stage: string;
   stop_follow_up: boolean;
   closed_status: string;
   contact_phone: string;
@@ -315,6 +316,57 @@ export class DashboardLeadActionService {
   }
 
   /**
+   * Moves the lead along the sales pipeline.
+   *
+   * `app.leads.status` is deliberately untouched: it is the conversation
+   * engine's own lifecycle and several services branch on it, so the pipeline
+   * is recorded alongside rather than folded into it.
+   */
+  async setPipelineStage(user: DashboardUser, scope: DashboardScope, leadId: string, stage: string): Promise<{
+    pipelineStage: string;
+    previousPipelineStage: string;
+    changed: boolean;
+  }> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const lead = await this.lockLead(client, scope, leadId);
+      if (lead.pipeline_stage === stage) {
+        await client.query('COMMIT');
+        return { pipelineStage: stage, previousPipelineStage: stage, changed: false };
+      }
+
+      const updated = await client.query<{ pipeline_stage: string }>(
+        `UPDATE app.leads
+         SET pipeline_stage = $2, updated_at = now()
+         WHERE lead_id = $1
+         RETURNING pipeline_stage`,
+        [lead.lead_id, stage],
+      );
+      const pipelineStage = updated.rows[0]?.pipeline_stage;
+      if (!pipelineStage) throw notFound('lead_not_found');
+
+      await this.audit.record(client, {
+        eventType: 'dashboard.pipeline_stage_changed',
+        actorType: 'salesperson',
+        actorId: user.userId,
+        aggregateType: 'lead',
+        aggregateId: lead.lead_id,
+        payload: { clientId: lead.client_id, from: lead.pipeline_stage, to: pipelineStage },
+        before: { pipelineStage: lead.pipeline_stage },
+        after: { pipelineStage },
+      });
+      await client.query('COMMIT');
+      return { pipelineStage, previousPipelineStage: lead.pipeline_stage, changed: true };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Queues an outbound WhatsApp message. Nothing is sent here: the shared
    * MessageRequestService writes the message row and the outbox command in one
    * transaction, and the messaging worker performs the HTTP call afterwards.
@@ -421,7 +473,7 @@ export class DashboardLeadActionService {
     const visibility = leadVisibilitySql('l', scope, params);
     const leadParam = params.bind(leadId);
     const result = await pool.query<LeadRecord>(
-      `SELECT l.lead_id, l.client_id, l.contact_id, l.status, l.stop_follow_up, l.closed_status,
+      `SELECT l.lead_id, l.client_id, l.contact_id, l.status, l.pipeline_stage, l.stop_follow_up, l.closed_status,
               ct.phone_e164 AS contact_phone,
               COALESCE(cl.legacy_airtable_id, cl.client_key) AS client_record_id,
               conv.conversation_id, conv.last_inbound_at, conv.conversation_window_expires_at
@@ -446,7 +498,7 @@ export class DashboardLeadActionService {
     const visibility = leadVisibilitySql('l', scope, params);
     const leadParam = params.bind(leadId);
     const result = await client.query<LeadRecord>(
-      `SELECT l.lead_id, l.client_id, l.contact_id, l.status, l.stop_follow_up, l.closed_status,
+      `SELECT l.lead_id, l.client_id, l.contact_id, l.status, l.pipeline_stage, l.stop_follow_up, l.closed_status,
               ct.phone_e164 AS contact_phone,
               COALESCE(cl.legacy_airtable_id, cl.client_key) AS client_record_id,
               NULL::uuid AS conversation_id,

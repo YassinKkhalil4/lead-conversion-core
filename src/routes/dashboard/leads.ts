@@ -44,6 +44,17 @@ const closeSchema = z.object({ reason: z.string().min(1).max(200) });
 const stopFollowUpSchema = z.object({ reason: z.string().min(1).max(200).default('stopped_from_dashboard') });
 const takeoverSchema = z.object({ enabled: z.boolean().default(true) });
 
+export const PIPELINE_STAGES = [
+  'new',
+  'in_progress',
+  'site_visit_scheduled',
+  'closed_won',
+  'closed_lost',
+  'ghosted',
+] as const;
+
+const stageSchema = z.object({ stage: z.enum(PIPELINE_STAGES) });
+
 const replySchema = z.object({
   requestKey: z.string().min(8).max(200),
   payload: z.discriminatedUnion('kind', [
@@ -135,6 +146,14 @@ export async function dashboardLeadRoutes(
     const params = parseOrThrow(leadParamsSchema, request.params);
     const body = parseOrThrow(stopFollowUpSchema, request.body ?? {});
     const result = await deps.actions.stopFollowUp(user, scopeFor(user), params.id, body.reason);
+    return { ok: true, ...result };
+  });
+
+  app.patch('/api/leads/:id/stage', async (request: FastifyRequest) => {
+    const user = requireUser(request);
+    const params = parseOrThrow(leadParamsSchema, request.params);
+    const body = parseOrThrow(stageSchema, request.body);
+    const result = await deps.actions.setPipelineStage(user, scopeFor(user), params.id, body.stage);
     return { ok: true, ...result };
   });
 

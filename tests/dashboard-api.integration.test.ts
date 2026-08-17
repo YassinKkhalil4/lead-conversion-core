@@ -577,6 +577,119 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
   });
 
+  describe('pipeline stage', () => {
+    it('moves a lead through the pipeline and writes an audit row', async () => {
+      const token = await login(tenantA.salespersonEmail);
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/leads/${tenantA.leadId}/stage`,
+        headers: authed(token),
+        payload: { stage: 'site_visit_scheduled' },
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json()).toMatchObject({
+        pipelineStage: 'site_visit_scheduled',
+        previousPipelineStage: 'new',
+        changed: true,
+      });
+
+      const row = await db.pool.query('SELECT status, pipeline_stage FROM app.leads WHERE lead_id = $1', [
+        tenantA.leadId,
+      ]);
+      // The engine's own lifecycle column must be left exactly as it was.
+      expect(row.rows[0]).toMatchObject({ status: 'qualified', pipeline_stage: 'site_visit_scheduled' });
+
+      const audit = await db.pool.query(
+        `SELECT payload_json, before_json, after_json FROM audit.events
+         WHERE event_type = 'dashboard.pipeline_stage_changed' AND aggregate_id = $1`,
+        [tenantA.leadId],
+      );
+      expect(audit.rows).toHaveLength(1);
+      expect(audit.rows[0]?.payload_json).toMatchObject({ from: 'new', to: 'site_visit_scheduled' });
+      expect(audit.rows[0]?.before_json).toMatchObject({ pipelineStage: 'new' });
+      expect(audit.rows[0]?.after_json).toMatchObject({ pipelineStage: 'site_visit_scheduled' });
+    });
+
+    it('is a no-op that writes no audit row when the stage is unchanged', async () => {
+      const token = await login(tenantA.salespersonEmail);
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/leads/${tenantA.leadId}/stage`,
+        headers: authed(token),
+        payload: { stage: 'new' },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().changed).toBe(false);
+      const audit = await db.pool.query(
+        `SELECT count(*)::int AS total FROM audit.events WHERE event_type = 'dashboard.pipeline_stage_changed'`,
+      );
+      expect(audit.rows[0]?.total).toBe(0);
+    });
+
+    it('rejects a stage outside the allowed set', async () => {
+      const token = await login(tenantA.salespersonEmail);
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/leads/${tenantA.leadId}/stage`,
+        headers: authed(token),
+        payload: { stage: 'closed_maybe' },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toBe('validation_failed');
+    });
+
+    it('accepts every stage the migration allows', async () => {
+      const token = await login(tenantA.managerEmail);
+      for (const stage of ['in_progress', 'site_visit_scheduled', 'closed_won', 'closed_lost', 'ghosted', 'new']) {
+        const response = await app.inject({
+          method: 'PATCH',
+          url: `/api/leads/${tenantA.leadId}/stage`,
+          headers: authed(token),
+          payload: { stage },
+        });
+        expect(response.statusCode, `${stage}: ${response.body}`).toBe(200);
+      }
+    });
+
+    it('cannot move a lead belonging to another client', async () => {
+      const token = await login(tenantA.adminEmail);
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/leads/${tenantB.leadId}/stage`,
+        headers: authed(token),
+        payload: { stage: 'closed_won' },
+      });
+      expect(response.statusCode).toBe(404);
+      const row = await db.pool.query('SELECT pipeline_stage FROM app.leads WHERE lead_id = $1', [tenantB.leadId]);
+      expect(row.rows[0]?.pipeline_stage).toBe('new');
+    });
+
+    it('cannot move a lead the salesperson cannot see', async () => {
+      await db.pool.query(
+        `INSERT INTO app.lead_assignments (lead_id, salesperson_id, routing_version, status)
+         VALUES ($1, $2, 'routing-v1', 'assigned')`,
+        [tenantA.otherLeadId, tenantA.otherSalespersonId],
+      );
+      const token = await login(tenantA.salespersonEmail);
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/leads/${tenantA.otherLeadId}/stage`,
+        headers: authed(token),
+        payload: { stage: 'ghosted' },
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('requires a session', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/leads/${tenantA.leadId}/stage`,
+        payload: { stage: 'in_progress' },
+      });
+      expect(response.statusCode).toBe(401);
+    });
+  });
+
   describe('approved templates', () => {
     it('returns the approved templates with their language codes', async () => {
       const token = await login(tenantA.salespersonEmail);
