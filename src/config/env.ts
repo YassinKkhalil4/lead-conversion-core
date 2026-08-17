@@ -21,6 +21,7 @@ const baseSchema = z.object({
   META_WA_ACCESS_TOKEN: z.string().optional().default(''),
   META_WA_PHONE_NUMBER_ID: z.string().optional().default(''),
   META_APPROVED_TEMPLATE_NAMES: z.string().optional().default(''),
+  META_DEFAULT_TEMPLATE_LANGUAGE: z.string().min(2).max(10).default('ar'),
   META_APP_SECRET: z.string().optional().default(''),
   META_WEBHOOK_VERIFY_TOKEN: z.string().optional().default(''),
   META_STATUS_PROCESSOR_ENABLED: booleanString.default('false'),

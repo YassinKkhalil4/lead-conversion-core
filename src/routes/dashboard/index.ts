@@ -15,6 +15,7 @@ import { dashboardLeadRoutes } from './leads.js';
 import { dashboardNotificationRoutes } from './notifications.js';
 import { dashboardStreamRoutes } from './stream.js';
 import { dashboardSummaryRoutes } from './summary.js';
+import { dashboardTemplateRoutes } from './templates.js';
 import { dashboardUserRoutes } from './users.js';
 
 /**
@@ -44,6 +45,7 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   await dashboardNotificationRoutes(app, { notifications });
   await dashboardDirectoryRoutes(app, { directory });
   await dashboardSummaryRoutes(app, { summary });
+  await dashboardTemplateRoutes(app);
   await dashboardStreamRoutes(app, { events: dashboardEventBus });
 
   app.addHook('onClose', async () => {

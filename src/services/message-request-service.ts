@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { approvedTemplateNames } from '../config/approved-templates.js';
 import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
@@ -67,10 +68,10 @@ export class MessageRequestService {
     private readonly outbox = new RuntimeOutboxRepository(),
     private readonly audit = new AuditRepository(),
     private readonly policy = {
-      approvedTemplateNames: getEnv().META_APPROVED_TEMPLATE_NAMES
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean),
+      approvedTemplateNames: approvedTemplateNames(
+        getEnv().META_APPROVED_TEMPLATE_NAMES,
+        getEnv().META_DEFAULT_TEMPLATE_LANGUAGE,
+      ),
       now: () => new Date(),
     },
   ) {}

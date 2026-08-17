@@ -310,7 +310,10 @@ describePg('dashboard API with real PostgreSQL', () => {
     process.env.DASHBOARD_SESSION_COOKIE_SECURE = 'false';
     process.env.DASHBOARD_LOGIN_RATE_LIMIT_MAX = '5';
     process.env.DASHBOARD_LOGIN_RATE_LIMIT_WINDOW_MS = '900000';
-    process.env.META_APPROVED_TEMPLATE_NAMES = 'lead_welcome';
+    // Both entry forms: a bare name taking the default language, and an
+    // explicit name:language pair.
+    process.env.META_APPROVED_TEMPLATE_NAMES = 'lead_welcome,lead_followup:en';
+    process.env.META_DEFAULT_TEMPLATE_LANGUAGE = 'ar';
 
     db = await import('../src/db/pool.js');
     appModule = await import('../src/app.js');
@@ -571,6 +574,45 @@ describePg('dashboard API with real PostgreSQL', () => {
         tenantB.salespersonId,
       ]);
       expect(check.rows[0]?.name).toBe('Sales One b');
+    });
+  });
+
+  describe('approved templates', () => {
+    it('returns the approved templates with their language codes', async () => {
+      const token = await login(tenantA.salespersonEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/templates', headers: authed(token) });
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.defaultLanguageCode).toBe('ar');
+      // The suite configures META_APPROVED_TEMPLATE_NAMES as
+      // 'lead_welcome,lead_followup:en', covering both entry forms.
+      expect(body.templates).toEqual([
+        { name: 'lead_welcome', languageCode: 'ar' },
+        { name: 'lead_followup', languageCode: 'en' },
+      ]);
+    });
+
+    it('requires a session', async () => {
+      const response = await app.inject({ method: 'GET', url: '/api/templates' });
+      expect(response.statusCode).toBe(401);
+    });
+
+    it('accepts any approved name regardless of the language variant requested', async () => {
+      await db.pool.query(
+        `UPDATE app.messages SET created_at = now() - interval '30 hours' WHERE lead_id = $1`,
+        [tenantA.leadId],
+      );
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/leads/${tenantA.leadId}/reply`,
+        headers: authed(token),
+        payload: {
+          requestKey: 'template-language-variant',
+          payload: { kind: 'template', templateName: 'lead_followup', languageCode: 'ar' },
+        },
+      });
+      expect(response.statusCode, response.body).toBe(200);
     });
   });
 
