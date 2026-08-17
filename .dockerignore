@@ -1,6 +1,12 @@
 node_modules
 dist
 .git
+
+# The dashboard is a separate Expo app that Caddy serves as static files. The
+# API image never needs it, and excluding it keeps its node_modules out of the
+# build context.
+dashboard
+
 .env
 .env.*
 !.env.example
