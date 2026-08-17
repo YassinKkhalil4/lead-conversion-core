@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Rolefit",
+    "slug": "rolefit-dashboard",
+    "scheme": "rolefit",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tryrolefit.dashboard"
+    },
+    "android": {
+      "package": "com.tryrolefit.dashboard"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

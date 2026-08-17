@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Expo caches and generated types
+.expo/
+.expo-shared/
+
+# Static web export produced by `npm run build:web`.
+# The build is shipped to the server with rsync, never committed.
+dist/
+web-build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Local editor and agent tooling, matching the repository root convention
+.claude/
+.claude-flow/
+.DS_Store
+
+# Local environment overrides
+.env
+.env.*
+!.env.example
