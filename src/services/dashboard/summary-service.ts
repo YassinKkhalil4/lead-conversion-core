@@ -8,6 +8,10 @@ export interface PeriodMetrics {
   qualifiedLeads: number;
   closedLeads: number;
   assignedUnacknowledged: number;
+  /** Assignments acknowledged in the period, not leads created in it. */
+  acknowledged: number;
+  /** Distinct leads that received an outbound message in the period. */
+  replied: number;
   conversionRate: number;
 }
 
@@ -34,6 +38,12 @@ export interface DashboardSummary {
 }
 
 interface SummaryRow {
+  acknowledged_today: string;
+  acknowledged_week: string;
+  acknowledged_month: string;
+  replied_today: string;
+  replied_week: string;
+  replied_month: string;
   new_today: string;
   new_week: string;
   new_month: string;
@@ -101,6 +111,19 @@ export class DashboardSummaryService {
          FROM app.lead_assignments a
          JOIN visible v ON v.lead_id = a.lead_id
          WHERE a.status = 'assigned' AND a.acknowledged_at IS NULL
+       ),
+       acknowledgements AS (
+         SELECT a.acknowledged_at
+         FROM app.lead_assignments a
+         JOIN visible v ON v.lead_id = a.lead_id
+         WHERE a.acknowledged_at IS NOT NULL
+       ),
+       replies AS (
+         SELECT m.lead_id, min(m.created_at) AS first_reply_at
+         FROM app.messages m
+         JOIN visible v ON v.lead_id = m.lead_id
+         WHERE m.direction = 'outbound'
+         GROUP BY m.lead_id, date_trunc('day', m.created_at)
        )
        SELECT
          (SELECT count(*) FROM visible WHERE created_at >= (SELECT day_start FROM bounds)) AS new_today,
@@ -120,26 +143,37 @@ export class DashboardSummaryService {
             AND created_at >= (SELECT month_start FROM bounds)) AS closed_month,
          (SELECT count(*) FROM assignments WHERE assigned_at >= (SELECT day_start FROM bounds)) AS unack_today,
          (SELECT count(*) FROM assignments WHERE assigned_at >= (SELECT week_start FROM bounds)) AS unack_week,
-         (SELECT count(*) FROM assignments WHERE assigned_at >= (SELECT month_start FROM bounds)) AS unack_month`,
+         (SELECT count(*) FROM assignments WHERE assigned_at >= (SELECT month_start FROM bounds)) AS unack_month,
+         (SELECT count(*) FROM acknowledgements
+            WHERE acknowledged_at >= (SELECT day_start FROM bounds)) AS acknowledged_today,
+         (SELECT count(*) FROM acknowledgements
+            WHERE acknowledged_at >= (SELECT week_start FROM bounds)) AS acknowledged_week,
+         (SELECT count(*) FROM acknowledgements
+            WHERE acknowledged_at >= (SELECT month_start FROM bounds)) AS acknowledged_month,
+         (SELECT count(DISTINCT lead_id) FROM replies
+            WHERE first_reply_at >= (SELECT day_start FROM bounds)) AS replied_today,
+         (SELECT count(DISTINCT lead_id) FROM replies
+            WHERE first_reply_at >= (SELECT week_start FROM bounds)) AS replied_week,
+         (SELECT count(DISTINCT lead_id) FROM replies
+            WHERE first_reply_at >= (SELECT month_start FROM bounds)) AS replied_month`,
       params.list(),
     );
     const row = result.rows[0];
-    const build = (newLeads: string, qualified: string, closed: string, unack: string): PeriodMetrics => {
-      const total = Number(newLeads ?? 0);
-      const qualifiedCount = Number(qualified ?? 0);
+    const build = (period: 'today' | 'week' | 'month'): PeriodMetrics => {
+      const read = (prefix: string): number => Number(row?.[`${prefix}_${period}` as keyof SummaryRow] ?? 0);
+      const total = read('new');
+      const qualifiedCount = read('qualified');
       return {
         newLeads: total,
         qualifiedLeads: qualifiedCount,
-        closedLeads: Number(closed ?? 0),
-        assignedUnacknowledged: Number(unack ?? 0),
+        closedLeads: read('closed'),
+        assignedUnacknowledged: read('unack'),
+        acknowledged: read('acknowledged'),
+        replied: read('replied'),
         conversionRate: ratio(qualifiedCount, total),
       };
     };
-    return {
-      today: build(row?.new_today ?? '0', row?.qualified_today ?? '0', row?.closed_today ?? '0', row?.unack_today ?? '0'),
-      week: build(row?.new_week ?? '0', row?.qualified_week ?? '0', row?.closed_week ?? '0', row?.unack_week ?? '0'),
-      month: build(row?.new_month ?? '0', row?.qualified_month ?? '0', row?.closed_month ?? '0', row?.unack_month ?? '0'),
-    };
+    return { today: build('today'), week: build('week'), month: build('month') };
   }
 
   private async responseTime(scope: DashboardScope): Promise<ResponseTimeMetrics> {

@@ -574,6 +574,112 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
   });
 
+  describe('summary counts', () => {
+    it('counts acknowledgements and replies for today', async () => {
+      const token = await login(tenantA.managerEmail);
+      const before = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(token),
+      });
+      // The seed gives this lead one outbound message two hours ago.
+      expect(before.json().summary.periods.today.replied).toBe(1);
+      expect(before.json().summary.periods.today.acknowledged).toBe(0);
+
+      await db.pool.query('UPDATE app.lead_assignments SET acknowledged_at = now() WHERE lead_assignment_id = $1', [
+        tenantA.assignmentId,
+      ]);
+      await db.pool.query(
+        `INSERT INTO app.messages (lead_id, client_id, contact_id, direction, message_text, state)
+         VALUES ($1, $2, $3, 'outbound', 'تمام', 'sent')`,
+        [tenantA.otherLeadId, tenantA.clientId, tenantA.contactId],
+      );
+
+      const after = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(token),
+      });
+      expect(after.json().summary.periods.today.acknowledged).toBe(1);
+      // Distinct leads replied to, not messages sent.
+      expect(after.json().summary.periods.today.replied).toBe(2);
+    });
+
+    it('counts a lead once however many times it was replied to', async () => {
+      const token = await login(tenantA.managerEmail);
+      for (let index = 0; index < 3; index += 1) {
+        await db.pool.query(
+          `INSERT INTO app.messages (lead_id, client_id, contact_id, direction, message_text, state)
+           VALUES ($1, $2, $3, 'outbound', 'follow up', 'sent')`,
+          [tenantA.leadId, tenantA.clientId, tenantA.contactId],
+        );
+      }
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(token),
+      });
+      expect(response.json().summary.periods.today.replied).toBe(1);
+    });
+
+    it('scopes both counts to the salesperson when that is the role', async () => {
+      // Acknowledged and replied on a lead this salesperson cannot see.
+      await db.pool.query(
+        `INSERT INTO app.lead_assignments (lead_id, salesperson_id, routing_version, status, acknowledged_at)
+         VALUES ($1, $2, 'routing-v1', 'assigned', now())`,
+        [tenantA.otherLeadId, tenantA.otherSalespersonId],
+      );
+      await db.pool.query(
+        `INSERT INTO app.messages (lead_id, client_id, contact_id, direction, message_text, state)
+         VALUES ($1, $2, $3, 'outbound', 'not yours', 'sent')`,
+        [tenantA.otherLeadId, tenantA.clientId, tenantA.contactId],
+      );
+      await db.pool.query('UPDATE app.lead_assignments SET acknowledged_at = now() WHERE lead_assignment_id = $1', [
+        tenantA.assignmentId,
+      ]);
+
+      const salespersonToken = await login(tenantA.salespersonEmail);
+      const managerToken = await login(tenantA.managerEmail);
+      const asSalesperson = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(salespersonToken),
+      });
+      const asManager = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(managerToken),
+      });
+
+      // The other lead now has an active assignment held by a colleague, so it
+      // leaves this salesperson's visibility entirely.
+      expect(asSalesperson.json().summary.periods.today.acknowledged).toBe(1);
+      expect(asManager.json().summary.periods.today.acknowledged).toBe(2);
+      expect(asSalesperson.json().summary.periods.today.replied).toBe(1);
+      expect(asManager.json().summary.periods.today.replied).toBe(2);
+    });
+
+    it('never counts another client\'s acknowledgements or replies', async () => {
+      await db.pool.query('UPDATE app.lead_assignments SET acknowledged_at = now() WHERE lead_assignment_id = $1', [
+        tenantB.assignmentId,
+      ]);
+      await db.pool.query(
+        `INSERT INTO app.messages (lead_id, client_id, contact_id, direction, message_text, state)
+         VALUES ($1, $2, $3, 'outbound', 'other tenant', 'sent')`,
+        [tenantB.otherLeadId, tenantB.clientId, tenantB.contactId],
+      );
+
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(token),
+      });
+      expect(response.json().summary.periods.today.acknowledged).toBe(0);
+      expect(response.json().summary.periods.today.replied).toBe(1);
+    });
+  });
+
   describe('role restrictions', () => {
     it('limits a salesperson to their own and unassigned leads', async () => {
       await db.pool.query(
