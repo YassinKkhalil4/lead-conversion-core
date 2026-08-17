@@ -1,159 +1,153 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { explain } from '@/api/errors';
 import type { Lead, LeadFilters } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
-import { LeadListSkeleton } from '@/design/Skeleton';
+import { Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, fontFamily, fontSize, hitSlop, radius, space } from '@/design/tokens';
-import { LeadRow } from '@/leads/LeadRow';
-import { useLeadList } from '@/leads/hooks';
+import { color, hitSlop, radius, rowHeight, space } from '@/design/tokens';
+import { QueueRow } from '@/leads/QueueRow';
+import { useLeadList, useUnacknowledgedLeads } from '@/leads/hooks';
+import { useLastLook } from '@/leads/lastLook';
+import { QueueState, type RankedLead, countToday, lastActivityAt, rankLeads, urgentCount } from '@/leads/queue';
+import { ageAgo } from '@/time/format';
 
-type Scope = 'all' | 'mine' | 'unassigned';
+type Scope = 'mine' | 'all';
+type Filter = 'none' | 'pastSla' | 'unacknowledged';
 
-export default function LeadInbox() {
+type Item = { kind: 'lead'; entry: RankedLead } | { kind: 'divider'; label: string };
+
+export default function Queue() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
+  const { previousLook } = useLastLook();
 
-  const [scope, setScope] = useState<Scope>('all');
-  const [temperature, setTemperature] = useState<string[]>([]);
-  const [status, setStatus] = useState<string[]>([]);
-  const [unacknowledged, setUnacknowledged] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const [scope, setScope] = useState<Scope>('mine');
+  const [filter, setFilter] = useState<Filter>('none');
 
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput.trim()), 250);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  const filters = useMemo<LeadFilters>(
+  const baseFilters = useMemo<LeadFilters>(
     () => ({
       ...(scope === 'mine' ? { assignedTo: 'me' as const } : {}),
-      ...(scope === 'unassigned' ? { assignedTo: 'unassigned' as const } : {}),
-      ...(temperature.length > 0 ? { temperature } : {}),
-      ...(status.length > 0 ? { status } : {}),
-      ...(unacknowledged ? { unacknowledged: true } : {}),
-      ...(search ? { search } : {}),
       sort: 'last_message_at',
       direction: 'desc',
     }),
-    [scope, temperature, status, unacknowledged, search],
+    [scope],
   );
 
-  const query = useLeadList(filters);
-  const leads = useMemo(() => query.data?.pages.flatMap((page) => page.leads) ?? [], [query.data]);
-  const total = query.data?.pages[0]?.total ?? 0;
+  const unacknowledged = useUnacknowledgedLeads(baseFilters);
+  const recent = useLeadList(baseFilters);
 
-  const pendingAcknowledgement = leads.filter(
-    (lead) => lead.assignment?.status === 'assigned' && !lead.assignment.acknowledgedAt,
-  ).length;
+  const allLeads = useMemo<Lead[]>(
+    () => [...(unacknowledged.data?.leads ?? []), ...(recent.data?.pages.flatMap((page) => page.leads) ?? [])],
+    [unacknowledged.data, recent.data],
+  );
 
-  const explained = query.isError ? explain(query.error, 'Loading the inbox') : null;
-  const isStaleCache = query.isError && leads.length > 0;
+  const ranked = useMemo(() => rankLeads(allLeads), [allLeads]);
+  const urgent = urgentCount(ranked);
+  const today = useMemo(() => countToday(allLeads), [allLeads]);
+
+  const visible = useMemo(() => {
+    if (filter === 'pastSla') return ranked.filter((entry) => entry.state === QueueState.UnacknowledgedPastSla);
+    if (filter === 'unacknowledged') return ranked.filter((entry) => entry.needsAcknowledgement);
+    return ranked;
+  }, [ranked, filter]);
+
+  const items = useMemo<Item[]>(() => withSinceDivider(visible, previousLook), [visible, previousLook]);
+
+  const loading = unacknowledged.isLoading && recent.isLoading;
+  const failed = recent.isError && allLeads.length === 0;
+  const explained = failed ? explain(recent.error, 'Loading your queue') : null;
+
+  const refreshing = (recent.isRefetching || unacknowledged.isRefetching) && !recent.isFetchingNextPage;
+  const refreshAll = () => {
+    void recent.refetch();
+    void unacknowledged.refetch();
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: color.paper }}>
-      <View
-        style={{
-          paddingTop: insets.top + space.lg,
-          paddingHorizontal: space.xl,
-          paddingBottom: space.lg,
-          backgroundColor: color.surface,
-          borderBottomWidth: 1,
-          borderBottomColor: color.hairline,
-          gap: space.lg,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space.md }}>
-          <Text size="title" weight="bold">
-            Inbox
-          </Text>
-          <Text size="small" tone="muted" numeric>
-            {query.isLoading ? '' : `${total} lead${total === 1 ? '' : 's'}`}
-          </Text>
-          <View style={{ flex: 1 }} />
+      <View style={{ paddingTop: insets.top + space.md, backgroundColor: color.surface }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: space.xl }}>
           <Pressable onPress={() => void signOut()} hitSlop={hitSlop} accessibilityRole="button">
-            <Text size="micro" tone="accent" weight="semibold">
-              Sign out
+            <Text size="micro" tone="faint">
+              {user?.name ? `${user.name} · sign out` : 'Sign out'}
             </Text>
           </Pressable>
         </View>
 
-        <TextInput
-          accessibilityLabel="Search by name or phone"
-          value={searchInput}
-          onChangeText={setSearchInput}
-          placeholder="Search name or phone"
-          placeholderTextColor={color.inkFaint}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
-          style={{
-            fontFamily,
-            fontSize: fontSize.body,
-            color: color.ink,
-            backgroundColor: color.surfaceSunken,
-            borderRadius: radius.md,
-            paddingHorizontal: space.lg,
-            minHeight: 40,
-          }}
-        />
-        <Text size="micro" tone="faint">
-          {user?.companyName ?? ''}
-          {user?.role ? ` · ${user.role}` : ''}
-        </Text>
+        {loading ? (
+          <View style={{ paddingHorizontal: space.xl, paddingVertical: space.xl, gap: space.md }}>
+            <Skeleton width={140} height={52} />
+            <Skeleton width={180} height={14} />
+          </View>
+        ) : urgent > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${urgent} assignments need you now. Show only these.`}
+            onPress={() => setFilter('pastSla')}
+            style={({ pressed }) => ({
+              paddingHorizontal: space.xl,
+              paddingTop: space.sm,
+              paddingBottom: space.xl,
+              backgroundColor: pressed ? color.surfacePressed : 'transparent',
+            })}
+          >
+            <Text size="display" weight="bold" numeric style={{ color: color.alert }}>
+              {urgent}
+            </Text>
+            <Text size="large" weight="semibold" style={{ color: color.alert }}>
+              need you now
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm, paddingBottom: space.xl, gap: space.sm }}>
+            <Text size="large" weight="semibold">
+              Nothing is past its SLA.
+            </Text>
+            <Text size="small" tone="muted" numeric>
+              {today.received} received · {today.acknowledged} acknowledged · {today.replied} replied today
+            </Text>
+          </View>
+        )}
+
+        {filter !== 'none' ? (
+          <View style={{ paddingHorizontal: space.xl, paddingBottom: space.md }}>
+            <Text size="micro" tone="muted">
+              Showing {filter === 'pastSla' ? 'assignments past SLA' : 'unacknowledged assignments'} only
+            </Text>
+          </View>
+        ) : null}
       </View>
 
-      {isStaleCache && explained ? (
-        <View
-          style={{
-            paddingHorizontal: space.xl,
-            paddingVertical: space.md,
-            backgroundColor: color.warmWash,
-            borderBottomWidth: 1,
-            borderBottomColor: color.hairline,
-          }}
-        >
-          <Text size="micro" style={{ color: color.warm }}>
-            {explained.title}. Showing the last leads saved on this device.
-          </Text>
-        </View>
-      ) : null}
-
-      {query.isLoading ? (
-        <LeadListSkeleton rows={8} />
-      ) : explained && leads.length === 0 ? (
-        <ErrorState title={explained.title} detail={explained.detail} onRetry={() => void query.refetch()} />
+      {loading ? (
+        <QueueSkeleton />
+      ) : explained ? (
+        <ErrorState title={explained.title} detail={explained.detail} onRetry={refreshAll} />
       ) : (
         <FlatList
-          data={leads}
-          keyExtractor={(lead: Lead) => lead.leadId}
-          renderItem={({ item }) => <LeadRow lead={item} onPress={(id) => router.push(`/leads/${id}`)} />}
+          data={items}
+          keyExtractor={(item) => (item.kind === 'lead' ? item.entry.lead.leadId : `divider-${item.label}`)}
+          renderItem={({ item }) =>
+            item.kind === 'divider' ? (
+              <SinceDivider label={item.label} />
+            ) : (
+              <QueueRow entry={item.entry} onPress={(leadId) => router.push(`/leads/${leadId}`)} />
+            )
+          }
           refreshControl={
-            <RefreshControl
-              refreshing={query.isRefetching && !query.isFetchingNextPage}
-              onRefresh={() => void query.refetch()}
-              tintColor={color.inkMuted}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={refreshAll} tintColor={color.inkMuted} />
           }
           onEndReachedThreshold={0.6}
           onEndReached={() => {
-            if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
+            if (filter === 'none' && recent.hasNextPage && !recent.isFetchingNextPage) void recent.fetchNextPage();
           }}
-          ListEmptyComponent={
-            <EmptyState
-              title={emptyTitle({ search, scope, unacknowledged, temperature, status })}
-              detail={emptyDetail({ search, scope, unacknowledged, temperature, status })}
-            />
-          }
+          ListEmptyComponent={<QueueEmpty filter={filter} scope={scope} />}
           ListFooterComponent={
-            query.isFetchingNextPage ? (
+            recent.isFetchingNextPage ? (
               <View style={{ paddingVertical: space.xl }}>
                 <ActivityIndicator size="small" color={color.inkMuted} />
               </View>
@@ -163,137 +157,210 @@ export default function LeadInbox() {
         />
       )}
 
-      {/* Filters sit at the bottom: this is used one-handed, between viewings. */}
+      {/* Thumb reach. At most two controls; nothing else earns this space. */}
       <View
         style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: space.md,
           borderTopWidth: 1,
           borderTopColor: color.hairline,
           backgroundColor: color.surface,
-          paddingBottom: insets.bottom,
+          paddingHorizontal: space.xl,
+          paddingTop: space.lg,
+          paddingBottom: insets.bottom + space.lg,
         }}
       >
-        {pendingAcknowledgement > 0 ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setUnacknowledged(true)}
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: space.md,
-              paddingHorizontal: space.xl,
-              paddingVertical: space.lg,
-              backgroundColor: pressed ? color.accentPressed : color.accent,
-            })}
-          >
-            <Text size="small" weight="semibold" tone="inverse" numeric>
-              {pendingAcknowledgement}
-            </Text>
-            <Text size="small" weight="semibold" tone="inverse" style={{ flex: 1 }}>
-              {pendingAcknowledgement === 1 ? 'assignment needs acknowledging' : 'assignments need acknowledging'}
-            </Text>
-            <Text size="small" weight="bold" tone="inverse">
-              →
-            </Text>
-          </Pressable>
-        ) : null}
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: space.lg, paddingVertical: space.lg, gap: space.md }}
-        >
-          <Chip label="All" active={scope === 'all' && !unacknowledged} onPress={() => { setScope('all'); setUnacknowledged(false); }} />
-          <Chip label="Mine" active={scope === 'mine'} onPress={() => setScope(scope === 'mine' ? 'all' : 'mine')} />
-          <Chip
-            label="Unassigned"
-            active={scope === 'unassigned'}
-            onPress={() => setScope(scope === 'unassigned' ? 'all' : 'unassigned')}
-          />
-          <Chip label="Needs ack" active={unacknowledged} onPress={() => setUnacknowledged(!unacknowledged)} />
-          <Divider />
-          {(['hot', 'warm', 'cold'] as const).map((value) => (
-            <Chip
-              key={value}
-              label={value[0]!.toUpperCase() + value.slice(1)}
-              active={temperature.includes(value)}
-              onPress={() => setTemperature(toggle(temperature, value))}
+        {filter !== 'none' ? (
+          <Control label="Show whole queue" active onPress={() => setFilter('none')} grow />
+        ) : (
+          <>
+            <Segmented
+              options={[
+                { key: 'mine', label: 'Mine' },
+                { key: 'all', label: 'All' },
+              ]}
+              value={scope}
+              onChange={(next) => setScope(next as Scope)}
             />
-          ))}
-          <Divider />
-          {(['open', 'qualified', 'closed'] as const).map((value) => (
-            <Chip
-              key={value}
-              label={value[0]!.toUpperCase() + value.slice(1)}
-              active={status.includes(value)}
-              onPress={() => setStatus(toggle(status, value))}
-            />
-          ))}
-        </ScrollView>
+            <Control label="Unacknowledged" active={false} onPress={() => setFilter('unacknowledged')} grow />
+          </>
+        )}
       </View>
     </View>
   );
 }
 
-function toggle(values: string[], value: string): string[] {
-  return values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+/**
+ * Splits the ranked list where activity stops being newer than the previous
+ * visit. Drawn only when it genuinely falls between rows: a divider at the very
+ * top or the very bottom tells the reader nothing.
+ */
+function withSinceDivider(entries: RankedLead[], previousLook: number | null): Item[] {
+  const items: Item[] = entries.map((entry) => ({ kind: 'lead', entry }));
+  if (!previousLook || entries.length === 0) return items;
+
+  const firstOlder = entries.findIndex((entry) => {
+    const activity = lastActivityAt(entry.lead);
+    return !activity || Date.parse(activity) <= previousLook;
+  });
+  if (firstOlder <= 0 || firstOlder >= entries.length) return items;
+
+  const label = `Last looked ${ageAgo(new Date(previousLook).toISOString())}`;
+  return [...items.slice(0, firstOlder), { kind: 'divider', label }, ...items.slice(firstOlder)];
 }
 
-function Divider() {
-  return <View style={{ width: 1, alignSelf: 'stretch', marginHorizontal: space.xs, backgroundColor: color.hairline }} />;
+function SinceDivider({ label }: { label: string }) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+        paddingHorizontal: space.xl,
+        paddingVertical: space.lg,
+      }}
+    >
+      <View style={{ height: 1, width: space.xxl, backgroundColor: color.hairlineStrong }} />
+      <Text size="micro" tone="faint" style={{ letterSpacing: 0.4 }}>
+        {label}
+      </Text>
+      <View style={{ height: 1, flex: 1, backgroundColor: color.hairline }} />
+    </View>
+  );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function QueueSkeleton() {
+  return (
+    <View>
+      {[0, 1, 2, 3, 4, 5].map((index) => (
+        <View
+          key={index}
+          style={{
+            height: index < 2 ? rowHeight.urgent : rowHeight.standard,
+            paddingHorizontal: space.xl,
+            paddingVertical: space.lg,
+            borderBottomWidth: 1,
+            borderBottomColor: color.hairline,
+            justifyContent: 'center',
+            gap: space.md,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Skeleton width={index < 2 ? 190 : 150} height={index < 2 ? 18 : 15} />
+            <Skeleton width={index < 2 ? 54 : 38} height={index < 2 ? 18 : 13} />
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Skeleton width={130} height={12} />
+            <Skeleton width={64} height={12} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
+  if (filter === 'pastSla') {
+    return (
+      <EmptyState
+        title="Nothing is past its SLA"
+        detail="An assignment appears here once it has gone 15 minutes without being acknowledged, which is when the system sends its first reminder."
+      />
+    );
+  }
+  if (filter === 'unacknowledged') {
+    return (
+      <EmptyState
+        title="Every assignment is acknowledged"
+        detail="A lead lands here the moment routing assigns it to you, and stays until you acknowledge it."
+      />
+    );
+  }
+  return (
+    <EmptyState
+      title={scope === 'mine' ? 'No leads assigned to you' : 'No leads yet'}
+      detail="Leads arrive from the website form, Facebook lead ads and WhatsApp. Each one appears here once the qualification conversation starts."
+    />
+  );
+}
+
+function Control({
+  label,
+  active,
+  onPress,
+  grow = false,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  grow?: boolean;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: 34,
+        minHeight: 44,
+        flexGrow: grow ? 1 : 0,
+        flexBasis: grow ? 0 : 'auto',
+        alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: space.lg,
-        borderRadius: radius.pill,
+        borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: active ? color.accent : color.hairlineStrong,
-        backgroundColor: active ? color.accentWash : pressed ? color.surfacePressed : color.surface,
+        borderColor: active ? color.ink : color.hairlineStrong,
+        backgroundColor: active ? color.ink : pressed ? color.surfacePressed : color.surface,
       })}
     >
-      <Text size="small" weight={active ? 'semibold' : 'regular'} style={{ color: active ? color.accent : color.inkMuted }}>
+      <Text size="small" weight="semibold" style={{ color: active ? color.inkInverse : color.ink }}>
         {label}
       </Text>
     </Pressable>
   );
 }
 
-interface EmptyContext {
-  search: string;
-  scope: Scope;
-  unacknowledged: boolean;
-  temperature: string[];
-  status: string[];
-}
-
-function hasFilters(context: EmptyContext): boolean {
+function Segmented({
+  options,
+  value,
+  onChange,
+}: {
+  options: { key: string; label: string }[];
+  value: string;
+  onChange: (key: string) => void;
+}) {
   return (
-    context.scope !== 'all' ||
-    context.unacknowledged ||
-    context.temperature.length > 0 ||
-    context.status.length > 0
+    <View
+      style={{
+        flexDirection: 'row',
+        borderWidth: 1,
+        borderColor: color.hairlineStrong,
+        borderRadius: radius.md,
+        overflow: 'hidden',
+      }}
+    >
+      {options.map((option) => {
+        const selected = option.key === value;
+        return (
+          <Pressable
+            key={option.key}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            onPress={() => onChange(option.key)}
+            style={({ pressed }) => ({
+              minHeight: 44,
+              justifyContent: 'center',
+              paddingHorizontal: space.xl,
+              backgroundColor: selected ? color.ink : pressed ? color.surfacePressed : color.surface,
+            })}
+          >
+            <Text size="small" weight="semibold" style={{ color: selected ? color.inkInverse : color.inkMuted }}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
-}
-
-function emptyTitle(context: EmptyContext): string {
-  if (context.search) return `No lead matches "${context.search}"`;
-  if (hasFilters(context)) return 'No leads match these filters';
-  return 'No leads yet';
-}
-
-function emptyDetail(context: EmptyContext): string {
-  if (context.search) {
-    return 'Search covers contact name and phone number only. Check the spelling, or clear the search to see the full inbox.';
-  }
-  if (hasFilters(context)) {
-    return 'Leads appear here as they arrive and are scored. Clear a filter above to widen the list.';
-  }
-  return 'Leads arrive from your website form, Facebook lead ads, and WhatsApp. Each one appears here once the qualification conversation starts.';
 }
