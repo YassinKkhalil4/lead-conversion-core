@@ -345,32 +345,68 @@ export class DashboardLeadActionService {
       }
     }
 
-    const result = await this.messages.requestWhatsAppSend({
-      clientId: record.client_id,
-      contactId: record.contact_id,
-      leadId: record.lead_id,
-      ...(record.conversation_id ? { conversationId: record.conversation_id } : {}),
-      requestKey: `dashboard:${user.userId}:${input.requestKey}`,
-      phoneNumberId: '',
-      toE164: record.contact_phone,
-      actorId: user.userId,
-      ...(windowExpiresAt ? { conversationWindowExpiresAt: windowExpiresAt } : {}),
-      payload:
-        input.payload.kind === 'text'
-          ? { kind: 'text', text: input.payload.text.trim() }
-          : {
-              kind: 'template',
-              templateName: input.payload.templateName,
-              languageCode: input.payload.languageCode,
-              components: [],
-            },
-    });
+    try {
+      const result = await this.messages.requestWhatsAppSend({
+        clientId: record.client_id,
+        contactId: record.contact_id,
+        leadId: record.lead_id,
+        ...(record.conversation_id ? { conversationId: record.conversation_id } : {}),
+        requestKey: `dashboard:${user.userId}:${input.requestKey}`,
+        phoneNumberId: '',
+        toE164: record.contact_phone,
+        actorId: user.userId,
+        ...(windowExpiresAt ? { conversationWindowExpiresAt: windowExpiresAt } : {}),
+        payload:
+          input.payload.kind === 'text'
+            ? { kind: 'text', text: input.payload.text.trim() }
+            : {
+                kind: 'template',
+                templateName: input.payload.templateName,
+                languageCode: input.payload.languageCode,
+                components: [],
+              },
+      });
 
-    return {
-      messageId: result.messageId,
-      outboxCommandId: result.outboxCommandId,
-      sessionWindowOpen,
-    };
+      return {
+        messageId: result.messageId,
+        outboxCommandId: result.outboxCommandId,
+        sessionWindowOpen,
+      };
+    } catch (error) {
+      throw this.translateSendPolicyError(error, windowExpiresAt);
+    }
+  }
+
+  /**
+   * MessageRequestService is the fail-closed authority on send policy and
+   * signals refusals with plain Errors. Those are expected outcomes of a caller
+   * request, not server faults, so they are mapped to 4xx here.
+   *
+   * This also closes a time-of-check/time-of-use race: the window is evaluated
+   * once above and again inside the service, and a reply sent close to the
+   * 24-hour boundary can cross it in between. Without this translation that
+   * race surfaced as an opaque 500 that reproduced only under load.
+   */
+  private translateSendPolicyError(error: unknown, windowExpiresAt: string | null): unknown {
+    if (!(error instanceof Error)) return error;
+
+    if (
+      error.message === 'conversation_window_expired'
+      || error.message === 'conversation_window_required_for_session_message'
+    ) {
+      return conflict('session_window_closed', {
+        sessionWindowExpiresAt: windowExpiresAt,
+        allowedMessageKind: 'template',
+      });
+    }
+
+    if (error.message.startsWith('whatsapp_template_not_approved:')) {
+      return badRequest('template_not_approved', {
+        templateName: error.message.slice('whatsapp_template_not_approved:'.length),
+      });
+    }
+
+    return error;
   }
 
   private sessionWindowExpiry(record: LeadRecord, visible: LeadListItem): string | null {

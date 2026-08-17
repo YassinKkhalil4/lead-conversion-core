@@ -38,7 +38,12 @@ interface Tenant {
 describePg('dashboard API with real PostgreSQL', () => {
   const root = mkdtempSync(join(tmpdir(), 'lead-core-dashboard-test.'));
   const dataDir = join(root, 'data');
-  const port = 57_500 + Math.floor(Math.random() * 1000);
+  // Disposable-cluster port ranges are allocated one per test file so parallel
+  // files cannot bind the same port: 56_500 runtime, 57_500 health-readiness,
+  // 58_500 config-seed, 59_500 notification-outbox, 60_500 dashboard-api.
+  // A collision does not fail loudly — `createdb` succeeds against whichever
+  // cluster won the bind, so the loser silently shares the winner's cluster.
+  const port = 60_500 + Math.floor(Math.random() * 1000);
   const dbName = 'lead_core_dashboard_test';
   const databaseUrl = `postgresql://127.0.0.1:${port}/${dbName}`;
 
@@ -926,7 +931,57 @@ describePg('dashboard API with real PostgreSQL', () => {
           payload: { kind: 'template', templateName: 'not_approved', languageCode: 'ar' },
         },
       });
-      expect(unapproved.statusCode).toBeGreaterThanOrEqual(400);
+      // An unapproved template is a caller error, not a server fault.
+      expect(unapproved.statusCode).toBe(400);
+      expect(unapproved.json().error).toBe('template_not_approved');
+      expect(unapproved.json().templateName).toBe('not_approved');
+    });
+
+    it('answers 409 rather than 500 when the window closes between the check and the send', async () => {
+      const [actions, list, types, runtime, sla, followups, sessions] = await Promise.all([
+        import('../src/services/dashboard/lead-action-service.js'),
+        import('../src/services/dashboard/lead-list-service.js'),
+        import('../src/services/dashboard/types.js'),
+        import('../src/infrastructure/runtime.js'),
+        import('../src/services/sla-service.js'),
+        import('../src/services/followup-scheduler-service.js'),
+        import('../src/services/dashboard/session-service.js'),
+      ]);
+
+      const { user } = await new sessions.DashboardSessionService().login({
+        email: tenantA.managerEmail,
+        password: PASSWORD,
+        ipAddress: '127.0.0.1',
+        userAgent: 'vitest',
+      });
+
+      // The lead's window is open when reply() checks it, but the send policy
+      // is re-evaluated a moment later and can cross the 24-hour boundary. That
+      // race previously escaped as an opaque 500.
+      const racedSender = {
+        requestWhatsAppSend: async () => {
+          throw new Error('conversation_window_expired');
+        },
+      } as unknown as InstanceType<typeof import('../src/services/message-request-service.js').MessageRequestService>;
+
+      const service = new actions.DashboardLeadActionService(
+        new list.DashboardLeadListService(),
+        new runtime.AuditRepository(),
+        new sla.SlaService(),
+        new followups.FollowupSchedulerService(),
+        racedSender,
+      );
+
+      await expect(
+        service.reply(user, types.scopeFor(user), {
+          leadId: tenantA.leadId,
+          requestKey: 'window-race',
+          payload: { kind: 'text', text: 'راح أتصل بيك' },
+        }),
+      ).rejects.toMatchObject({
+        statusCode: 409,
+        message: 'session_window_closed',
+      });
     });
   });
 

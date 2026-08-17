@@ -3611,3 +3611,25 @@ Result: passed. Vitest ran 19 files and 183 tests.
 Command: `npm run build`
 
 Result: passed. `tsc -p tsconfig.build.json` emitted `dist` without errors.
+
+## 2026-08-16 Dashboard Reply Status Codes And Error Log Detail
+
+Command: `npx tsx` against `src/config/logger.ts` with a synthetic PostgreSQL error
+
+Result: an `Error` logged under the `error` key now renders `type`, `message`, `stack`, `code`, `severity`, `table`, and `schema`, and follows the `cause` chain. The PostgreSQL `detail` field, which echoed a contact phone number, is absent from the output. Before the change the same log line rendered `"error": {}` because `Error.message` and `Error.stack` are non-enumerable and pino had no serializer registered for that key.
+
+Command: `npx vitest run tests/logger.test.ts tests/dashboard-api.integration.test.ts`
+
+Result: passed with 2 files and 44 tests, including the new error-serializer regression tests and the reply send-policy status-code tests.
+
+Command: `npm run lint`
+
+Result: passed. `tsc --noEmit` reported no errors.
+
+Command: `npm test` (run three consecutive times)
+
+Result: passed on all three runs. Vitest ran 19 files and 187 tests each time.
+
+Command: `npm run build`
+
+Result: passed. `tsc -p tsconfig.build.json` emitted `dist` without errors, and `dist/tests` was absent.

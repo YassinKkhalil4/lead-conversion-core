@@ -129,7 +129,14 @@ retrying a reply queued while offline, so a retry cannot double-send.
 
 If the lead's last inbound message is older than 24 hours the route returns
 `409 session_window_closed` with `allowedMessageKind: "template"`. Templates are
-checked against `META_APPROVED_TEMPLATE_NAMES`.
+checked against `META_APPROVED_TEMPLATE_NAMES`; an unapproved name returns
+`400 template_not_approved` with the offending `templateName`.
+
+Send policy is enforced twice: once by this route and again by
+`MessageRequestService`, which is the fail-closed authority. A reply sent close
+to the 24-hour boundary can cross it between the two checks, so the service's
+refusals are translated into the same `409`/`400` responses rather than
+surfacing as a `500`.
 
 Nothing is sent inline. `MessageRequestService` writes the `app.messages` row
 and the `whatsapp.send_message` outbox command in one transaction; the messaging
