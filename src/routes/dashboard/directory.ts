@@ -23,6 +23,7 @@ const salespersonCreateSchema = z.object({
   locations: stringList.default([]),
   languages: stringList.default([]),
   priorityRank: z.number().int().min(1).max(1000).default(100),
+  capacityLimit: z.number().int().min(1).max(1000).default(10),
   active: z.boolean().default(true),
 });
 
@@ -35,8 +36,13 @@ const salespersonUpdateSchema = z
     locations: stringList.optional(),
     languages: stringList.optional(),
     priorityRank: z.number().int().min(1).max(1000).optional(),
+    capacityLimit: z.number().int().min(1).max(1000).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, { message: 'no_fields_to_update' });
+
+const projectSalespeopleSchema = z.object({
+  salespersonIds: z.array(z.string().uuid()).max(200),
+});
 
 const projectCreateSchema = z.object({
   projectName: z.string().min(1).max(200),
@@ -97,6 +103,18 @@ export async function dashboardDirectoryRoutes(
     const user = requireRole(request, MANAGERS);
     const body = parseOrThrow(projectCreateSchema, request.body);
     const project = await deps.directory.createProject(user, body);
+    return { ok: true, project };
+  });
+
+  /**
+   * Replaces the whole set of salespeople eligible for a project. Routing reads
+   * this join, so onboarding a brokerage is not complete until it is populated.
+   */
+  app.put('/api/projects/:id/salespeople', async (request: FastifyRequest) => {
+    const user = requireRole(request, MANAGERS);
+    const params = parseOrThrow(idParamsSchema, request.params);
+    const body = parseOrThrow(projectSalespeopleSchema, request.body);
+    const project = await deps.directory.setProjectSalespeople(user, params.id, body.salespersonIds);
     return { ok: true, project };
   });
 

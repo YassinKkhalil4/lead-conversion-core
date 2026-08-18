@@ -577,6 +577,209 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
   });
 
+  describe('management surfaces', () => {
+    it('exposes capacity and per-salesperson acknowledgement stats', async () => {
+      await db.pool.query(
+        `UPDATE app.lead_assignments SET acknowledged_at = assigned_at + interval '4 minutes'
+         WHERE lead_assignment_id = $1`,
+        [tenantA.assignmentId],
+      );
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/salespeople', headers: authed(token) });
+      expect(response.statusCode).toBe(200);
+
+      const one = response
+        .json()
+        .salespeople.find((entry: { salespersonId: string }) => entry.salespersonId === tenantA.salespersonId);
+      expect(one.capacityLimit).toBe(10);
+      expect(one.acknowledgedCount).toBe(1);
+      expect(one.avgAcknowledgementSeconds).toBe(240);
+      expect(one.overdueAssignmentCount).toBe(0);
+
+      const untouched = response
+        .json()
+        .salespeople.find((entry: { salespersonId: string }) => entry.salespersonId === tenantA.otherSalespersonId);
+      expect(untouched.acknowledgedCount).toBe(0);
+      expect(untouched.avgAcknowledgementSeconds).toBeNull();
+    });
+
+    it('counts an assignment as overdue once it passes the SLA reminder', async () => {
+      await db.pool.query(
+        `UPDATE app.lead_assignments SET assigned_at = now() - interval '40 minutes'
+         WHERE lead_assignment_id = $1`,
+        [tenantA.assignmentId],
+      );
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({ method: 'GET', url: '/api/salespeople', headers: authed(token) });
+      const one = response
+        .json()
+        .salespeople.find((entry: { salespersonId: string }) => entry.salespersonId === tenantA.salespersonId);
+      expect(one.overdueAssignmentCount).toBe(1);
+    });
+
+    it('sets and reads the capacity limit', async () => {
+      const token = await login(tenantA.managerEmail);
+      const created = await app.inject({
+        method: 'POST',
+        url: '/api/salespeople',
+        headers: authed(token),
+        payload: { name: 'Capacity Test', phoneE164: '+201777777777', capacityLimit: 25 },
+      });
+      expect(created.statusCode, created.body).toBe(200);
+      expect(created.json().salesperson.capacityLimit).toBe(25);
+
+      const patched = await app.inject({
+        method: 'PATCH',
+        url: `/api/salespeople/${created.json().salesperson.salespersonId}`,
+        headers: authed(token),
+        payload: { capacityLimit: 3 },
+      });
+      expect(patched.statusCode).toBe(200);
+      expect(patched.json().salesperson.capacityLimit).toBe(3);
+    });
+
+    it('rejects a capacity limit below one', async () => {
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/salespeople/${tenantA.salespersonId}`,
+        headers: authed(token),
+        payload: { capacityLimit: 0 },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toBe('validation_failed');
+    });
+
+    it('replaces the set of salespeople eligible for a project', async () => {
+      const token = await login(tenantA.managerEmail);
+      const before = await app.inject({ method: 'GET', url: '/api/projects', headers: authed(token) });
+      expect(before.json().projects[0].salespersonIds).toEqual([]);
+
+      const set = await app.inject({
+        method: 'PUT',
+        url: `/api/projects/${tenantA.projectId}/salespeople`,
+        headers: authed(token),
+        payload: { salespersonIds: [tenantA.salespersonId, tenantA.otherSalespersonId] },
+      });
+      expect(set.statusCode, set.body).toBe(200);
+      expect(set.json().project.salespersonIds).toHaveLength(2);
+
+      // Replacing with a subset removes the rest rather than merging.
+      const narrowed = await app.inject({
+        method: 'PUT',
+        url: `/api/projects/${tenantA.projectId}/salespeople`,
+        headers: authed(token),
+        payload: { salespersonIds: [tenantA.otherSalespersonId] },
+      });
+      expect(narrowed.json().project.salespersonIds).toEqual([tenantA.otherSalespersonId]);
+
+      const cleared = await app.inject({
+        method: 'PUT',
+        url: `/api/projects/${tenantA.projectId}/salespeople`,
+        headers: authed(token),
+        payload: { salespersonIds: [] },
+      });
+      expect(cleared.json().project.salespersonIds).toEqual([]);
+
+      const audit = await db.pool.query(
+        `SELECT count(*)::int AS total FROM audit.events
+         WHERE event_type = 'dashboard.project_salespeople_set' AND aggregate_id = $1`,
+        [tenantA.projectId],
+      );
+      expect(audit.rows[0]?.total).toBe(3);
+    });
+
+    it('refuses to attach another client\'s salesperson to a project', async () => {
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'PUT',
+        url: `/api/projects/${tenantA.projectId}/salespeople`,
+        headers: authed(token),
+        payload: { salespersonIds: [tenantB.salespersonId] },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toBe('salesperson_not_in_client');
+
+      const rows = await db.pool.query('SELECT count(*)::int AS total FROM app.salesperson_projects WHERE project_id = $1', [
+        tenantA.projectId,
+      ]);
+      expect(rows.rows[0]?.total).toBe(0);
+    });
+
+    it('refuses to touch another client\'s project', async () => {
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'PUT',
+        url: `/api/projects/${tenantB.projectId}/salespeople`,
+        headers: authed(token),
+        payload: { salespersonIds: [] },
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('reserves project assignment for managers and admins', async () => {
+      const token = await login(tenantA.salespersonEmail);
+      const response = await app.inject({
+        method: 'PUT',
+        url: `/api/projects/${tenantA.projectId}/salespeople`,
+        headers: authed(token),
+        payload: { salespersonIds: [] },
+      });
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('reports p90 alongside median and worst for both response measures', async () => {
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(token),
+      });
+      const responseTime = response.json().summary.responseTime;
+      expect(responseTime).toHaveProperty('p90FirstContactSeconds');
+      expect(responseTime).toHaveProperty('p90AcknowledgementSeconds');
+      expect(responseTime).toHaveProperty('slowestAcknowledgementSeconds');
+      // The seed contacts its lead five minutes after arrival.
+      expect(responseTime.p90FirstContactSeconds).toBe(300);
+      expect(responseTime.medianFirstContactSeconds).toBe(300);
+    });
+
+    it('reports the previous period beside the current one without overlapping it', async () => {
+      // One lead yesterday, one last month; neither counts toward today.
+      await db.pool.query(
+        `INSERT INTO app.leads (client_id, contact_id, provider, provider_external_id, source, status, created_at)
+         VALUES ($1, $2, 'website', 'prev-day', 'website', 'open', now() - interval '1 day'),
+                ($1, $2, 'website', 'prev-month', 'website', 'open', now() - interval '40 days')`,
+        [tenantA.clientId, tenantA.contactId],
+      );
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(token),
+      });
+      const body = response.json().summary;
+      expect(body.periods.today.newLeads).toBe(2);
+      expect(body.previousPeriods.today.newLeads).toBe(1);
+      expect(body.previousPeriods.month.newLeads).toBe(1);
+    });
+
+    it('scopes the previous period to the client like every other query', async () => {
+      await db.pool.query(
+        `INSERT INTO app.leads (client_id, contact_id, provider, provider_external_id, source, status, created_at)
+         VALUES ($1, $2, 'website', 'other-prev-day', 'website', 'open', now() - interval '1 day')`,
+        [tenantB.clientId, tenantB.contactId],
+      );
+      const token = await login(tenantA.managerEmail);
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/dashboard/summary',
+        headers: authed(token),
+      });
+      expect(response.json().summary.previousPeriods.today.newLeads).toBe(0);
+    });
+  });
+
   describe('pipeline stage', () => {
     it('moves a lead through the pipeline and writes an audit row', async () => {
       const token = await login(tenantA.salespersonEmail);

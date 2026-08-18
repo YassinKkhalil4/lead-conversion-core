@@ -1,6 +1,6 @@
 import { pool } from '../../db/pool.js';
 import { AuditRepository } from '../../infrastructure/runtime.js';
-import { conflict, type DashboardUser, notFound } from './types.js';
+import { badRequest, conflict, type DashboardUser, notFound } from './types.js';
 
 export interface SalespersonView {
   salespersonId: string;
@@ -12,13 +12,26 @@ export interface SalespersonView {
   locations: string[];
   languages: string[];
   priorityRank: number;
+  /** Active assignments this salesperson may hold before routing skips them. */
+  capacityLimit: number;
   activeAssignmentCount: number;
   unacknowledgedAssignmentCount: number;
+  /** Assignments unacknowledged past the 15-minute SLA reminder, right now. */
+  overdueAssignmentCount: number;
+  /** Assignments this salesperson has ever acknowledged. */
+  acknowledgedCount: number;
+  /** Mean assignment-to-acknowledgement time, null until they acknowledge one. */
+  avgAcknowledgementSeconds: number | null;
   createdAt: string;
 }
 
 export interface ProjectView {
   projectId: string;
+  /**
+   * Salespeople eligible for this project. Routing matches on this join, so a
+   * project with nobody assigned can never be routed to.
+   */
+  salespersonIds: string[];
   projectName: string;
   active: boolean;
   startingPrice: number | null;
@@ -39,13 +52,18 @@ interface SalespersonRow {
   locations: string[];
   languages: string[];
   priority_rank: number;
+  capacity_limit: number;
   active_assignment_count: string;
   unacknowledged_assignment_count: string;
+  overdue_assignment_count: string;
+  acknowledged_count: string;
+  avg_acknowledgement_seconds: string | null;
   created_at: Date;
 }
 
 interface ProjectRow {
   project_id: string;
+  salesperson_ids: string[] | null;
   project_name: string;
   active: boolean;
   starting_price: string | null;
@@ -67,8 +85,13 @@ function toSalesperson(row: SalespersonRow): SalespersonView {
     locations: row.locations ?? [],
     languages: row.languages ?? [],
     priorityRank: row.priority_rank,
+    capacityLimit: row.capacity_limit,
     activeAssignmentCount: Number(row.active_assignment_count),
     unacknowledgedAssignmentCount: Number(row.unacknowledged_assignment_count),
+    overdueAssignmentCount: Number(row.overdue_assignment_count),
+    acknowledgedCount: Number(row.acknowledged_count),
+    avgAcknowledgementSeconds:
+      row.avg_acknowledgement_seconds === null ? null : Math.round(Number(row.avg_acknowledgement_seconds)),
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -76,6 +99,7 @@ function toSalesperson(row: SalespersonRow): SalespersonView {
 function toProject(row: ProjectRow): ProjectView {
   return {
     projectId: row.project_id,
+    salespersonIds: row.salesperson_ids ?? [],
     projectName: row.project_name,
     active: row.active,
     startingPrice: row.starting_price === null ? null : Number(row.starting_price),
@@ -89,17 +113,35 @@ function toProject(row: ProjectRow): ProjectView {
 
 const SALESPERSON_COLUMNS = `
   sp.salesperson_id, sp.name, sp.phone_e164, sp.email, sp.active,
-  sp.unit_specialties, sp.locations, sp.languages, sp.priority_rank, sp.created_at,
+  sp.unit_specialties, sp.locations, sp.languages, sp.priority_rank, sp.capacity_limit, sp.created_at,
   (SELECT count(*) FROM app.lead_assignments a
     WHERE a.salesperson_id = sp.salesperson_id AND a.status = 'assigned') AS active_assignment_count,
   (SELECT count(*) FROM app.lead_assignments a
     WHERE a.salesperson_id = sp.salesperson_id AND a.status = 'assigned'
-      AND a.acknowledged_at IS NULL) AS unacknowledged_assignment_count
+      AND a.acknowledged_at IS NULL) AS unacknowledged_assignment_count,
+  (SELECT count(*) FROM app.lead_assignments a
+    WHERE a.salesperson_id = sp.salesperson_id AND a.status = 'assigned'
+      AND a.acknowledged_at IS NULL
+      AND a.assigned_at <= now() - interval '15 minutes') AS overdue_assignment_count,
+  (SELECT count(*) FROM app.lead_assignments a
+    WHERE a.salesperson_id = sp.salesperson_id
+      AND a.acknowledged_at IS NOT NULL) AS acknowledged_count,
+  (SELECT avg(extract(epoch FROM (a.acknowledged_at - a.assigned_at)))
+     FROM app.lead_assignments a
+    WHERE a.salesperson_id = sp.salesperson_id
+      AND a.acknowledged_at IS NOT NULL) AS avg_acknowledgement_seconds
 `;
 
 const PROJECT_COLUMNS = `
   p.project_id, p.project_name, p.active, p.starting_price, p.max_price,
-  p.unit_types, p.location, p.maps_url, p.created_at
+  p.unit_types, p.location, p.maps_url, p.created_at,
+  ARRAY(
+    SELECT spp.salesperson_id::text
+    FROM app.salesperson_projects spp
+    JOIN app.salespeople s2 ON s2.salesperson_id = spp.salesperson_id
+    WHERE spp.project_id = p.project_id AND s2.client_id = p.client_id
+    ORDER BY s2.priority_rank, s2.name
+  ) AS salesperson_ids
 `;
 
 export class DashboardDirectoryService {
@@ -126,6 +168,7 @@ export class DashboardDirectoryService {
       locations: string[];
       languages: string[];
       priorityRank: number;
+      capacityLimit: number;
       active: boolean;
     },
   ): Promise<SalespersonView> {
@@ -134,8 +177,9 @@ export class DashboardDirectoryService {
       await client.query('BEGIN');
       const inserted = await client.query<{ salesperson_id: string }>(
         `INSERT INTO app.salespeople
-          (client_id, name, phone_e164, email, active, unit_specialties, locations, languages, priority_rank)
-         VALUES ($1, $2, $3, $4, $5, $6::text[], $7::text[], $8::text[], $9)
+          (client_id, name, phone_e164, email, active, unit_specialties, locations, languages,
+           priority_rank, capacity_limit)
+         VALUES ($1, $2, $3, $4, $5, $6::text[], $7::text[], $8::text[], $9, $10)
          ON CONFLICT (client_id, phone_e164) DO NOTHING
          RETURNING salesperson_id`,
         [
@@ -148,6 +192,7 @@ export class DashboardDirectoryService {
           input.locations,
           input.languages,
           input.priorityRank,
+          input.capacityLimit,
         ],
       );
       const salespersonId = inserted.rows[0]?.salesperson_id;
@@ -183,6 +228,7 @@ export class DashboardDirectoryService {
       locations?: string[] | undefined;
       languages?: string[] | undefined;
       priorityRank?: number | undefined;
+      capacityLimit?: number | undefined;
     },
   ): Promise<SalespersonView> {
     const client = await pool.connect();
@@ -197,6 +243,7 @@ export class DashboardDirectoryService {
              locations = COALESCE($7::text[], locations),
              languages = COALESCE($8::text[], languages),
              priority_rank = COALESCE($9, priority_rank),
+             capacity_limit = COALESCE($10, capacity_limit),
              updated_at = now()
          WHERE salesperson_id = $1 AND client_id = $2
          RETURNING salesperson_id`,
@@ -210,6 +257,7 @@ export class DashboardDirectoryService {
           input.locations ?? null,
           input.languages ?? null,
           input.priorityRank ?? null,
+          input.capacityLimit ?? null,
         ],
       );
       if (!updated.rows[0]) throw notFound('salesperson_not_found');
@@ -264,7 +312,8 @@ export class DashboardDirectoryService {
           (client_id, project_name, active, starting_price, max_price, unit_types, location, maps_url)
          VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8)
          RETURNING project_id, project_name, active, starting_price, max_price,
-                   unit_types, location, maps_url, created_at`,
+                   unit_types, location, maps_url, created_at,
+                   ARRAY[]::text[] AS salesperson_ids`,
         [
           actor.clientId,
           input.projectName,
@@ -324,7 +373,8 @@ export class DashboardDirectoryService {
              updated_at = now()
          WHERE project_id = $1 AND client_id = $2
          RETURNING project_id, project_name, active, starting_price, max_price,
-                   unit_types, location, maps_url, created_at`,
+                   unit_types, location, maps_url, created_at,
+                   ARRAY[]::text[] AS salesperson_ids`,
         [
           projectId,
           actor.clientId,
@@ -357,6 +407,79 @@ export class DashboardDirectoryService {
     } finally {
       client.release();
     }
+  }
+
+  /**
+   * Replaces the set of salespeople eligible for a project.
+   *
+   * Routing reads this join, so it is written as a whole set inside one
+   * transaction rather than as add/remove calls: a half-applied change would
+   * silently narrow who can receive a lead.
+   */
+  async setProjectSalespeople(
+    actor: DashboardUser,
+    projectId: string,
+    salespersonIds: string[],
+  ): Promise<ProjectView> {
+    const unique = [...new Set(salespersonIds)];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const project = await client.query<{ project_id: string }>(
+        'SELECT project_id FROM app.projects WHERE project_id = $1 AND client_id = $2 FOR UPDATE',
+        [projectId, actor.clientId],
+      );
+      if (!project.rows[0]) throw notFound('project_not_found');
+
+      // Every id must belong to the caller's client, so a crafted request
+      // cannot attach another brokerage's salesperson to this project.
+      if (unique.length > 0) {
+        const owned = await client.query<{ salesperson_id: string }>(
+          `SELECT salesperson_id FROM app.salespeople
+           WHERE client_id = $1 AND salesperson_id = ANY($2::uuid[])`,
+          [actor.clientId, unique],
+        );
+        if (owned.rows.length !== unique.length) throw badRequest('salesperson_not_in_client');
+      }
+
+      await client.query('DELETE FROM app.salesperson_projects WHERE project_id = $1', [projectId]);
+      if (unique.length > 0) {
+        await client.query(
+          `INSERT INTO app.salesperson_projects (salesperson_id, project_id)
+           SELECT unnest($1::uuid[]), $2`,
+          [unique, projectId],
+        );
+      }
+      await this.audit.record(client, {
+        eventType: 'dashboard.project_salespeople_set',
+        actorType: 'operator',
+        actorId: actor.userId,
+        aggregateType: 'project',
+        aggregateId: projectId,
+        payload: { clientId: actor.clientId, salespersonIds: unique, count: unique.length },
+      });
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    const view = await this.findProject(actor.clientId, projectId);
+    if (!view) throw notFound('project_not_found');
+    return view;
+  }
+
+  private async findProject(clientId: string, projectId: string): Promise<ProjectView | null> {
+    const result = await pool.query<ProjectRow>(
+      `SELECT ${PROJECT_COLUMNS}
+       FROM app.projects p
+       WHERE p.client_id = $1 AND p.project_id = $2`,
+      [clientId, projectId],
+    );
+    const row = result.rows[0];
+    return row ? toProject(row) : null;
   }
 
   private async findSalesperson(clientId: string, salespersonId: string): Promise<SalespersonView | null> {

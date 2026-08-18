@@ -19,10 +19,14 @@ export interface ResponseTimeMetrics {
   /** Lead arrival to the automated first-contact message. */
   avgFirstContactSeconds: number | null;
   medianFirstContactSeconds: number | null;
+  /** The slow tail. An average hides the cases that lose deals; p90 does not. */
+  p90FirstContactSeconds: number | null;
   slowestFirstContactSeconds: number | null;
   /** Assignment to salesperson acknowledgement. */
   avgAcknowledgementSeconds: number | null;
   medianAcknowledgementSeconds: number | null;
+  p90AcknowledgementSeconds: number | null;
+  slowestAcknowledgementSeconds: number | null;
   /** Assignments still unacknowledged right now, and the oldest of them. */
   pendingAcknowledgements: number;
   oldestPendingAcknowledgementSeconds: number | null;
@@ -32,31 +36,21 @@ export interface DashboardSummary {
   timezone: string;
   generatedAt: string;
   periods: { today: PeriodMetrics; week: PeriodMetrics; month: PeriodMetrics };
+  /**
+   * The same metrics for the period immediately before each one — yesterday,
+   * last week, last month — so a figure can be shown with a direction rather
+   * than as a number with no reference point.
+   */
+  previousPeriods: { today: PeriodMetrics; week: PeriodMetrics; month: PeriodMetrics };
   responseTime: ResponseTimeMetrics;
   leadsByTemperature: { temperature: string; count: number }[];
   leadsBySource: { source: string; count: number }[];
 }
 
-interface SummaryRow {
-  acknowledged_today: string;
-  acknowledged_week: string;
-  acknowledged_month: string;
-  replied_today: string;
-  replied_week: string;
-  replied_month: string;
-  new_today: string;
-  new_week: string;
-  new_month: string;
-  qualified_today: string;
-  qualified_week: string;
-  qualified_month: string;
-  closed_today: string;
-  closed_week: string;
-  closed_month: string;
-  unack_today: string;
-  unack_week: string;
-  unack_month: string;
-}
+const PERIODS = ['day', 'week', 'month'] as const;
+const PHASES = ['current', 'previous'] as const;
+type Period = (typeof PERIODS)[number];
+type Phase = (typeof PHASES)[number];
 
 function ratio(numerator: number, denominator: number): number {
   if (denominator <= 0) return 0;
@@ -80,7 +74,8 @@ export class DashboardSummaryService {
     return {
       timezone,
       generatedAt: new Date().toISOString(),
-      periods: counts,
+      periods: counts.current,
+      previousPeriods: counts.previous,
       responseTime,
       leadsByTemperature: temperature,
       leadsBySource: source,
@@ -90,16 +85,45 @@ export class DashboardSummaryService {
   private async periodCounts(
     scope: DashboardScope,
     timezone: string,
-  ): Promise<DashboardSummary['periods']> {
+  ): Promise<{ current: DashboardSummary['periods']; previous: DashboardSummary['periods'] }> {
     const params = new QueryParams();
     const visibility = leadVisibilitySql('l', scope, params);
     const tz = params.bind(timezone);
-    const result = await pool.query<SummaryRow>(
+
+    // Each metric is counted twice: once over the period so far, and once over
+    // the whole of the period before it. The previous window is closed at the
+    // current window's start so the two never overlap.
+    const windows = (period: Period, phase: Phase): { from: string; to: string } =>
+      phase === 'current'
+        ? { from: `(SELECT ${period}_start FROM bounds)`, to: 'now()' }
+        : { from: `(SELECT prev_${period}_start FROM bounds)`, to: `(SELECT ${period}_start FROM bounds)` };
+
+    const columns: string[] = [];
+    for (const period of PERIODS) {
+      for (const phase of PHASES) {
+        const { from, to } = windows(period, phase);
+        const suffix = `${period}_${phase}`;
+        const between = (column: string) => `${column} >= ${from} AND ${column} < ${to}`;
+        columns.push(
+          `(SELECT count(*) FROM visible WHERE ${between('created_at')}) AS new_${suffix}`,
+          `(SELECT count(*) FROM visible WHERE status = 'qualified' AND ${between('created_at')}) AS qualified_${suffix}`,
+          `(SELECT count(*) FROM visible WHERE status = 'closed' AND ${between('created_at')}) AS closed_${suffix}`,
+          `(SELECT count(*) FROM assignments WHERE ${between('assigned_at')}) AS unack_${suffix}`,
+          `(SELECT count(*) FROM acknowledgements WHERE ${between('acknowledged_at')}) AS acknowledged_${suffix}`,
+          `(SELECT count(DISTINCT lead_id) FROM replies WHERE ${between('first_reply_at')}) AS replied_${suffix}`,
+        );
+      }
+    }
+
+    const result = await pool.query<Record<string, string>>(
       `WITH bounds AS (
          SELECT
            (date_trunc('day',   now() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS day_start,
            (date_trunc('week',  now() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS week_start,
-           (date_trunc('month', now() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS month_start
+           (date_trunc('month', now() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS month_start,
+           ((date_trunc('day',   now() AT TIME ZONE ${tz}) - interval '1 day')   AT TIME ZONE ${tz}) AS prev_day_start,
+           ((date_trunc('week',  now() AT TIME ZONE ${tz}) - interval '1 week')  AT TIME ZONE ${tz}) AS prev_week_start,
+           ((date_trunc('month', now() AT TIME ZONE ${tz}) - interval '1 month') AT TIME ZONE ${tz}) AS prev_month_start
        ),
        visible AS (
          SELECT l.lead_id, l.status, l.created_at
@@ -125,42 +149,13 @@ export class DashboardSummaryService {
          WHERE m.direction = 'outbound'
          GROUP BY m.lead_id, date_trunc('day', m.created_at)
        )
-       SELECT
-         (SELECT count(*) FROM visible WHERE created_at >= (SELECT day_start FROM bounds)) AS new_today,
-         (SELECT count(*) FROM visible WHERE created_at >= (SELECT week_start FROM bounds)) AS new_week,
-         (SELECT count(*) FROM visible WHERE created_at >= (SELECT month_start FROM bounds)) AS new_month,
-         (SELECT count(*) FROM visible WHERE status = 'qualified'
-            AND created_at >= (SELECT day_start FROM bounds)) AS qualified_today,
-         (SELECT count(*) FROM visible WHERE status = 'qualified'
-            AND created_at >= (SELECT week_start FROM bounds)) AS qualified_week,
-         (SELECT count(*) FROM visible WHERE status = 'qualified'
-            AND created_at >= (SELECT month_start FROM bounds)) AS qualified_month,
-         (SELECT count(*) FROM visible WHERE status = 'closed'
-            AND created_at >= (SELECT day_start FROM bounds)) AS closed_today,
-         (SELECT count(*) FROM visible WHERE status = 'closed'
-            AND created_at >= (SELECT week_start FROM bounds)) AS closed_week,
-         (SELECT count(*) FROM visible WHERE status = 'closed'
-            AND created_at >= (SELECT month_start FROM bounds)) AS closed_month,
-         (SELECT count(*) FROM assignments WHERE assigned_at >= (SELECT day_start FROM bounds)) AS unack_today,
-         (SELECT count(*) FROM assignments WHERE assigned_at >= (SELECT week_start FROM bounds)) AS unack_week,
-         (SELECT count(*) FROM assignments WHERE assigned_at >= (SELECT month_start FROM bounds)) AS unack_month,
-         (SELECT count(*) FROM acknowledgements
-            WHERE acknowledged_at >= (SELECT day_start FROM bounds)) AS acknowledged_today,
-         (SELECT count(*) FROM acknowledgements
-            WHERE acknowledged_at >= (SELECT week_start FROM bounds)) AS acknowledged_week,
-         (SELECT count(*) FROM acknowledgements
-            WHERE acknowledged_at >= (SELECT month_start FROM bounds)) AS acknowledged_month,
-         (SELECT count(DISTINCT lead_id) FROM replies
-            WHERE first_reply_at >= (SELECT day_start FROM bounds)) AS replied_today,
-         (SELECT count(DISTINCT lead_id) FROM replies
-            WHERE first_reply_at >= (SELECT week_start FROM bounds)) AS replied_week,
-         (SELECT count(DISTINCT lead_id) FROM replies
-            WHERE first_reply_at >= (SELECT month_start FROM bounds)) AS replied_month`,
+       SELECT ${columns.join(',\n         ')}`,
       params.list(),
     );
+
     const row = result.rows[0];
-    const build = (period: 'today' | 'week' | 'month'): PeriodMetrics => {
-      const read = (prefix: string): number => Number(row?.[`${prefix}_${period}` as keyof SummaryRow] ?? 0);
+    const build = (period: Period, phase: Phase): PeriodMetrics => {
+      const read = (prefix: string): number => Number(row?.[`${prefix}_${period}_${phase}`] ?? 0);
       const total = read('new');
       const qualifiedCount = read('qualified');
       return {
@@ -173,7 +168,14 @@ export class DashboardSummaryService {
         conversionRate: ratio(qualifiedCount, total),
       };
     };
-    return { today: build('today'), week: build('week'), month: build('month') };
+
+    const forPhase = (phase: Phase): DashboardSummary['periods'] => ({
+      today: build('day', phase),
+      week: build('week', phase),
+      month: build('month', phase),
+    });
+
+    return { current: forPhase('current'), previous: forPhase('previous') };
   }
 
   private async responseTime(scope: DashboardScope): Promise<ResponseTimeMetrics> {
@@ -182,9 +184,12 @@ export class DashboardSummaryService {
     const result = await pool.query<{
       avg_first_contact: string | null;
       median_first_contact: string | null;
+      p90_first_contact: string | null;
       slowest_first_contact: string | null;
       avg_ack: string | null;
       median_ack: string | null;
+      p90_ack: string | null;
+      slowest_ack: string | null;
       pending_ack: string;
       oldest_pending_ack: string | null;
     }>(
@@ -215,9 +220,12 @@ export class DashboardSummaryService {
        SELECT
          (SELECT avg(delay) FROM contact) AS avg_first_contact,
          (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY delay) FROM contact) AS median_first_contact,
+         (SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY delay) FROM contact) AS p90_first_contact,
          (SELECT max(delay) FROM contact) AS slowest_first_contact,
          (SELECT avg(delay) FROM acknowledged) AS avg_ack,
          (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY delay) FROM acknowledged) AS median_ack,
+         (SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY delay) FROM acknowledged) AS p90_ack,
+         (SELECT max(delay) FROM acknowledged) AS slowest_ack,
          (SELECT count(*) FROM pending) AS pending_ack,
          (SELECT max(waiting) FROM pending) AS oldest_pending_ack`,
       params.list(),
@@ -226,9 +234,12 @@ export class DashboardSummaryService {
     return {
       avgFirstContactSeconds: seconds(row?.avg_first_contact ?? null),
       medianFirstContactSeconds: seconds(row?.median_first_contact ?? null),
+      p90FirstContactSeconds: seconds(row?.p90_first_contact ?? null),
       slowestFirstContactSeconds: seconds(row?.slowest_first_contact ?? null),
       avgAcknowledgementSeconds: seconds(row?.avg_ack ?? null),
       medianAcknowledgementSeconds: seconds(row?.median_ack ?? null),
+      p90AcknowledgementSeconds: seconds(row?.p90_ack ?? null),
+      slowestAcknowledgementSeconds: seconds(row?.slowest_ack ?? null),
       pendingAcknowledgements: Number(row?.pending_ack ?? 0),
       oldestPendingAcknowledgementSeconds: seconds(row?.oldest_pending_ack ?? null),
     };
