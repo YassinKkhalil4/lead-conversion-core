@@ -116,13 +116,14 @@ export class LeadRoutingService {
           name: string;
           phone_e164: string;
           priority_rank: number;
+          capacity_limit: number;
           active_assignment_count: string;
           unit_match: boolean;
           location_match: boolean;
           language_match: boolean;
         }>(
           `SELECT
-             sp.salesperson_id, sp.name, sp.phone_e164, sp.priority_rank,
+             sp.salesperson_id, sp.name, sp.phone_e164, sp.priority_rank, sp.capacity_limit,
              (
                SELECT count(*)::text
                FROM app.lead_assignments la
@@ -168,6 +169,7 @@ export class LeadRoutingService {
           name: row.name,
           phoneE164: row.phone_e164,
           priorityRank: row.priority_rank,
+          capacityLimit: row.capacity_limit,
           activeAssignmentCount: Number(row.active_assignment_count),
           unitMatch: row.unit_match,
           locationMatch: row.location_match,

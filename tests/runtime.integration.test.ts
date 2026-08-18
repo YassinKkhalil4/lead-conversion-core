@@ -2024,6 +2024,178 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query("SELECT count(*) FROM audit.events WHERE event_type='lead.routing_no_eligible' AND aggregate_id=$1", [seeded.leadId])).rows[0]?.count).toBe('1');
   });
 
+  it('skips a salesperson at capacity and records why', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'ROUTECAP',
+      phone: '+201099999977',
+      phoneNumberId: 'phone-number-id-mp09-route-cap',
+    });
+    // Ranks better on priority and carries the only matching specialities, so
+    // capacity is the only thing that can keep this one from being selected.
+    const full = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank, capacity_limit,
+         unit_specialties, locations, languages)
+       VALUES ($1, 'recCAPFULL', 'Full Capacity', '+201044444441', true, 1, 1,
+         ARRAY['Apartment'], ARRAY['New Cairo'], ARRAY['English'])
+       RETURNING salesperson_id`,
+      [seeded.clientId],
+    );
+    const free = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank, capacity_limit,
+         unit_specialties, locations, languages)
+       VALUES ($1, 'recCAPFREE', 'Has Room', '+201044444442', true, 50, 10,
+         ARRAY[]::text[], ARRAY[]::text[], ARRAY[]::text[])
+       RETURNING salesperson_id`,
+      [seeded.clientId],
+    );
+    await db.pool.query(
+      'INSERT INTO app.salesperson_projects (salesperson_id, project_id) VALUES ($1,$3), ($2,$3)',
+      [full.rows[0]?.salesperson_id, free.rows[0]?.salesperson_id, seeded.projectId],
+    );
+    const filler = await db.pool.query<{ lead_id: string }>(
+      `INSERT INTO app.leads (client_id, contact_id, provider, provider_external_id, source)
+       VALUES ($1, $2, 'website', 'cap-filler-1', 'website')
+       RETURNING lead_id`,
+      [seeded.clientId, seeded.contactId],
+    );
+    await db.pool.query(
+      `INSERT INTO app.lead_assignments (lead_id, salesperson_id, routing_version, status)
+       VALUES ($1, $2, 'real_estate_v2', 'assigned')`,
+      [filler.rows[0]?.lead_id, full.rows[0]?.salesperson_id],
+    );
+
+    await db.pool.query("UPDATE app.leads SET status='qualified', current_stage='qualified' WHERE lead_id=$1", [seeded.leadId]);
+    const scorer = new leadScoring.LeadScoringService();
+    const score = await scorer.scoreLead(db.pool, {
+      leadId: seeded.leadId,
+      answers: {
+        q_location: 'New Cairo',
+        q_unit_type: 'Apartment',
+        q_budget_min: '3000000',
+        q_budget_max: '5000000',
+        q_payment_plan: 'Installments',
+        q_down_payment: '500000',
+        q_timeline: '3 months',
+        q_purpose: 'Primary Residence',
+        q_site_visit: 'Yes',
+      },
+      correlationId: 'route-cap',
+    });
+    const router = new leadRouting.LeadRoutingService();
+    const decision = await router.routeLead(db.pool, {
+      leadId: seeded.leadId,
+      scoreRunId: score.scoreRunId,
+      correlationId: 'route-cap',
+    });
+
+    expect(decision.outcome).toBe('assigned');
+    expect(decision.selectedSalespersonId).toBe(free.rows[0]?.salesperson_id);
+
+    const run = await db.pool.query<{
+      reasons_json: Record<string, unknown>;
+      candidates_json: { salespersonId: string; overCapacity: boolean }[];
+    }>('SELECT reasons_json, candidates_json FROM app.routing_runs WHERE lead_id=$1', [seeded.leadId]);
+    expect(run.rows[0]?.reasons_json.excludedOverCapacity).toBe(1);
+    // The skipped candidate stays in the record, flagged, so the run shows who
+    // was considered rather than silently omitting them.
+    const skipped = run.rows[0]?.candidates_json.find(
+      (candidate) => candidate.salespersonId === full.rows[0]?.salesperson_id,
+    );
+    expect(skipped?.overCapacity).toBe(true);
+  });
+
+  it('assigns the least loaded salesperson when every one of them is over capacity', async () => {
+    const seeded = await seedMp08Conversation({
+      suffix: 'ROUTECAPALL',
+      phone: '+201099999976',
+      phoneNumberId: 'phone-number-id-mp09-route-cap-all',
+    });
+    const lighter = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank, capacity_limit)
+       VALUES ($1, 'recCAPALLA', 'Lighter Load', '+201055555551', true, 20, 1)
+       RETURNING salesperson_id`,
+      [seeded.clientId],
+    );
+    const heavier = await db.pool.query<{ salesperson_id: string }>(
+      `INSERT INTO app.salespeople
+        (client_id, legacy_airtable_id, name, phone_e164, active, priority_rank, capacity_limit)
+       VALUES ($1, 'recCAPALLB', 'Heavier Load', '+201055555552', true, 1, 1)
+       RETURNING salesperson_id`,
+      [seeded.clientId],
+    );
+    await db.pool.query(
+      'INSERT INTO app.salesperson_projects (salesperson_id, project_id) VALUES ($1,$3), ($2,$3)',
+      [lighter.rows[0]?.salesperson_id, heavier.rows[0]?.salesperson_id, seeded.projectId],
+    );
+
+    const loads: [string | undefined, number][] = [
+      [lighter.rows[0]?.salesperson_id, 1],
+      [heavier.rows[0]?.salesperson_id, 3],
+    ];
+    let filler = 0;
+    for (const [salespersonId, count] of loads) {
+      for (let index = 0; index < count; index += 1) {
+        filler += 1;
+        const lead = await db.pool.query<{ lead_id: string }>(
+          `INSERT INTO app.leads (client_id, contact_id, provider, provider_external_id, source)
+           VALUES ($1, $2, 'website', $3, 'website')
+           RETURNING lead_id`,
+          [seeded.clientId, seeded.contactId, `cap-all-filler-${filler}`],
+        );
+        await db.pool.query(
+          `INSERT INTO app.lead_assignments (lead_id, salesperson_id, routing_version, status)
+           VALUES ($1, $2, 'real_estate_v2', 'assigned')`,
+          [lead.rows[0]?.lead_id, salespersonId],
+        );
+      }
+    }
+
+    await db.pool.query("UPDATE app.leads SET status='qualified', current_stage='qualified' WHERE lead_id=$1", [seeded.leadId]);
+    const scorer = new leadScoring.LeadScoringService();
+    const score = await scorer.scoreLead(db.pool, {
+      leadId: seeded.leadId,
+      answers: {
+        q_location: 'New Cairo',
+        q_unit_type: 'Apartment',
+        q_budget_min: '3000000',
+        q_budget_max: '5000000',
+        q_payment_plan: 'Installments',
+        q_down_payment: '500000',
+        q_timeline: '3 months',
+        q_purpose: 'Primary Residence',
+        q_site_visit: 'Yes',
+      },
+      correlationId: 'route-cap-all',
+    });
+    const router = new leadRouting.LeadRoutingService();
+    const decision = await router.routeLead(db.pool, {
+      leadId: seeded.leadId,
+      scoreRunId: score.scoreRunId,
+      correlationId: 'route-cap-all',
+    });
+
+    // A lead nobody owns is worse than a lead owned by the least busy person,
+    // so this must assign rather than fall through to no_eligible.
+    expect(decision.outcome).toBe('assigned');
+    expect(decision.selectedSalespersonId).toBe(lighter.rows[0]?.salesperson_id);
+    expect((await db.pool.query('SELECT count(*) FROM app.lead_assignments WHERE lead_id=$1', [seeded.leadId])).rows[0]?.count).toBe('1');
+
+    const run = await db.pool.query<{ reasons_json: Record<string, unknown> }>(
+      'SELECT reasons_json FROM app.routing_runs WHERE lead_id=$1',
+      [seeded.leadId],
+    );
+    expect(run.rows[0]?.reasons_json).toMatchObject({
+      reason: 'all_salespeople_over_capacity',
+      overCapacityFallback: true,
+      selectedActiveAssignmentCount: 1,
+      selectedCapacityLimit: 1,
+      excludedOverCapacity: 2,
+    });
+  });
+
   it('schedules durable follow-up jobs idempotently with explicit timezone', async () => {
     const seeded = await seedMp08Conversation({
       suffix: 'FOLLOW',

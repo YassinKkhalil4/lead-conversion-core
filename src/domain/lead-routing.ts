@@ -1,4 +1,9 @@
-export const REAL_ESTATE_ROUTING_VERSION = 'real_estate_v1';
+/**
+ * v2 adds capacity. The decision function is versioned because routing runs are
+ * keyed by (lead, version, input hash) and replayed for audit, so a changed
+ * algorithm must not answer to the old version's name.
+ */
+export const REAL_ESTATE_ROUTING_VERSION = 'real_estate_v2';
 
 export interface RoutingCandidate {
   salespersonId: string;
@@ -6,6 +11,8 @@ export interface RoutingCandidate {
   phoneE164: string;
   priorityRank: number;
   activeAssignmentCount: number;
+  /** Active assignments this salesperson may hold before routing skips them. */
+  capacityLimit: number;
   unitMatch: boolean;
   locationMatch: boolean;
   languageMatch: boolean;
@@ -14,6 +21,7 @@ export interface RoutingCandidate {
 export interface RankedRoutingCandidate extends RoutingCandidate {
   rank: number;
   score: number;
+  overCapacity: boolean;
 }
 
 export interface RoutingDecision {
@@ -25,7 +33,7 @@ export interface RoutingDecision {
 }
 
 export function routeRealEstateLead(candidates: RoutingCandidate[]): RoutingDecision {
-  const ranked = candidates
+  const ranked: RankedRoutingCandidate[] = candidates
     .map((candidate) => ({
       ...candidate,
       score:
@@ -35,6 +43,7 @@ export function routeRealEstateLead(candidates: RoutingCandidate[]): RoutingDeci
         candidate.priorityRank -
         candidate.activeAssignmentCount * 10,
       rank: 0,
+      overCapacity: candidate.activeAssignmentCount >= candidate.capacityLimit,
     }))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
@@ -46,20 +55,59 @@ export function routeRealEstateLead(candidates: RoutingCandidate[]): RoutingDeci
     })
     .map((candidate, index) => ({ ...candidate, rank: index + 1 }));
 
-  const selected = ranked[0];
+  // Over-capacity candidates stay in the recorded list, flagged, so the run
+  // shows who was considered and why they were passed over.
+  const withinCapacity = ranked.filter((candidate) => !candidate.overCapacity);
+  const overCapacityCount = ranked.length - withinCapacity.length;
+
+  if (withinCapacity.length > 0) {
+    const selected = withinCapacity[0]!;
+    return {
+      routingVersion: REAL_ESTATE_ROUTING_VERSION,
+      outcome: 'assigned',
+      selected,
+      candidates: ranked,
+      reasons: {
+        selectedSalespersonId: selected.salespersonId,
+        selectedRank: selected.rank,
+        selectedScore: selected.score,
+        ...(overCapacityCount > 0 ? { excludedOverCapacity: overCapacityCount } : {}),
+      },
+    };
+  }
+
+  if (ranked.length > 0) {
+    // Everyone is full. A lead nobody owns is worse than a lead owned by the
+    // least busy person, so this assigns rather than failing to no_eligible.
+    const leastLoaded = [...ranked].sort((a, b) => {
+      if (a.activeAssignmentCount !== b.activeAssignmentCount) {
+        return a.activeAssignmentCount - b.activeAssignmentCount;
+      }
+      return a.rank - b.rank;
+    })[0]!;
+
+    return {
+      routingVersion: REAL_ESTATE_ROUTING_VERSION,
+      outcome: 'assigned',
+      selected: leastLoaded,
+      candidates: ranked,
+      reasons: {
+        reason: 'all_salespeople_over_capacity',
+        overCapacityFallback: true,
+        selectedSalespersonId: leastLoaded.salespersonId,
+        selectedRank: leastLoaded.rank,
+        selectedScore: leastLoaded.score,
+        selectedActiveAssignmentCount: leastLoaded.activeAssignmentCount,
+        selectedCapacityLimit: leastLoaded.capacityLimit,
+        excludedOverCapacity: overCapacityCount,
+      },
+    };
+  }
+
   return {
     routingVersion: REAL_ESTATE_ROUTING_VERSION,
-    outcome: selected ? 'assigned' : 'no_eligible_salesperson',
-    ...(selected ? { selected } : {}),
+    outcome: 'no_eligible_salesperson',
     candidates: ranked,
-    reasons: selected
-      ? {
-          selectedSalespersonId: selected.salespersonId,
-          selectedRank: selected.rank,
-          selectedScore: selected.score,
-        }
-      : {
-          reason: 'no_active_salesperson_for_client_project',
-        },
+    reasons: { reason: 'no_active_salesperson_for_client_project' },
   };
 }
