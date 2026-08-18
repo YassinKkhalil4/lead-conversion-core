@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { explain } from '@/api/errors';
 import { useAuth } from '@/auth/AuthProvider';
+import { homeFor } from '@/nav/routes';
 import { Button } from '@/design/Button';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
@@ -20,7 +21,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function Login() {
-  const { status, signIn } = useAuth();
+  const { status, user, signIn } = useAuth();
   const [failure, setFailure] = useState<unknown>(null);
   const insets = useSafeAreaInsets();
 
@@ -34,7 +35,7 @@ export default function Login() {
     mode: 'onBlur',
   });
 
-  if (status === 'authenticated') return <Redirect href="/leads" />;
+  if (status === 'authenticated' && user) return <Redirect href={homeFor(user.role)} />;
 
   const onSubmit = handleSubmit(async (values) => {
     setFailure(null);

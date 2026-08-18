@@ -196,3 +196,94 @@ export interface LeadFilters {
   sort?: 'created_at' | 'lead_score' | 'last_message_at';
   direction?: 'asc' | 'desc';
 }
+
+export interface Salesperson {
+  salespersonId: string;
+  name: string;
+  phoneE164: string;
+  email: string;
+  active: boolean;
+  unitSpecialties: string[];
+  locations: string[];
+  languages: string[];
+  priorityRank: number;
+  capacityLimit: number;
+  activeAssignmentCount: number;
+  unacknowledgedAssignmentCount: number;
+  overdueAssignmentCount: number;
+  acknowledgedCount: number;
+  avgAcknowledgementSeconds: number | null;
+  createdAt: string;
+}
+
+export interface Project {
+  projectId: string;
+  projectName: string;
+  active: boolean;
+  startingPrice: number | null;
+  maxPrice: number | null;
+  unitTypes: string[];
+  location: string;
+  mapsUrl: string;
+  salespersonIds: string[];
+  createdAt: string;
+}
+
+export interface ManagedUser {
+  userId: string;
+  clientId: string;
+  salespersonId: string | null;
+  email: string;
+  name: string;
+  role: Role;
+  active: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface Notification {
+  notificationId: string;
+  notificationType: string;
+  recipientType: string;
+  recipientId: string | null;
+  priority: string;
+  payload: Record<string, unknown>;
+  leadId: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface PeriodMetrics {
+  newLeads: number;
+  qualifiedLeads: number;
+  closedLeads: number;
+  assignedUnacknowledged: number;
+  acknowledged: number;
+  replied: number;
+  conversionRate: number;
+}
+
+export interface ResponseTimeMetrics {
+  avgFirstContactSeconds: number | null;
+  medianFirstContactSeconds: number | null;
+  p90FirstContactSeconds: number | null;
+  slowestFirstContactSeconds: number | null;
+  avgAcknowledgementSeconds: number | null;
+  medianAcknowledgementSeconds: number | null;
+  p90AcknowledgementSeconds: number | null;
+  slowestAcknowledgementSeconds: number | null;
+  pendingAcknowledgements: number;
+  oldestPendingAcknowledgementSeconds: number | null;
+}
+
+export type PeriodKey = 'today' | 'week' | 'month';
+
+export interface DashboardSummary {
+  timezone: string;
+  generatedAt: string;
+  periods: Record<PeriodKey, PeriodMetrics>;
+  previousPeriods: Record<PeriodKey, PeriodMetrics>;
+  responseTime: ResponseTimeMetrics;
+  leadsByTemperature: { temperature: string; count: number }[];
+  leadsBySource: { source: string; count: number }[];
+}

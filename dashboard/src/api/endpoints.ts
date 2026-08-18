@@ -1,5 +1,18 @@
 import { buildQuery, request } from './client';
-import type { Lead, LeadDetail, LeadFilters, LeadPage, Message, User } from './types';
+import type {
+  DashboardSummary,
+  Lead,
+  LeadDetail,
+  LeadFilters,
+  LeadPage,
+  ManagedUser,
+  Message,
+  Notification,
+  Project,
+  Role,
+  Salesperson,
+  User,
+} from './types';
 
 export async function login(input: { email: string; password: string; clientKey?: string }) {
   return request<{ ok: true; token: string; expiresAt: string; user: User }>('/api/auth/login', {
@@ -92,3 +105,110 @@ export async function replyToLead(
 }
 
 export type { Lead, LeadDetail, LeadPage, Message, User };
+
+// --- Management surfaces ---------------------------------------------------
+
+export async function listSalespeople(includeInactive = true) {
+  return request<{ ok: true; salespeople: Salesperson[] }>(
+    `/api/salespeople${includeInactive ? '?include_inactive=true' : ''}`,
+  );
+}
+
+export interface SalespersonInput {
+  name: string;
+  phoneE164: string;
+  email: string;
+  unitSpecialties: string[];
+  locations: string[];
+  languages: string[];
+  priorityRank: number;
+  capacityLimit: number;
+  active: boolean;
+}
+
+export async function createSalesperson(input: SalespersonInput) {
+  return request<{ ok: true; salesperson: Salesperson }>('/api/salespeople', { method: 'POST', body: input });
+}
+
+export async function updateSalesperson(salespersonId: string, input: Partial<Omit<SalespersonInput, 'phoneE164'>>) {
+  return request<{ ok: true; salesperson: Salesperson }>(`/api/salespeople/${salespersonId}`, {
+    method: 'PATCH',
+    body: input,
+  });
+}
+
+export async function listProjects(includeInactive = true) {
+  return request<{ ok: true; projects: Project[] }>(
+    `/api/projects${includeInactive ? '?include_inactive=true' : ''}`,
+  );
+}
+
+export interface ProjectInput {
+  projectName: string;
+  active: boolean;
+  startingPrice: number | null;
+  maxPrice: number | null;
+  unitTypes: string[];
+  location: string;
+  mapsUrl: string;
+}
+
+export async function createProject(input: ProjectInput) {
+  return request<{ ok: true; project: Project }>('/api/projects', { method: 'POST', body: input });
+}
+
+export async function updateProject(projectId: string, input: Partial<ProjectInput>) {
+  return request<{ ok: true; project: Project }>(`/api/projects/${projectId}`, { method: 'PATCH', body: input });
+}
+
+/** Replaces the whole eligible set; routing reads this join. */
+export async function setProjectSalespeople(projectId: string, salespersonIds: string[]) {
+  return request<{ ok: true; project: Project }>(`/api/projects/${projectId}/salespeople`, {
+    method: 'PUT',
+    body: { salespersonIds },
+  });
+}
+
+export async function listUsers() {
+  return request<{ ok: true; users: ManagedUser[] }>('/api/users');
+}
+
+export async function createUser(input: {
+  email: string;
+  password: string;
+  name: string;
+  role: Role;
+  salespersonId: string | null;
+}) {
+  return request<{ ok: true; user: ManagedUser }>('/api/users', { method: 'POST', body: input });
+}
+
+export async function updateUser(
+  userId: string,
+  input: { name?: string; role?: Role; active?: boolean; salespersonId?: string | null },
+) {
+  return request<{ ok: true; user: ManagedUser }>(`/api/users/${userId}`, { method: 'PATCH', body: input });
+}
+
+export async function listNotifications(unreadOnly = false) {
+  return request<{
+    ok: true;
+    notifications: Notification[];
+    total: number;
+    unreadCount: number;
+  }>(`/api/notifications?limit=100${unreadOnly ? '&unread=true' : ''}`);
+}
+
+export async function markNotificationRead(notificationId: string) {
+  return request<{ ok: true; notification: Notification }>(`/api/notifications/${notificationId}/read`, {
+    method: 'POST',
+  });
+}
+
+export async function markAllNotificationsRead() {
+  return request<{ ok: true; updated: number }>('/api/notifications/read-all', { method: 'POST' });
+}
+
+export async function getSummary() {
+  return request<{ ok: true; summary: DashboardSummary }>('/api/dashboard/summary');
+}
