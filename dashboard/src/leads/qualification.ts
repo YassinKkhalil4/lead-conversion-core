@@ -8,6 +8,8 @@ export const QUESTION = {
   paymentPlan: 'q_payment_plan',
   downPayment: 'q_down_payment',
   timeline: 'q_timeline',
+  budgetMin: 'q_budget_min',
+  budgetMax: 'q_budget_max',
   purpose: 'q_purpose',
   siteVisit: 'q_site_visit',
 } as const;
@@ -16,6 +18,48 @@ export type AnswerIndex = Map<string, QualificationAnswer>;
 
 export function indexAnswers(answers: QualificationAnswer[]): AnswerIndex {
   return new Map(answers.map((answer) => [answer.questionKey, answer]));
+}
+
+/**
+ * The list endpoint returns answers as a flat `{question: value}` object while
+ * the detail endpoint returns full answer records. Both are read through the
+ * same index so a queue row and a call-prep sheet cannot disagree about what a
+ * lead said.
+ */
+export function indexAnswerMap(answers: Record<string, string>): AnswerIndex {
+  return new Map(
+    Object.entries(answers ?? {})
+      .filter(([, value]) => typeof value === 'string' && value.trim() !== '')
+      .map(([questionKey, value]) => [
+        questionKey,
+        {
+          questionKey,
+          order: 0,
+          answered: true,
+          normalizedValue: value,
+          rawValue: value,
+          parserSource: '',
+          answeredAt: null,
+        } satisfies QualificationAnswer,
+      ]),
+  );
+}
+
+/**
+ * Budget reaches the client in two shapes. The current configuration stores a
+ * single range string on `q_budget` (`10000000-50000000`), while other
+ * configuration versions split it across `q_budget_min` and `q_budget_max`.
+ * Both are normalised to the range form before any formatting happens, so the
+ * rest of the code only ever sees one.
+ */
+export function budgetValue(answers: AnswerIndex): string {
+  const single = valueOf(answers, QUESTION.budget);
+  if (single) return single;
+
+  const low = valueOf(answers, QUESTION.budgetMin);
+  const high = valueOf(answers, QUESTION.budgetMax);
+  if (low && high) return `${low}-${high}`;
+  return low || high;
 }
 
 /** The stored value, or empty string when the question was never answered. */
@@ -82,7 +126,7 @@ export interface Fact {
  * of a value carries meaning even when a label is skimmed past.
  */
 export function fourFacts(answers: AnswerIndex): Fact[] {
-  const budget = valueOf(answers, QUESTION.budget);
+  const budget = budgetValue(answers);
   return [
     { label: 'Budget', value: budget ? formatBudget(budget) : '', numeric: true },
     { label: 'Unit', value: valueOf(answers, QUESTION.unitType), numeric: false },
@@ -111,7 +155,7 @@ export function skipReason(questionKey: string, answers: AnswerIndex): string {
  * omitted rather than rendered as empty slots, so the line is always readable.
  */
 export function summaryLine(answers: AnswerIndex): string {
-  const budget = valueOf(answers, QUESTION.budget);
+  const budget = budgetValue(answers);
   const parts = [
     valueOf(answers, QUESTION.unitType),
     valueOf(answers, QUESTION.location),
@@ -120,6 +164,23 @@ export function summaryLine(answers: AnswerIndex): string {
     valueOf(answers, QUESTION.timeline),
   ].filter(Boolean);
   return parts.join(' · ');
+}
+
+const UNIT_TYPE_AR: Record<string, string> = {
+  apartment: 'شقة',
+  villa: 'فيلا',
+  townhouse: 'تاون هاوس',
+  duplex: 'دوبلكس',
+  studio: 'استوديو',
+  chalet: 'شاليه',
+  commercial: 'وحدة تجارية',
+};
+
+function budgetArabic(value: string): string {
+  const compact = formatBudgetCompact(value);
+  if (!compact) return '';
+  if (compact.startsWith('<')) return `أقل من ${compact.slice(1).replace('M', ' مليون').replace('K', ' ألف')}`;
+  return compact.replace('M', ' مليون').replace('K', ' ألف');
 }
 
 function firstName(fullName: string): string {
@@ -132,14 +193,23 @@ function firstName(fullName: string): string {
  * The line to open a call with, assembled from answers already in the lead
  * response. No model call, no network. Every missing part shortens the sentence
  * rather than leaving a hole, so it never reads as broken.
+ *
+ * Written in the language the lead chose during qualification. An empty
+ * preference means the conversation never settled on one, which falls back to
+ * English rather than guessing from the script of a name.
  */
-export function openingLine(contactName: string, answers: AnswerIndex): string {
+export function openingLine(
+  contactName: string,
+  answers: AnswerIndex,
+  preferredLanguage = '',
+): string {
+  if (preferredLanguage === 'Arabic') return openingLineArabic(contactName, answers);
   const name = firstName(contactName);
   const greeting = name ? `Hi ${name} — following up` : 'Following up';
 
   const unit = valueOf(answers, QUESTION.unitType).toLowerCase();
   const location = valueOf(answers, QUESTION.location);
-  const budget = valueOf(answers, QUESTION.budget);
+  const budget = budgetValue(answers);
   const budgetText = budget ? formatBudgetCompact(budget) : '';
 
   const interest = [
@@ -154,4 +224,30 @@ export function openingLine(contactName: string, answers: AnswerIndex): string {
     return `${greeting} on your enquiry. I have a few options that might suit you.`;
   }
   return `${greeting} on your interest in ${interest}. I have a few options that fit.`;
+}
+
+function openingLineArabic(contactName: string, answers: AnswerIndex): string {
+  const name = firstName(contactName);
+  const greeting = name ? `أهلاً ${name}،` : 'أهلاً،';
+
+  const unit = valueOf(answers, QUESTION.unitType);
+  const unitArabic = UNIT_TYPE_AR[unit.toLowerCase()] ?? '';
+  const location = valueOf(answers, QUESTION.location);
+  const budget = budgetValue(answers);
+  const budgetText = budget ? budgetArabic(budget) : '';
+
+  const interest = [
+    // A recognised unit type takes the attached prefix; anything else stays
+    // detached, which is how Arabic handles a foreign word.
+    unitArabic ? `ب${unitArabic}` : unit ? `بـ${unit}` : '',
+    location ? `في ${location}` : '',
+    budgetText ? `حوالي ${budgetText}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (!interest) {
+    return `${greeting} بخصوص طلبك. عندي كام خيار ممكن يناسبك.`;
+  }
+  return `${greeting} بخصوص اهتمامك ${interest}. عندي كام خيار مناسب.`;
 }

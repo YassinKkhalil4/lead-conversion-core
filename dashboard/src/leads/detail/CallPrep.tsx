@@ -7,6 +7,7 @@ import { Temperature } from '@/design/Temperature';
 import { Text } from '@/design/Text';
 import { color, hitSlop, radius, space } from '@/design/tokens';
 import { fourFacts, indexAnswers, openingLine } from '@/leads/qualification';
+import { StagePicker } from './StagePicker';
 import { PAST_SLA_SECONDS } from '@/leads/queue';
 import { queueClock } from '@/time/format';
 
@@ -25,16 +26,20 @@ export function CallPrep({
   waitingSeconds,
   onAcknowledge,
   acknowledging,
+  onChangeStage,
+  changingStage,
 }: {
   lead: Lead;
   answers: QualificationAnswer[];
   waitingSeconds: number | null;
   onAcknowledge: () => void;
   acknowledging: boolean;
+  onChangeStage: (stage: string) => void;
+  changingStage: boolean;
 }) {
   const index = indexAnswers(answers);
   const facts = fourFacts(index);
-  const opening = openingLine(lead.contact.name, index);
+  const opening = openingLine(lead.contact.name, index, lead.preferredLanguage);
   const phone = dialable(lead.contact.phoneE164);
   const whatsappNumber = phone.replace('+', '');
 
@@ -131,6 +136,7 @@ export function CallPrep({
         ) : (
           <Button label="Open WhatsApp" variant="primary" size="large" grow onPress={openWhatsApp} />
         )}
+        <StagePicker stage={lead.pipelineStage} busy={changingStage} onChange={onChangeStage} />
       </View>
     </View>
   );

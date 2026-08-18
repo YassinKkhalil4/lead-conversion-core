@@ -110,6 +110,16 @@ export function useStopFollowUp(leadId: string) {
   });
 }
 
+export function useSetStage(leadId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (stage: string) => api.setLeadStage(leadId, stage),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: leadKeys.all });
+    },
+  });
+}
+
 export function useReply(leadId: string) {
   const queryClient = useQueryClient();
   return useMutation({

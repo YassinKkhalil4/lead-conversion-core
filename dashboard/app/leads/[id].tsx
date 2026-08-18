@@ -17,6 +17,7 @@ import {
   useCloseLead,
   useLeadDetail,
   useReply,
+  useSetStage,
   useStopFollowUp,
   useTakeover,
 } from '@/leads/hooks';
@@ -39,6 +40,7 @@ export default function CallPrepScreen() {
   const close = useCloseLead(leadId);
   const stopFollowUp = useStopFollowUp(leadId);
   const reply = useReply(leadId);
+  const setStage = useSetStage(leadId);
 
   if (query.isLoading) {
     return (
@@ -97,6 +99,8 @@ export default function CallPrepScreen() {
           waitingSeconds={ranked.needsAcknowledgement ? ranked.waitingSeconds : null}
           acknowledging={acknowledge.isPending}
           onAcknowledge={() => void run(() => acknowledge.mutateAsync(leadId))}
+          changingStage={setStage.isPending}
+          onChangeStage={(stage) => void run(() => setStage.mutateAsync(stage))}
         />
 
         {/* Everything below here is reference material and starts closed. */}

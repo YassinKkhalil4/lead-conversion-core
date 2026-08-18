@@ -50,6 +50,29 @@ export function eventLabel(eventType: string): string {
   return EVENT_LABELS[eventType] ?? humanise(eventType.replace(/^[a-z]+\./, ''));
 }
 
+/** The pipeline stages accepted by PATCH /api/leads/:id/stage, in order. */
+export const PIPELINE_STAGES = [
+  'new',
+  'in_progress',
+  'site_visit_scheduled',
+  'closed_won',
+  'closed_lost',
+  'ghosted',
+] as const;
+
+const STAGE_LABELS: Record<string, string> = {
+  new: 'New',
+  in_progress: 'In progress',
+  site_visit_scheduled: 'Site visit scheduled',
+  closed_won: 'Closed won',
+  closed_lost: 'Closed lost',
+  ghosted: 'Ghosted',
+};
+
+export function stageLabel(stage: string): string {
+  return STAGE_LABELS[stage] ?? humanise(stage);
+}
+
 /** Outbound delivery state, phrased the way a salesperson would read it. */
 export function deliveryLabel(state: string): string {
   switch (state) {

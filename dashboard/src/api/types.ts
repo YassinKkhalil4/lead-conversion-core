@@ -55,6 +55,12 @@ export interface Lead {
   provider: string;
   stopFollowUp: boolean;
   closedStatus: string;
+  /** Sales pipeline stage, independent of the engine's `status`. */
+  pipelineStage: string;
+  /** 'English', 'Arabic', or '' when the conversation never settled on one. */
+  preferredLanguage: string;
+  /** Latest qualification session's answers, keyed by question. */
+  qualificationAnswers: Record<string, string>;
   firstReceivedAt: string | null;
   firstContactedAt: string | null;
   lastMessageAt: string | null;

@@ -1,4 +1,5 @@
 import type { Lead } from '@/api/types';
+import { indexAnswerMap, summaryLine } from '@/leads/qualification';
 
 /**
  * The backend schedules its first assignment reminder 15 minutes after
@@ -118,16 +119,17 @@ function humaniseStage(stage: string): string {
 }
 
 /**
- * The row's one-line context.
+ * The row's one-line context: what this lead actually asked for, in their own
+ * answers. Missing parts are omitted rather than rendered as empty slots.
  *
- * The intended line is the lead's own answers — unit, location, budget,
- * payment plan, timeline — but `/api/leads` does not return qualification
- * answers, only `/api/leads/:id` does. Rather than fetch a full detail payload
- * per visible row, this shows what the list genuinely knows: the matched
- * project, or where the conversation has reached. See DEPLOY notes in the
- * session report for the one-line backend change that would fix this properly.
+ * A lead still mid-conversation has few or no answers, so the line falls back
+ * to the matched project and then to where the conversation has reached —
+ * something true rather than an empty row.
  */
 export function rowSummary(lead: Lead): string {
+  const answers = summaryLine(indexAnswerMap(lead.qualificationAnswers));
+  if (answers) return answers;
+
   const project = [lead.project?.projectName, lead.project?.location].filter(Boolean).join(' · ');
   if (project) return project;
   if (lead.status !== 'qualified' && lead.currentStage) return humaniseStage(lead.currentStage);

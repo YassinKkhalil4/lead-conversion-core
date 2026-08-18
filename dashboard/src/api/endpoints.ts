@@ -71,6 +71,13 @@ export async function stopFollowUp(leadId: string, reason: string) {
   );
 }
 
+export async function setLeadStage(leadId: string, stage: string) {
+  return request<{ ok: true; pipelineStage: string; previousPipelineStage: string; changed: boolean }>(
+    `/api/leads/${leadId}/stage`,
+    { method: 'PATCH', body: { stage } },
+  );
+}
+
 export async function replyToLead(
   leadId: string,
   input: {
