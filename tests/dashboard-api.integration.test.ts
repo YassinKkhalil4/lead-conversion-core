@@ -932,8 +932,24 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
   });
 
+  /**
+   * The seed places its outbound message two hours back, which stops being
+   * "today" in the client's timezone once the suite runs shortly after
+   * midnight. These counts are about the window, not the wall clock, so the
+   * message is pinned inside today before asserting.
+   */
+  async function pinSeededRepliesToToday(): Promise<void> {
+    await db.pool.query(
+      `UPDATE app.messages
+       SET created_at = (date_trunc('day', now() AT TIME ZONE 'Africa/Cairo') AT TIME ZONE 'Africa/Cairo')
+                        + interval '5 minutes'
+       WHERE direction = 'outbound'`,
+    );
+  }
+
   describe('summary counts', () => {
     it('counts acknowledgements and replies for today', async () => {
+      await pinSeededRepliesToToday();
       const token = await login(tenantA.managerEmail);
       const before = await app.inject({
         method: 'GET',
@@ -964,6 +980,7 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
 
     it('counts a lead once however many times it was replied to', async () => {
+      await pinSeededRepliesToToday();
       const token = await login(tenantA.managerEmail);
       for (let index = 0; index < 3; index += 1) {
         await db.pool.query(
@@ -981,6 +998,7 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
 
     it('scopes both counts to the salesperson when that is the role', async () => {
+      await pinSeededRepliesToToday();
       // Acknowledged and replied on a lead this salesperson cannot see.
       await db.pool.query(
         `INSERT INTO app.lead_assignments (lead_id, salesperson_id, routing_version, status, acknowledged_at)
@@ -1018,6 +1036,7 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
 
     it('never counts another client\'s acknowledgements or replies', async () => {
+      await pinSeededRepliesToToday();
       await db.pool.query('UPDATE app.lead_assignments SET acknowledged_at = now() WHERE lead_assignment_id = $1', [
         tenantB.assignmentId,
       ]);
