@@ -42,6 +42,7 @@ export default function NotificationsScreen() {
   }, [status, queryClient]);
 
   const grouped = useMemo(() => groupByDay(query.data?.notifications ?? []), [query.data]);
+  // Lists guard their own shape so a cached payload cannot take the screen down.
   const unread = query.data?.unreadCount ?? 0;
 
   if (query.isError) {
@@ -140,8 +141,9 @@ export default function NotificationsScreen() {
 }
 
 function describe(item: Notification): string {
-  const contact = typeof item.payload.contactName === 'string' ? item.payload.contactName : '';
-  const reason = typeof item.payload.reason === 'string' ? item.payload.reason.replace(/_/g, ' ') : '';
+  const payload = item.payload ?? {};
+  const contact = typeof payload.contactName === 'string' ? payload.contactName : '';
+  const reason = typeof payload.reason === 'string' ? payload.reason.replace(/_/g, ' ') : '';
   const parts = [contact, reason, item.leadId ? 'tap to open the lead' : ''].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : ageAgo(item.createdAt);
 }

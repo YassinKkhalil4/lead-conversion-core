@@ -10,6 +10,7 @@ import { color, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, NumberField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
+import { atLeast, countLabel, optionalNumber, ratioLabel } from '@/desk/safe';
 import { useSalespeople, useSaveSalesperson } from '@/manage/hooks';
 import { duration } from '@/time/format';
 
@@ -45,8 +46,8 @@ export default function SalespeopleScreen() {
               unitSpecialties: person.unitSpecialties,
               locations: person.locations,
               languages: person.languages,
-              priorityRank: person.priorityRank,
-              capacityLimit: person.capacityLimit,
+              priorityRank: optionalNumber(person.priorityRank) ?? BLANK.priorityRank,
+              capacityLimit: optionalNumber(person.capacityLimit) ?? BLANK.capacityLimit,
               active: person.active,
             },
           }
@@ -66,7 +67,7 @@ export default function SalespeopleScreen() {
           onRetry={() => void query.refetch()}
         />
       ) : (
-        <Section title={`${query.data?.salespeople.length ?? 0} on the team`}>
+        <Section title={`${query.data?.salespeople?.length ?? 0} on the team`}>
           <DataTable
             rows={query.data?.salespeople ?? []}
             keyOf={(person) => person.salespersonId}
@@ -160,10 +161,10 @@ const columns: Column<Salesperson>[] = [
     header: 'Priority',
     width: 100,
     numeric: true,
-    sortValue: (person) => person.priorityRank,
+    sortValue: (person) => optionalNumber(person.priorityRank),
     render: (person) => (
       <Text size="small" numeric>
-        {person.priorityRank}
+        {countLabel(person.priorityRank)}
       </Text>
     ),
   },
@@ -172,15 +173,15 @@ const columns: Column<Salesperson>[] = [
     header: 'Active / capacity',
     width: 150,
     numeric: true,
-    sortValue: (person) => person.activeAssignmentCount,
+    sortValue: (person) => optionalNumber(person.activeAssignmentCount),
     render: (person) => (
       <Text
         size="small"
         numeric
         weight="semibold"
-        style={person.activeAssignmentCount >= person.capacityLimit ? { color: color.warning } : undefined}
+        style={atLeast(person.activeAssignmentCount, person.capacityLimit) ? { color: color.warning } : undefined}
       >
-        {person.activeAssignmentCount} / {person.capacityLimit}
+        {ratioLabel(person.activeAssignmentCount, person.capacityLimit)}
       </Text>
     ),
   },
@@ -189,10 +190,12 @@ const columns: Column<Salesperson>[] = [
     header: 'Avg to ack',
     width: 120,
     numeric: true,
-    sortValue: (person) => person.avgAcknowledgementSeconds,
+    sortValue: (person) => optionalNumber(person.avgAcknowledgementSeconds),
     render: (person) => (
-      <Text size="small" numeric tone={person.avgAcknowledgementSeconds === null ? 'faint' : 'default'}>
-        {person.avgAcknowledgementSeconds === null ? '—' : duration(person.avgAcknowledgementSeconds)}
+      <Text size="small" numeric tone={optionalNumber(person.avgAcknowledgementSeconds) === null ? 'faint' : 'default'}>
+        {optionalNumber(person.avgAcknowledgementSeconds) === null
+          ? '—'
+          : duration(person.avgAcknowledgementSeconds)}
       </Text>
     ),
   },

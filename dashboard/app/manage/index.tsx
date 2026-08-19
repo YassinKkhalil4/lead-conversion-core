@@ -11,6 +11,7 @@ import { color, radius, space } from '@/design/tokens';
 import { BarChart, DistributionBar, StatTile } from '@/desk/charts';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Page, Panel, Section } from '@/desk/Page';
+import { atLeast, countLabel, optionalNumber, ratioLabel } from '@/desk/safe';
 import { useLeadList } from '@/leads/hooks';
 import { useSalespeople, useSummary } from '@/manage/hooks';
 import { PAST_SLA_SECONDS } from '@/leads/queue';
@@ -46,9 +47,13 @@ export default function ManagerOverview() {
   });
 
   const data = summary.data?.summary;
-  const current = data?.periods[period];
-  const previous = data?.previousPeriods[period];
-  const riskLeads = useMemo(() => atRisk.data?.pages.flatMap((page) => page.leads) ?? [], [atRisk.data]);
+  // Every link is guarded, not just the first. A payload with `summary` but
+  // no `previousPeriods` — an older build, or a cached response persisted
+  // before the field existed — would otherwise throw here on read.
+  const current = data?.periods?.[period] ?? null;
+  const previous = data?.previousPeriods?.[period] ?? null;
+  const responseTime = data?.responseTime ?? null;
+  const riskLeads = useMemo(() => atRisk.data?.pages?.flatMap((page) => page.leads ?? []) ?? [], [atRisk.data]);
 
   if (summary.isError) {
     const explained = explain(summary.error, 'Loading the overview');
@@ -89,7 +94,7 @@ export default function ManagerOverview() {
         </View>
       }
     >
-      {summary.isLoading || !current || !previous ? (
+      {summary.isLoading || !current ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.lg }}>
           {[0, 1, 2, 3].map((index) => (
             <View key={index} style={{ flexGrow: 1, flexBasis: 180, padding: space.xl, borderWidth: 1, borderColor: color.hairline, gap: space.md }}>
@@ -101,11 +106,11 @@ export default function ManagerOverview() {
         </View>
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.lg }}>
-          <StatTile label="New leads" value={current.newLeads} previous={previous.newLeads} />
-          <StatTile label="Qualified" value={current.qualifiedLeads} previous={previous.qualifiedLeads} />
+          <StatTile label="New leads" value={current.newLeads} previous={previous?.newLeads ?? null} />
+          <StatTile label="Qualified" value={current.qualifiedLeads} previous={previous?.qualifiedLeads ?? null} />
           <StatTile
             label="Speed to acknowledge"
-            value={data?.responseTime.medianAcknowledgementSeconds ?? null}
+            value={responseTime?.medianAcknowledgementSeconds ?? null}
             previous={null}
             format={(value) => duration(value)}
             lowerIsBetter
@@ -113,12 +118,12 @@ export default function ManagerOverview() {
           />
           <StatTile
             label="Pending acknowledgement"
-            value={data?.responseTime.pendingAcknowledgements ?? null}
-            previous={previous.assignedUnacknowledged}
+            value={responseTime?.pendingAcknowledgements ?? null}
+            previous={previous?.assignedUnacknowledged ?? null}
             lowerIsBetter
             hint={
-              data?.responseTime.oldestPendingAcknowledgementSeconds
-                ? `oldest ${duration(data.responseTime.oldestPendingAcknowledgementSeconds)}`
+              responseTime?.oldestPendingAcknowledgementSeconds
+                ? `oldest ${duration(responseTime.oldestPendingAcknowledgementSeconds)}`
                 : undefined
             }
           />
@@ -132,15 +137,15 @@ export default function ManagerOverview() {
         <Panel>
           <DistributionBar
             label="Lead arrival to first contact"
-            median={data?.responseTime.medianFirstContactSeconds ?? null}
-            p90={data?.responseTime.p90FirstContactSeconds ?? null}
-            worst={data?.responseTime.slowestFirstContactSeconds ?? null}
+            median={responseTime?.medianFirstContactSeconds ?? null}
+            p90={responseTime?.p90FirstContactSeconds ?? null}
+            worst={responseTime?.slowestFirstContactSeconds ?? null}
           />
           <DistributionBar
             label="Assignment to acknowledgement"
-            median={data?.responseTime.medianAcknowledgementSeconds ?? null}
-            p90={data?.responseTime.p90AcknowledgementSeconds ?? null}
-            worst={data?.responseTime.slowestAcknowledgementSeconds ?? null}
+            median={responseTime?.medianAcknowledgementSeconds ?? null}
+            p90={responseTime?.p90AcknowledgementSeconds ?? null}
+            worst={responseTime?.slowestAcknowledgementSeconds ?? null}
           />
         </Panel>
       </Section>
@@ -300,12 +305,12 @@ const teamColumns: Column<TeamRow>[] = [
     header: 'Active / capacity',
     width: 150,
     numeric: true,
-    sortValue: (person) => person.activeAssignmentCount / Math.max(1, person.capacityLimit),
+    sortValue: (person) => (optionalNumber(person.activeAssignmentCount) ?? 0) / Math.max(1, optionalNumber(person.capacityLimit) ?? 1),
     render: (person) => {
-      const full = person.activeAssignmentCount >= person.capacityLimit;
+      const full = atLeast(person.activeAssignmentCount, person.capacityLimit);
       return (
         <Text size="small" weight="semibold" numeric style={full ? { color: color.warning } : undefined}>
-          {person.activeAssignmentCount} / {person.capacityLimit}
+          {ratioLabel(person.activeAssignmentCount, person.capacityLimit)}
         </Text>
       );
     },
@@ -315,15 +320,15 @@ const teamColumns: Column<TeamRow>[] = [
     header: 'Overdue',
     width: 110,
     numeric: true,
-    sortValue: (person) => person.overdueAssignmentCount,
+    sortValue: (person) => optionalNumber(person.overdueAssignmentCount),
     render: (person) => (
       <Text
         size="small"
-        weight={person.overdueAssignmentCount > 0 ? 'bold' : 'regular'}
+        weight={(optionalNumber(person.overdueAssignmentCount) ?? 0) > 0 ? 'bold' : 'regular'}
         numeric
-        style={person.overdueAssignmentCount > 0 ? { color: color.alert } : undefined}
+        style={(optionalNumber(person.overdueAssignmentCount) ?? 0) > 0 ? { color: color.alert } : undefined}
       >
-        {person.overdueAssignmentCount}
+        {countLabel(person.overdueAssignmentCount)}
       </Text>
     ),
   },
@@ -332,10 +337,10 @@ const teamColumns: Column<TeamRow>[] = [
     header: 'Acknowledged',
     width: 140,
     numeric: true,
-    sortValue: (person) => person.acknowledgedCount,
+    sortValue: (person) => optionalNumber(person.acknowledgedCount),
     render: (person) => (
-      <Text size="small" numeric>
-        {person.acknowledgedCount}
+      <Text size="small" numeric tone={optionalNumber(person.acknowledgedCount) === null ? 'faint' : 'default'}>
+        {countLabel(person.acknowledgedCount)}
       </Text>
     ),
   },
@@ -344,10 +349,12 @@ const teamColumns: Column<TeamRow>[] = [
     header: 'Avg to ack',
     width: 130,
     numeric: true,
-    sortValue: (person) => person.avgAcknowledgementSeconds,
+    sortValue: (person) => optionalNumber(person.avgAcknowledgementSeconds),
     render: (person) => (
-      <Text size="small" numeric tone={person.avgAcknowledgementSeconds === null ? 'faint' : 'default'}>
-        {person.avgAcknowledgementSeconds === null ? '—' : duration(person.avgAcknowledgementSeconds)}
+      <Text size="small" numeric tone={optionalNumber(person.avgAcknowledgementSeconds) === null ? 'faint' : 'default'}>
+        {optionalNumber(person.avgAcknowledgementSeconds) === null
+          ? '—'
+          : duration(person.avgAcknowledgementSeconds)}
       </Text>
     ),
   },
@@ -356,10 +363,10 @@ const teamColumns: Column<TeamRow>[] = [
     header: 'Priority',
     width: 100,
     numeric: true,
-    sortValue: (person) => person.priorityRank,
+    sortValue: (person) => optionalNumber(person.priorityRank),
     render: (person) => (
       <Text size="small" numeric tone="muted">
-        {person.priorityRank}
+        {countLabel(person.priorityRank)}
       </Text>
     ),
   },

@@ -164,7 +164,7 @@ function UsersInner() {
           onRetry={() => void users.refetch()}
         />
       ) : (
-        <Section title={`${users.data?.users.length ?? 0} accounts`}>
+        <Section title={`${users.data?.users?.length ?? 0} accounts`}>
           <DataTable
             rows={users.data?.users ?? []}
             keyOf={(row) => row.userId}

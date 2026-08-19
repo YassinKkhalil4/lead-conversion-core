@@ -6,7 +6,7 @@ import type { Project, Salesperson } from '@/api/types';
 import { Button } from '@/design/Button';
 import { ErrorState, InlineNotice } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, radius, space } from '@/design/tokens';
+import { color, hitSlop, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, MoneyField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
@@ -40,7 +40,7 @@ export default function ProjectsScreen() {
 
   const byId = new Map((salespeople.data?.salespeople ?? []).map((person) => [person.salespersonId, person]));
   const unassigned = (projects.data?.projects ?? []).filter(
-    (project) => project.active && project.salespersonIds.length === 0,
+    (project) => project.active && (project.salespersonIds ?? []).length === 0,
   ).length;
 
   const open = (project?: Project) =>
@@ -138,28 +138,38 @@ export default function ProjectsScreen() {
       key: 'salespeople',
       header: 'Salespeople',
       width: 230,
-      sortValue: (project) => project.salespersonIds.length,
-      render: (project) => (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setAssigning(project)}
-          style={{ gap: 2 }}
-        >
-          {project.salespersonIds.length === 0 ? (
-            <Text size="small" style={{ color: color.warning }}>
-              None — cannot be routed
-            </Text>
-          ) : (
-            <Text size="small" numberOfLines={1}>
-              {project.salespersonIds
-                .map((id) => byId.get(id)?.name ?? 'Unknown')
-                .join(', ')}
-            </Text>
-          )}
-          <Text size="micro" tone="faint" style={{ textDecorationLine: 'underline' }}>
-            Change
+      sortValue: (project) => (project.salespersonIds ?? []).length,
+      render: (project) =>
+        (project.salespersonIds ?? []).length === 0 ? (
+          <Text size="small" style={{ color: color.warning }}>
+            None — cannot be routed
           </Text>
-        </Pressable>
+        ) : (
+          <Text size="small" numberOfLines={1}>
+            {(project.salespersonIds ?? []).map((id) => byId.get(id)?.name ?? 'Unknown').join(', ')}
+          </Text>
+        ),
+    },
+    {
+      // Both actions live here as separate controls. Nesting a pressable cell
+      // inside a pressable row makes the target ambiguous on web, so the row
+      // itself is not pressable on this table.
+      key: 'actions',
+      header: 'Actions',
+      width: 150,
+      render: (project) => (
+        <View style={{ flexDirection: 'row', gap: space.lg }}>
+          <Pressable accessibilityRole="button" onPress={() => open(project)} hitSlop={hitSlop}>
+            <Text size="small" weight="semibold" style={{ textDecorationLine: 'underline' }}>
+              Edit
+            </Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => setAssigning(project)} hitSlop={hitSlop}>
+            <Text size="small" weight="semibold" style={{ textDecorationLine: 'underline' }}>
+              Assign
+            </Text>
+          </Pressable>
+        </View>
       ),
     },
   ];
@@ -184,11 +194,10 @@ export default function ProjectsScreen() {
           onRetry={() => void projects.refetch()}
         />
       ) : (
-        <Section title={`${projects.data?.projects.length ?? 0} projects`}>
+        <Section title={`${projects.data?.projects?.length ?? 0} projects`}>
           <DataTable
             rows={projects.data?.projects ?? []}
             keyOf={(project) => project.projectId}
-            onRowPress={open}
             initialSort={{ key: 'name', direction: 'asc' }}
             emptyTitle="No projects yet"
             emptyDetail="Add the developments this brokerage sells. Leads are matched to a project by budget and unit type, and routing then chooses among the salespeople assigned to it."
@@ -340,7 +349,7 @@ function AssignSheet({
   onCancel: () => void;
   onSave: (salespersonIds: string[]) => Promise<void>;
 }) {
-  const [selected, setSelected] = useState<string[]>(project.salespersonIds);
+  const [selected, setSelected] = useState<string[]>(project.salespersonIds ?? []);
   const explained = error ? explain(error, 'Saving the assignment') : null;
 
   const toggle = (salespersonId: string) =>

@@ -17,7 +17,7 @@ export function StagePicker({
   busy,
   onChange,
 }: {
-  stage: string;
+  stage: string | null | undefined;
   busy: boolean;
   onChange: (stage: string) => void;
 }) {

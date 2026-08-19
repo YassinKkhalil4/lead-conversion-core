@@ -69,7 +69,11 @@ const STAGE_LABELS: Record<string, string> = {
   ghosted: 'Ghosted',
 };
 
-export function stageLabel(stage: string): string {
+export function stageLabel(stage: string | null | undefined): string {
+  // A lead from an API build before pipeline_stage existed, or from a cached
+  // response persisted before it, has no stage. Read it as the default rather
+  // than throwing inside humanise.
+  if (typeof stage !== 'string' || stage === '') return STAGE_LABELS.new ?? 'New';
   return STAGE_LABELS[stage] ?? humanise(stage);
 }
 
