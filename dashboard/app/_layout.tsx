@@ -8,8 +8,9 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { color } from '@/design/tokens';
+import { ScreenErrorBoundary } from '@/nav/ErrorBoundary';
 import { Shell } from '@/nav/Shell';
-import { persister, queryClient } from '@/query/client';
+import { clearPersistedCache, persister, queryClient } from '@/query/client';
 
 const WEEK = 1000 * 60 * 60 * 24 * 7;
 
@@ -47,12 +48,16 @@ export default function RootLayout() {
           {/* One shell instance around every authenticated route, so moving
               between surfaces does not remount the navigation. */}
           <Shell>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: color.paper },
-              }}
-            />
+            {/* Inside the shell, so a screen that fails to render leaves the
+                navigation in place to move away with. */}
+            <ScreenErrorBoundary onReset={() => void clearPersistedCache()}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: color.paper },
+                }}
+              />
+            </ScreenErrorBoundary>
           </Shell>
         </AuthProvider>
       </PersistQueryClientProvider>

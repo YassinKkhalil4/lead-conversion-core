@@ -42,9 +42,19 @@ queryClient.setMutationDefaults(ACKNOWLEDGE_MUTATION_KEY, {
   mutationFn: async (leadId: string) => acknowledgeLead(leadId),
 });
 
+/**
+ * Bump when a cached response shape changes.
+ *
+ * The cache is kept for a week so the app is usable without signal, which also
+ * means a payload saved before a field existed is replayed on mount long after
+ * the API started returning it. Screens guard every optional field, but a
+ * versioned key stops the stale shape reaching them at all.
+ */
+const CACHE_VERSION = 'v2';
+
 export const persister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'rolefit.query-cache.v1',
+  key: `rolefit.query-cache.${CACHE_VERSION}`,
   throttleTime: 1000,
 });
 
