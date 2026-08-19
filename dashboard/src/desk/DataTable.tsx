@@ -37,6 +37,11 @@ export function DataTable<T>({
   rows: T[];
   columns: Column<T>[];
   keyOf: (row: T) => string;
+  /**
+   * Makes the whole row a control. Do not combine it with a pressable inside
+   * a cell: nested pressables make the click target ambiguous on web. Give
+   * the table an actions column instead.
+   */
   onRowPress?: (row: T) => void;
   emptyTitle: string;
   emptyDetail: string;
@@ -108,35 +113,55 @@ export function DataTable<T>({
           })}
         </View>
 
-        {sorted.map((row, index) => (
-          <Pressable
-            key={keyOf(row)}
-            accessibilityRole={onRowPress ? 'button' : undefined}
-            disabled={!onRowPress}
-            onPress={() => onRowPress?.(row)}
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              backgroundColor: pressed && onRowPress ? color.surfacePressed : color.surface,
-              borderBottomWidth: index === sorted.length - 1 ? 0 : 1,
-              borderBottomColor: color.hairline,
-            })}
-          >
-            {columns.map((column) => (
+        {sorted.map((row, index) => {
+          const cells = columns.map((column) => (
+            <View
+              key={column.key}
+              style={{
+                width: column.width,
+                paddingHorizontal: space.lg,
+                paddingVertical: space.lg,
+                alignItems: column.numeric ? 'flex-end' : 'flex-start',
+                justifyContent: 'center',
+              }}
+            >
+              {column.render(row)}
+            </View>
+          ));
+
+          const border = {
+            borderBottomWidth: index === sorted.length - 1 ? 0 : 1,
+            borderBottomColor: color.hairline,
+          } as const;
+
+          // A table without a row action renders plain Views, so a cell may
+          // hold its own control without nesting inside an outer pressable.
+          if (!onRowPress) {
+            return (
               <View
-                key={column.key}
-                style={{
-                  width: column.width,
-                  paddingHorizontal: space.lg,
-                  paddingVertical: space.lg,
-                  alignItems: column.numeric ? 'flex-end' : 'flex-start',
-                  justifyContent: 'center',
-                }}
+                key={keyOf(row)}
+                style={{ flexDirection: 'row', backgroundColor: color.surface, ...border }}
               >
-                {column.render(row)}
+                {cells}
               </View>
-            ))}
-          </Pressable>
-        ))}
+            );
+          }
+
+          return (
+            <Pressable
+              key={keyOf(row)}
+              accessibilityRole="button"
+              onPress={() => onRowPress(row)}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                backgroundColor: pressed ? color.surfacePressed : color.surface,
+                ...border,
+              })}
+            >
+              {cells}
+            </Pressable>
+          );
+        })}
       </View>
     </ScrollView>
   );
