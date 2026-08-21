@@ -15,6 +15,7 @@ import {
 } from '../infrastructure/runtime.js';
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
+import { AppointmentConversationService } from './appointment-conversation-service.js';
 import { LeadScoringService } from './lead-scoring-service.js';
 import { LeadRoutingService } from './lead-routing-service.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
@@ -116,6 +117,7 @@ export class EdgeInboundMessageProcessor {
     private readonly router = new LeadRoutingService(),
     private readonly followups = new FollowupSchedulerService(),
     private readonly sla = new SlaService(),
+    private readonly appointments = new AppointmentConversationService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -172,7 +174,7 @@ export class EdgeInboundMessageProcessor {
       state.leadName = state.leadName || input.profileName || '';
 
       const config = await this.configs.getByVersion(state.configVersion, client);
-      const decision = isOptOut(input.messageText)
+      let decision = isOptOut(input.messageText)
         ? optOutDecision(state)
         : evaluateConversation({
             state,
@@ -338,7 +340,6 @@ export class EdgeInboundMessageProcessor {
       decision.nextState.conversationId = state.conversationId;
       decision.nextState.configVersion = state.configVersion;
       decision.nextState.configurationVersionId = state.configurationVersionId;
-      await this.conversations.update(client, decision.nextState);
       await client.query(
         `INSERT INTO edge_message_events (
           conversation_id, client_record_id, direction, external_event_id, meta_message_id,
@@ -358,6 +359,40 @@ export class EdgeInboundMessageProcessor {
       );
 
       const target = await this.resolveAppLead(client, state.leadId);
+
+      // Appointment wiring must run before anything below takes a foreign-key
+      // lock on the lead row. `AppointmentService.bookSlot` runs its own
+      // transaction on a second connection and needs `FOR UPDATE` on
+      // app.leads; inserting app.conversations or app.messages first would
+      // hold `FOR KEY SHARE` on the same row and deadlock the two.
+      let appointmentReplySent = false;
+      if (target && ['appointment_slot_offer', 'appointment_slot_selected'].includes(decision.replyKey)) {
+        const existing = await client.query<{ conversation_id: string }>(
+          'SELECT conversation_id FROM app.conversations WHERE lead_id=$1',
+          [target.leadId],
+        );
+        const turn = {
+          state,
+          config,
+          decision,
+          target,
+          phoneNumberId: input.phoneNumberId,
+          toE164: input.from,
+          appConversationId: existing.rows[0]?.conversation_id || '',
+          sourceEventId: event.inboxEventId,
+          correlationId: event.dedupeKey,
+          causationId: event.inboxEventId,
+        };
+        const handled = decision.replyKey === 'appointment_slot_offer'
+          ? await this.appointments.composeSlotOffer(client, turn)
+          : await this.appointments.resolveSlotReply(client, turn);
+        decision = handled.decision;
+        appointmentReplySent = handled.replySent;
+        decision.nextState.conversationId = state.conversationId;
+        decision.nextState.configVersion = state.configVersion;
+        decision.nextState.configurationVersionId = state.configurationVersionId;
+      }
+
       const appConversationId = target
         ? await this.upsertAppConversation(client, decision.nextState, target)
         : '';
@@ -374,6 +409,8 @@ export class EdgeInboundMessageProcessor {
         correlationId: event.dedupeKey,
         causationId: event.inboxEventId,
       });
+
+      await this.conversations.update(client, decision.nextState);
       if (decision.outboxEvents.some((outboxEvent) => outboxEvent.eventType === 'lead_opted_out')) {
         await this.persistOptOut(client, decision.nextState, input.from);
       }
@@ -383,7 +420,7 @@ export class EdgeInboundMessageProcessor {
 
       let messageId = '';
       let outboxCommandId = '';
-      if (decision.action !== 'no_reply' && decision.text) {
+      if (!appointmentReplySent && decision.action !== 'no_reply' && decision.text) {
         if (!target) {
           await client.query('ROLLBACK');
           return { outcome: 'ignored', reason: 'app_lead_not_found_for_edge_conversation' };
@@ -489,7 +526,7 @@ export class EdgeInboundMessageProcessor {
         [
           state.clientRecordId,
           input.metaMessageId,
-          outboxCommandId ? 'queued' : 'suppressed',
+          outboxCommandId || appointmentReplySent ? 'queued' : 'suppressed',
           JSON.stringify(decision),
           Number((performance.now() - started).toFixed(3)),
           JSON.stringify({ messageId, outboxCommandId }),

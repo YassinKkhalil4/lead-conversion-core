@@ -6,6 +6,7 @@ import type { OutboxDispatchResult } from './runtime-worker.js';
 const notificationCommandTypes = [
   'salesperson.lead_assignment_notification',
   'salesperson.sla_assignment_reminder',
+  'salesperson.appointment_booked_notification',
   'operator.sla_escalation',
   'operator.daily_report',
   'operator.routing_attention_required',
