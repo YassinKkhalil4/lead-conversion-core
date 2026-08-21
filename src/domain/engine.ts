@@ -9,6 +9,31 @@ import type {
   ReplyDecision,
 } from './types.js';
 
+/**
+ * The stage a lead sits on between being shown slots and tapping one.
+ *
+ * It deliberately is not `appointment_slot_selection` (that stage still routes
+ * to the legacy handler below), nor `qualified`/`sales_handoff` (those answer
+ * `already_handed_off` and would swallow the tap).
+ */
+export const APPOINTMENT_SLOT_STAGE = 'awaiting_appointment_slot';
+
+/** `appt:<appointmentOfferId>:<appointmentSlotId>`, 78 characters. */
+const SLOT_OPTION_PATTERN = /^appt:([0-9a-f-]{36}):([0-9a-f-]{36})$/i;
+
+const SITE_VISIT_ACCEPTED = ['yes', 'نعم', 'أيوه', 'ايوه'];
+
+function isSiteVisitAccepted(question: CompiledQuestion, value: string): boolean {
+  if (question.saveKey !== 'q_site_visit') return false;
+  return SITE_VISIT_ACCEPTED.includes(value.trim().toLocaleLowerCase());
+}
+
+export function parseSlotOption(value: string): { appointmentOfferId: string; appointmentSlotId: string } | null {
+  const match = SLOT_OPTION_PATTERN.exec(value.trim());
+  if (!match || !match[1] || !match[2]) return null;
+  return { appointmentOfferId: match[1], appointmentSlotId: match[2] };
+}
+
 interface EngineInput {
   state: ConversationState;
   config: CompiledConfig;
@@ -206,6 +231,64 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
       stageAfter: state.currentStage,
       outboxEvents: [],
       nextState: state,
+    };
+  }
+
+  if (state.currentStage === APPOINTMENT_SLOT_STAGE) {
+    const language: Language = state.preferredLanguage || 'Arabic';
+    const selected = parseSlotOption(String(messageOptionId || incomingText || ''));
+    if (selected) {
+      return {
+        action: 'reply',
+        replyKey: 'appointment_slot_selected',
+        text: '',
+        messageKind: 'text',
+        stageBefore,
+        stageAfter: state.currentStage,
+        outboxEvents: [{ eventType: 'appointment_slot_selected', payload: { ...selected } }],
+        nextState: { ...state, retryCount: 0, stateVersion: state.stateVersion + 1 },
+      };
+    }
+    if (state.retryCount === 0) {
+      return {
+        action: 'reply',
+        replyKey: 'appointment_slot_reprompt',
+        text: messageText(config, 'clarify_invalid', language, state),
+        messageKind: 'text',
+        stageBefore,
+        stageAfter: state.currentStage,
+        outboxEvents: [
+          {
+            eventType: 'appointment_slot_reply_unparsed',
+            payload: { raw: String(incomingText || messageOptionId || '').slice(0, 200) },
+          },
+        ],
+        nextState: { ...state, retryCount: 1, stateVersion: state.stateVersion + 1 },
+      };
+    }
+    // Re-prompted once already. Never loop: hand the lead to the closing
+    // message and let a human pick the visit up from there.
+    return {
+      action: 'complete',
+      replyKey: 'qualified_closing',
+      text: messageText(config, 'qualified_closing', language, state),
+      messageKind: 'text',
+      stageBefore,
+      stageAfter: 'qualified',
+      outboxEvents: [
+        {
+          eventType: 'appointment_offer_abandoned',
+          payload: { reason: 'slot_reply_unparsed_after_retry' },
+        },
+      ],
+      nextState: {
+        ...state,
+        currentStage: 'qualified',
+        currentQuestionKey: '',
+        retryCount: 0,
+        status: 'qualified',
+        stateVersion: state.stateVersion + 1,
+      },
     };
   }
 
@@ -435,6 +518,51 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
   }
 
   if (!nextQuestion) {
+    const completionEvents: ReplyDecision['outboxEvents'] = [
+      ...commonEvents,
+      {
+        eventType: 'qualification_completed',
+        payload: {
+          qualification: qualificationPayload(answers),
+          transcriptNote: 'completed via conversation edge integration-safe runtime',
+        },
+      },
+    ];
+
+    // A lead who accepts a site visit is fully qualified, so scoring and
+    // routing still run off `qualification_completed`. Instead of closing the
+    // conversation, park them on the slot stage; the caller owns slot
+    // generation and decides whether an offer can actually be sent.
+    if (isSiteVisitAccepted(question, finalParsedValue)) {
+      const offerState: ConversationState = {
+        ...state,
+        answers,
+        currentStage: APPOINTMENT_SLOT_STAGE,
+        currentQuestionKey: '',
+        retryCount: 0,
+        status: 'qualified',
+        stateVersion: state.stateVersion + 1,
+      };
+      return {
+        action: 'reply',
+        replyKey: 'appointment_slot_offer',
+        text: '',
+        messageKind: 'list',
+        stageBefore,
+        stageAfter: APPOINTMENT_SLOT_STAGE,
+        questionKey: question.questionKey,
+        saveKey: question.saveKey,
+        parsedValue: finalParsedValue,
+        ...(parseSource ? { parseSource } : {}),
+        ...(needsAsyncAi ? { needsAsyncAi } : {}),
+        outboxEvents: [
+          ...completionEvents,
+          { eventType: 'appointment_slot_offer_requested', payload: { siteVisit: finalParsedValue } },
+        ],
+        nextState: offerState,
+      };
+    }
+
     const nextState: ConversationState = {
       ...state,
       answers,
@@ -456,16 +584,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
       parsedValue: finalParsedValue,
       ...(parseSource ? { parseSource } : {}),
       ...(needsAsyncAi ? { needsAsyncAi } : {}),
-      outboxEvents: [
-        ...commonEvents,
-        {
-          eventType: 'qualification_completed',
-          payload: {
-            qualification: qualificationPayload(answers),
-            transcriptNote: 'completed via conversation edge integration-safe runtime',
-          },
-        },
-      ],
+      outboxEvents: completionEvents,
       nextState,
     };
   }

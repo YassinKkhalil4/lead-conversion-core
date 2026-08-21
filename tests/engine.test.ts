@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { compileConfig, type CompileInput } from '../src/domain/compiler.js';
-import { evaluateConversation } from '../src/domain/engine.js';
+import { APPOINTMENT_SLOT_STAGE, evaluateConversation } from '../src/domain/engine.js';
 import { parseEgpAmount, parseEgpRange } from '../src/domain/normalization.js';
 import type { ConversationState } from '../src/domain/types.js';
 
@@ -171,5 +171,76 @@ describe('conversation engine', () => {
     expect(result.stageAfter).toBe('qualified');
     expect(result.replyKey).toBe('qualified_closing');
     expect(result.outboxEvents.some((event) => event.eventType === 'qualification_completed')).toBe(true);
+  });
+
+  it('parks an accepted site visit on the slot stage instead of closing', () => {
+    const result = evaluateConversation({
+      state: state({
+        currentStage: 'asking_site_visit',
+        currentQuestionKey: 'q_site_visit',
+        answers: { q_location: 'New Cairo', q_unit_type: 'Villa' },
+      }),
+      config,
+      messageOptionId: 'sv_yes',
+    });
+
+    expect(result.replyKey).toBe('appointment_slot_offer');
+    expect(result.stageAfter).toBe(APPOINTMENT_SLOT_STAGE);
+    expect(result.nextState.currentStage).toBe(APPOINTMENT_SLOT_STAGE);
+    expect(result.nextState.status).toBe('qualified');
+    // Scoring and routing still hang off qualification completion.
+    expect(result.outboxEvents.some((event) => event.eventType === 'qualification_completed')).toBe(true);
+    expect(result.outboxEvents.some((event) => event.eventType === 'appointment_slot_offer_requested')).toBe(true);
+  });
+
+  it('reads a slot tap off the interactive list row id', () => {
+    const offerId = '11111111-1111-4111-8111-111111111111';
+    const slotId = '22222222-2222-4222-8222-222222222222';
+    const result = evaluateConversation({
+      state: state({ currentStage: APPOINTMENT_SLOT_STAGE, currentQuestionKey: '' }),
+      config,
+      messageOptionId: `appt:${offerId}:${slotId}`,
+    });
+
+    expect(result.replyKey).toBe('appointment_slot_selected');
+    expect(result.outboxEvents[0]?.payload).toEqual({
+      appointmentOfferId: offerId,
+      appointmentSlotId: slotId,
+    });
+  });
+
+  it('re-prompts an unparseable slot reply once, then closes without looping', () => {
+    const base = state({ currentStage: APPOINTMENT_SLOT_STAGE, currentQuestionKey: '' });
+
+    const first = evaluateConversation({ state: base, config, messageText: 'whenever suits you' });
+    expect(first.replyKey).toBe('appointment_slot_reprompt');
+    expect(first.stageAfter).toBe(APPOINTMENT_SLOT_STAGE);
+    expect(first.nextState.retryCount).toBe(1);
+
+    const second = evaluateConversation({
+      state: { ...base, retryCount: first.nextState.retryCount },
+      config,
+      messageText: 'still not a slot',
+    });
+    expect(second.replyKey).toBe('qualified_closing');
+    expect(second.stageAfter).toBe('qualified');
+    expect(second.outboxEvents.some((event) => event.eventType === 'appointment_offer_abandoned')).toBe(true);
+  });
+
+  it('does not route the slot stage into the legacy handler or the handoff reply', () => {
+    const legacy = evaluateConversation({
+      state: state({ currentStage: 'appointment_slot_selection' }),
+      config,
+      messageText: 'hello',
+    });
+    expect(legacy.replyKey).toBe('legacy_appointment_router');
+
+    const parked = evaluateConversation({
+      state: state({ currentStage: APPOINTMENT_SLOT_STAGE }),
+      config,
+      messageText: 'hello',
+    });
+    expect(parked.action).not.toBe('fallback');
+    expect(parked.replyKey).not.toBe('already_handed_off');
   });
 });
