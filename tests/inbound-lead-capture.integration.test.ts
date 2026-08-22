@@ -207,12 +207,17 @@ describePg('direct WhatsApp inbound lead capture', () => {
       'SELECT current_stage, preferred_language FROM edge_conversations WHERE phone_normalized=$1',
       [phone],
     );
-    expect(conversation.rows[0]?.current_stage).toBe('awaiting_permission');
+    expect(conversation.rows[0]).toEqual({
+      current_stage: 'language_selection',
+      preferred_language: '',
+    });
 
+    // Greeting and language prompt arrive as one interactive message.
     const reply = await outboundText(phone);
     expect(reply.kind).toBe('buttons');
-    expect(reply.text).toContain('أهلاً بيك');
-    expect(reply.text).toContain('ممكن أسألك كام سؤال سريع');
+    expect(reply.text).toContain('Thanks for reaching out');
+    expect(reply.text).toContain('شكراً لتواصلك');
+    expect(reply.text).toContain('Please choose your preferred language');
     expect((await db.pool.query(
       `SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'`,
     )).rows[0]?.count).toBe('1');
@@ -236,9 +241,9 @@ describePg('direct WhatsApp inbound lead capture', () => {
     expect(intake.rows[0]?.provider).toBe('whatsapp');
     expect(intake.rows[0]?.payload_json).toMatchObject({
       openingMessage: opening,
-      detectedLanguage: 'Arabic',
       profileName: 'Walk In',
     });
+    expect(intake.rows[0]?.payload_json).not.toHaveProperty('detectedLanguage');
 
     // The opening text is captured, never turned into qualification answers.
     expect((await db.pool.query(
@@ -246,43 +251,44 @@ describePg('direct WhatsApp inbound lead capture', () => {
     )).rows[0]?.answers_json).toEqual({});
   });
 
-  it('starts an Arabic opener at question one with no language selection prompt', async () => {
+  it('asks Franco-Arabic openers to choose rather than guessing English', async () => {
+    // "3ayez sha2a" is Latin script from an Arabic speaker. Script detection
+    // used to put this lead in English; now the lead is asked.
     await seedClient();
     const phone = '+201125337757';
 
+    await deliver({ from: phone, text: '3ayez sha2a fe el tagamo3' });
+
+    expect((await db.pool.query(
+      'SELECT preferred_language, current_stage FROM edge_conversations WHERE phone_normalized=$1', [phone],
+    )).rows[0]).toEqual({ preferred_language: '', current_stage: 'language_selection' });
+    expect((await outboundText(phone)).text).toContain('اختار اللغة');
+  });
+
+  it('proceeds in Arabic once the lead picks Arabic', async () => {
+    await seedClient();
+    const phone = '+201125337758';
+
     await deliver({ from: phone, text: 'السلام عليكم' });
+    await deliver({ from: phone, text: 'العربية' });
 
     expect((await db.pool.query(
       'SELECT preferred_language, current_stage FROM edge_conversations WHERE phone_normalized=$1', [phone],
     )).rows[0]).toEqual({ preferred_language: 'Arabic', current_stage: 'awaiting_permission' });
-    const reply = await outboundText(phone);
-    expect(reply.text).not.toContain('choose your preferred language');
-    expect(reply.text).not.toContain('اختار اللغة');
+    expect((await outboundText(phone)).text).toContain('ممكن أسألك كام سؤال سريع');
   });
 
-  it('starts a Latin-script opener in English', async () => {
-    await seedClient();
-    const phone = '+201125337758';
-
-    await deliver({ from: phone, text: 'Hi, I want details about the compound' });
-
-    expect((await db.pool.query(
-      'SELECT preferred_language FROM edge_conversations WHERE phone_normalized=$1', [phone],
-    )).rows[0]?.preferred_language).toBe('English');
-    expect((await outboundText(phone)).text).toContain('May I ask you a few quick questions');
-  });
-
-  it('falls back to Arabic when the opener carries no letters at all', async () => {
+  it('proceeds in English once the lead picks English', async () => {
     await seedClient();
     const phone = '+201125337759';
 
-    await deliver({ from: phone, text: '👋 123' });
+    await deliver({ from: phone, text: 'Hi, I want details about the compound' });
+    await deliver({ from: phone, text: 'English' });
 
     expect((await db.pool.query(
-      'SELECT preferred_language FROM edge_conversations WHERE phone_normalized=$1', [phone],
-    )).rows[0]?.preferred_language).toBe('Arabic');
-    expect(captureModule.detectOpeningLanguage('')).toBe('Arabic');
-    expect(captureModule.detectOpeningLanguage('٠١٢')).toBe('Arabic');
+      'SELECT preferred_language, current_stage FROM edge_conversations WHERE phone_normalized=$1', [phone],
+    )).rows[0]).toEqual({ preferred_language: 'English', current_stage: 'awaiting_permission' });
+    expect((await outboundText(phone)).text).toContain('May I ask you a few quick questions');
   });
 
   it('ignores an inbound whose phone_number_id resolves to no client', async () => {
