@@ -164,7 +164,11 @@ export class DashboardLeadActionService {
          VALUES ($1, $2, $3, $4, 'dashboard', $5, 1)
          ON CONFLICT (client_record_id, phone_normalized) DO UPDATE SET
            human_takeover = EXCLUDED.human_takeover,
-           current_stage = CASE WHEN EXCLUDED.human_takeover THEN 'human_takeover' ELSE edge_lead_controls.current_stage END,
+           current_stage = CASE
+             WHEN EXCLUDED.human_takeover THEN 'human_takeover'
+             WHEN edge_lead_controls.current_stage = 'human_takeover' THEN ''
+             ELSE edge_lead_controls.current_stage
+           END,
            source = 'dashboard',
            source_event_id = EXCLUDED.source_event_id,
            control_version = edge_lead_controls.control_version + 1,
@@ -174,7 +178,11 @@ export class DashboardLeadActionService {
       await client.query(
         `UPDATE edge_conversations
          SET human_takeover = $3,
-             current_stage = CASE WHEN $3 THEN 'human_takeover' ELSE current_stage END,
+             current_stage = CASE
+               WHEN $3 THEN 'human_takeover'
+               WHEN current_stage = 'human_takeover' THEN ''
+               ELSE current_stage
+             END,
              state_version = state_version + 1,
              updated_at = now()
          WHERE client_record_id = $1 AND phone_normalized = $2`,

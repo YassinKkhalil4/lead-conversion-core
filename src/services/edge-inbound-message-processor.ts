@@ -912,7 +912,7 @@ export class EdgeInboundMessageProcessor {
       ON CONFLICT (client_record_id, phone_normalized) DO UPDATE SET
         lead_record_id=COALESCE(NULLIF(EXCLUDED.lead_record_id,''), edge_lead_controls.lead_record_id),
         status=COALESCE(NULLIF(EXCLUDED.status,''), edge_lead_controls.status),
-        current_stage=COALESCE(NULLIF(EXCLUDED.current_stage,''), edge_lead_controls.current_stage),
+        current_stage=EXCLUDED.current_stage,
         human_takeover=EXCLUDED.human_takeover,
         stop_follow_up=EXCLUDED.stop_follow_up,
         closed_status=COALESCE(NULLIF(EXCLUDED.closed_status,''), edge_lead_controls.closed_status),

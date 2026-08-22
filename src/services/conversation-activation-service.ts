@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConversationRepository } from '../repositories/conversation-repository.js';
 import { AuditRepository } from '../infrastructure/runtime.js';
+import { suppressionReason } from '../domain/engine.js';
 import type { ConversationState, Language } from '../domain/types.js';
 
 export interface ConversationActivationInput {
@@ -93,6 +94,33 @@ export class ConversationActivationService {
     );
 
     if (!existing) {
+      // A conversation can legitimately be born silent — an operator may have
+      // taken the lead over before first contact. Record it at creation so the
+      // silence is visible immediately, rather than only when an inbound turn
+      // is later dropped. On the intake path no inbound turn ever arrives, so
+      // without this there is no audit row at all.
+      const bornSuppressed = suppressionReason(state);
+      if (bornSuppressed) {
+        await this.audit.record(client, {
+          eventType: 'conversation.activated_suppressed',
+          actorType: 'system',
+          actorId: input.actorId || 'conversation-activation-service',
+          aggregateType: 'lead',
+          aggregateId: input.leadId,
+          ...(input.correlationId ? { correlationId: input.correlationId } : {}),
+          ...(input.causationId ? { causationId: input.causationId } : {}),
+          payload: {
+            reason: bornSuppressed,
+            clientRecordId: input.clientRecordId,
+            currentStage: state.currentStage,
+            status: state.status,
+            humanTakeover: state.humanTakeover,
+            stopFollowUp: state.stopFollowUp,
+            appointmentStatus: state.appointmentStatus,
+          },
+          after: { conversationId: state.conversationId || '', currentStage: state.currentStage },
+        });
+      }
       await this.audit.record(client, {
         eventType: 'conversation.activated',
         actorType: 'system',
@@ -105,6 +133,7 @@ export class ConversationActivationService {
           clientRecordId: input.clientRecordId,
           configVersion: snapshot.versionKey,
           preferredLanguage: input.preferredLanguage || '',
+          suppressedAtActivation: bornSuppressed || '',
         },
         after: { conversationId: state.conversationId || '', currentStage: state.currentStage },
       });

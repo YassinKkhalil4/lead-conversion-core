@@ -111,7 +111,14 @@ function parseLanguage(input: { text?: string; optionId?: string }): Language | 
   return null;
 }
 
-function suppressionReason(state: ConversationState): string | null {
+/**
+ * Why the engine will not reply to this state, or null if it will.
+ *
+ * Exported so a caller that creates a conversation can tell straight away that
+ * the new row is born silent, instead of that only surfacing when an inbound
+ * turn is later dropped.
+ */
+export function suppressionReason(state: ConversationState): string | null {
   const status = String(state.status || '').toLocaleLowerCase();
   const stage = String(state.currentStage || '').toLocaleLowerCase();
   const appointment = String(state.appointmentStatus || '').toLocaleLowerCase();
