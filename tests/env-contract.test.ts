@@ -40,6 +40,12 @@ describe('environment contract', () => {
     });
   });
 
+  it('gives the runtime worker a sub-second idle poll by default', () => {
+    expect(parseEnv(baseEnv).RUNTIME_WORKER_IDLE_SLEEP_MS).toBe(250);
+    expect(parseEnv({ ...baseEnv, RUNTIME_WORKER_IDLE_SLEEP_MS: '750' }).RUNTIME_WORKER_IDLE_SLEEP_MS).toBe(750);
+    expect(() => parseEnv({ ...baseEnv, RUNTIME_WORKER_IDLE_SLEEP_MS: '0' })).toThrow(/RUNTIME_WORKER_IDLE_SLEEP_MS/);
+  });
+
   it('rejects unknown worker kinds before a worker can start the wrong role', () => {
     expect(() => parseEnv({ ...baseEnv, WORKER_KIND: 'runtim' })).toThrow(/WORKER_KIND/);
     expect(parseEnv({ ...baseEnv, WORKER_KIND: 'runtime' }).WORKER_KIND).toBe('runtime');
