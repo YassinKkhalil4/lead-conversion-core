@@ -110,11 +110,12 @@ export class ConversationRepository {
   ): Promise<ConversationState> {
     const configPin = normalizeActiveConfig(activeConfig);
     const controlResult = await client.query<{
+      lead_record_id: string;
       status: string; current_stage: string; human_takeover: boolean; stop_follow_up: boolean;
       closed_status: string; appointment_status: string;
       assigned_salesperson_record_id: string; assigned_salesperson_phone: string;
     }>(
-      `SELECT status,current_stage,human_takeover,stop_follow_up,closed_status,
+      `SELECT lead_record_id,status,current_stage,human_takeover,stop_follow_up,closed_status,
               appointment_status,assigned_salesperson_record_id,assigned_salesperson_phone
        FROM edge_lead_controls WHERE client_record_id=$1 AND phone_normalized=$2`,
       [input.clientRecordId, input.phoneNormalized],
@@ -165,6 +166,17 @@ export class ConversationRepository {
       return next;
     }
 
+    // `edge_lead_controls` is keyed by phone alone, so the row surviving from a
+    // finished lead would otherwise seed a brand new conversation with that
+    // lead's terminal stage and suppress every reply. Only seed from a control
+    // that belongs to the lead being activated, or from an unscoped one — the
+    // dashboard writes no `lead_record_id` when an operator takes a lead over
+    // before any conversation exists, and that decision must still carry.
+    const controlLeadRecordId = control?.lead_record_id || '';
+    const seed = control && (controlLeadRecordId === '' || controlLeadRecordId === input.leadRecordId)
+      ? control
+      : undefined;
+
     const receivedAt = input.receivedAt || input.lastInboundAt || new Date().toISOString();
     const windowExpires = new Date(new Date(receivedAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
     const inserted = await client.query<ConversationRow>(
@@ -191,17 +203,17 @@ export class ConversationRepository {
         input.projectName || '',
         input.projectRecordId || '',
         input.preferredLanguage || '',
-        input.currentStage || control?.current_stage || '',
+        input.currentStage || seed?.current_stage || '',
         input.currentQuestionKey || '',
         JSON.stringify(input.answers || {}),
         input.retryCount || 0,
-        input.status || control?.status || '',
-        input.humanTakeover ?? control?.human_takeover ?? false,
-        input.stopFollowUp ?? control?.stop_follow_up ?? false,
-        input.closedStatus || control?.closed_status || '',
-        input.appointmentStatus || control?.appointment_status || '',
-        input.assignedSalespersonRecordId || control?.assigned_salesperson_record_id || '',
-        input.assignedSalespersonPhone || control?.assigned_salesperson_phone || '',
+        input.status || seed?.status || '',
+        input.humanTakeover ?? seed?.human_takeover ?? false,
+        input.stopFollowUp ?? seed?.stop_follow_up ?? false,
+        input.closedStatus || seed?.closed_status || '',
+        input.appointmentStatus || seed?.appointment_status || '',
+        input.assignedSalespersonRecordId || seed?.assigned_salesperson_record_id || '',
+        input.assignedSalespersonPhone || seed?.assigned_salesperson_phone || '',
         receivedAt,
         windowExpires,
         defaults.conversationEngine,
