@@ -15,6 +15,7 @@ const baseSchema = z.object({
   WORKER_NAME: z.string().optional().default(''),
   WORKER_KIND: z.literal('runtime').default('runtime'),
   RUNTIME_WORKER_ENABLED: booleanString.default('false'),
+  RUNTIME_WORKER_IDLE_SLEEP_MS: z.coerce.number().int().positive().default(250),
   DIRECT_META_WEBHOOK_ENABLED: booleanString.default('false'),
   DIRECT_LEAD_INGRESS_ENABLED: booleanString.default('false'),
   DIRECT_META_SEND_ENABLED: booleanString.default('false'),

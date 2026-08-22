@@ -2,34 +2,19 @@ import type { PoolClient } from 'pg';
 import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { AuditRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
-import type { ConversationState, Language } from '../domain/types.js';
+import type { ConversationState } from '../domain/types.js';
 import { ConversationActivationService } from './conversation-activation-service.js';
 
 /** Marks a lead that arrived by messaging the business number directly. */
 export const WHATSAPP_INBOUND_SOURCE = 'whatsapp_direct_inbound';
 export const WHATSAPP_INBOUND_PROVIDER = 'whatsapp';
 
-const ARABIC_PATTERN = /[\u0600-\u06ff]/;
-const LATIN_PATTERN = /[A-Za-z]/;
 const PHONE_PATTERN = /^\+\d{8,15}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type InboundLeadCaptureResult =
   | { outcome: 'captured'; state: ConversationState; leadId: string; openingMessage: string }
   | { outcome: 'ignored'; reason: string };
-
-/**
- * Chooses the language a captured lead starts in.
- *
- * Arabic script wins outright. Latin letters with no Arabic script start in
- * English. Anything with neither — digits, emoji, an empty caption — falls back
- * to Arabic, which is also the engine's own default.
- */
-export function detectOpeningLanguage(text: string): Language {
-  if (ARABIC_PATTERN.test(text)) return 'Arabic';
-  if (LATIN_PATTERN.test(text)) return 'English';
-  return 'Arabic';
-}
 
 interface ResolvedClient {
   clientId: string;
@@ -92,7 +77,6 @@ export class InboundLeadCaptureService {
     }
 
     const openingMessage = input.messageText.trim().slice(0, 4000);
-    const preferredLanguage = detectOpeningLanguage(openingMessage);
 
     const contact = await client.query<{ contact_id: string; opted_out: boolean }>(
       `INSERT INTO app.contacts
@@ -148,7 +132,6 @@ export class InboundLeadCaptureService {
       openingMessage,
       profileName: input.profileName,
       phoneNumberId: input.phoneNumberId,
-      preferredLanguage,
       payloadHash,
     });
 
@@ -160,7 +143,6 @@ export class InboundLeadCaptureService {
       leadRecordId: leadRow.legacy_airtable_id || leadRow.lead_id,
       leadName: input.profileName,
       companyName: resolved.companyName,
-      preferredLanguage,
       receivedAt: input.receivedAt,
       actorId: 'inbound-lead-capture-service',
       correlationId: input.dedupeKey,
@@ -182,7 +164,6 @@ export class InboundLeadCaptureService {
         provider: WHATSAPP_INBOUND_PROVIDER,
         source: WHATSAPP_INBOUND_SOURCE,
         clientRecordId: input.clientRecordId,
-        preferredLanguage,
         openingMessageLength: openingMessage.length,
         reengagedOptedOutContact: contactRow.opted_out,
       },
@@ -291,7 +272,6 @@ export class InboundLeadCaptureService {
     openingMessage: string;
     profileName: string;
     phoneNumberId: string;
-    preferredLanguage: Language;
     payloadHash: string;
   }): Promise<void> {
     const idempotencyKey = `whatsapp_inbound:${input.clientId}:${input.metaMessageId}`;
@@ -300,7 +280,6 @@ export class InboundLeadCaptureService {
       profileName: input.profileName,
       phoneNumberId: input.phoneNumberId,
       metaMessageId: input.metaMessageId,
-      detectedLanguage: input.preferredLanguage,
       payloadHash: input.payloadHash,
     };
     const inserted = await client.query<{ intake_event_id: string }>(

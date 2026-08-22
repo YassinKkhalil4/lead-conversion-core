@@ -100,19 +100,27 @@ const GREETING_DEFAULTS: Record<Language, string> = {
   Arabic: 'أهلاً بيك {{lead_name}} 👋 شكراً لتواصلك مع {{company_name}}.',
 };
 
-/**
- * Welcome text for a lead captured from direct inbound. A `direct_inbound_greeting`
- * key in the published config overrides it; otherwise the built-in copy is used,
- * so a client that has never republished still greets properly.
- */
-function greetingText(config: CompiledConfig, state: ConversationState): string {
-  const language: Language = state.preferredLanguage || 'Arabic';
+function greetingLine(config: CompiledConfig, state: ConversationState, language: Language): string {
   const configured = config.messages.direct_inbound_greeting?.texts[language];
   return renderTemplate(configured || GREETING_DEFAULTS[language], {
     lead_name: state.leadName,
     company_name: state.companyName,
     project_name: state.projectName,
   }, language);
+}
+
+/**
+ * Welcome text for a lead captured from direct inbound. A `direct_inbound_greeting`
+ * key in the published config overrides it; otherwise the built-in copy is used,
+ * so a client that has never republished still greets properly.
+ *
+ * A captured lead has not chosen a language yet, so the greeting carries both
+ * rather than guessing one — the same reason the language prompt it precedes is
+ * itself bilingual.
+ */
+function greetingText(config: CompiledConfig, state: ConversationState): string {
+  if (state.preferredLanguage) return greetingLine(config, state, state.preferredLanguage);
+  return `${greetingLine(config, state, 'English')}\n${greetingLine(config, state, 'Arabic')}`;
 }
 
 function fallbackMessageText(config: CompiledConfig, state: ConversationState): string {

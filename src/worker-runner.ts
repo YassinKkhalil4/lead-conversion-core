@@ -67,7 +67,11 @@ const runtimeHandlers = {
     : {}),
   processJob: processRuntimeJob,
 };
-const worker = new RuntimeWorker(runtimeHandlers, { inboxEventTypes, inboxProviders });
+const worker = new RuntimeWorker(runtimeHandlers, {
+  inboxEventTypes,
+  inboxProviders,
+  idleSleepMs: env.RUNTIME_WORKER_IDLE_SLEEP_MS,
+});
 
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'Stopping runtime worker');
