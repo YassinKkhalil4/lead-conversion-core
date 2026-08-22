@@ -16,6 +16,7 @@ import {
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
 import { AppointmentConversationService } from './appointment-conversation-service.js';
+import { InboundLeadCaptureService } from './inbound-lead-capture-service.js';
 import { LeadScoringService } from './lead-scoring-service.js';
 import { LeadRoutingService } from './lead-routing-service.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
@@ -94,6 +95,26 @@ function optOutDecision(state: ConversationState): ReplyDecision {
   };
 }
 
+const GREETING_DEFAULTS: Record<Language, string> = {
+  English: 'Hi {{lead_name}} 👋 Thanks for reaching out to {{company_name}}.',
+  Arabic: 'أهلاً بيك {{lead_name}} 👋 شكراً لتواصلك مع {{company_name}}.',
+};
+
+/**
+ * Welcome text for a lead captured from direct inbound. A `direct_inbound_greeting`
+ * key in the published config overrides it; otherwise the built-in copy is used,
+ * so a client that has never republished still greets properly.
+ */
+function greetingText(config: CompiledConfig, state: ConversationState): string {
+  const language: Language = state.preferredLanguage || 'Arabic';
+  const configured = config.messages.direct_inbound_greeting?.texts[language];
+  return renderTemplate(configured || GREETING_DEFAULTS[language], {
+    lead_name: state.leadName,
+    company_name: state.companyName,
+    project_name: state.projectName,
+  }, language);
+}
+
 function fallbackMessageText(config: CompiledConfig, state: ConversationState): string {
   const language: Language = state.preferredLanguage || 'Arabic';
   const fallback = config.messages.fallback;
@@ -118,6 +139,7 @@ export class EdgeInboundMessageProcessor {
     private readonly followups = new FollowupSchedulerService(),
     private readonly sla = new SlaService(),
     private readonly appointments = new AppointmentConversationService(),
+    private readonly capture = new InboundLeadCaptureService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -133,8 +155,13 @@ export class EdgeInboundMessageProcessor {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const channel = await client.query<{ client_record_id: string; active: boolean; direct_send_enabled: boolean }>(
-        `SELECT client_record_id, active, direct_send_enabled
+      const channel = await client.query<{
+        client_record_id: string;
+        client_id: string;
+        active: boolean;
+        direct_send_enabled: boolean;
+      }>(
+        `SELECT client_record_id, client_id, active, direct_send_enabled
          FROM edge_client_channels
          WHERE phone_number_id=$1
          LIMIT 1`,
@@ -147,11 +174,35 @@ export class EdgeInboundMessageProcessor {
       }
 
       await this.conversations.lockScope(client, channelRow.client_record_id, input.from);
-      const state = await this.conversations.find(client, channelRow.client_record_id, input.from);
+      let state = await this.conversations.find(client, channelRow.client_record_id, input.from);
+      let capturedLead = false;
       if (!state || !state.conversationId) {
+        // Nobody has ever talked to this number. Direct WhatsApp inbound is how
+        // most leads actually arrive, so capture it rather than dropping it.
+        const captured = await this.capture.capture(client, {
+          clientRecordId: channelRow.client_record_id,
+          channelClientId: channelRow.client_id,
+          phoneNumberId: input.phoneNumberId,
+          from: input.from,
+          profileName: input.profileName,
+          messageText: input.messageText,
+          receivedAt: input.receivedAt || new Date().toISOString(),
+          metaMessageId: input.metaMessageId,
+          inboxEventId: event.inboxEventId,
+          dedupeKey: event.dedupeKey,
+        });
+        if (captured.outcome === 'ignored') {
+          await client.query('ROLLBACK');
+          return { outcome: 'ignored', reason: captured.reason };
+        }
+        state = captured.state;
+        capturedLead = true;
+      }
+      if (!state.conversationId) {
         await client.query('ROLLBACK');
         return { outcome: 'ignored', reason: 'conversation_not_activated' };
       }
+      const conversationId = state.conversationId;
       const duplicate = await client.query<{ status: string }>(
         'SELECT status FROM edge_active_turns WHERE client_record_id=$1 AND meta_message_id=$2 LIMIT 1',
         [state.clientRecordId, input.metaMessageId],
@@ -182,6 +233,10 @@ export class EdgeInboundMessageProcessor {
             ...(input.messageText ? { messageText: input.messageText } : {}),
             ...(input.messageOptionId ? { messageOptionId: input.messageOptionId } : {}),
           });
+
+      if (capturedLead && decision.text) {
+        decision = { ...decision, text: `${greetingText(config, state)}\n\n${decision.text}` };
+      }
 
       if (decision.action === 'fallback') {
         const target = await this.resolveAppLead(client, state.leadId);
@@ -337,7 +392,7 @@ export class EdgeInboundMessageProcessor {
         return { outcome: 'processed' };
       }
 
-      decision.nextState.conversationId = state.conversationId;
+      decision.nextState.conversationId = conversationId;
       decision.nextState.configVersion = state.configVersion;
       decision.nextState.configurationVersionId = state.configurationVersionId;
       await client.query(
@@ -388,7 +443,7 @@ export class EdgeInboundMessageProcessor {
           : await this.appointments.resolveSlotReply(client, turn);
         decision = handled.decision;
         appointmentReplySent = handled.replySent;
-        decision.nextState.conversationId = state.conversationId;
+        decision.nextState.conversationId = conversationId;
         decision.nextState.configVersion = state.configVersion;
         decision.nextState.configurationVersionId = state.configurationVersionId;
       }

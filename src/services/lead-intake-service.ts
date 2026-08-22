@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
+import { ConversationActivationService } from './conversation-activation-service.js';
 import { messageText } from './message-request-service.js';
 
 type Db = typeof pool | PoolClient;
@@ -92,6 +93,7 @@ export class LeadIntakeService {
         .map((value) => value.trim())
         .filter(Boolean),
     },
+    private readonly activation = new ConversationActivationService(),
   ) {}
 
   async intake(input: LeadIntakeInput): Promise<LeadIntakeResult> {
@@ -146,7 +148,7 @@ export class LeadIntakeService {
       if (!contactRow) throw new Error('contact_not_created');
 
       const projectId = await this.resolveProjectId(client, clientId, parsed.project);
-      const lead = await client.query<{ lead_id: string }>(
+      const lead = await client.query<{ lead_id: string; legacy_airtable_id: string | null }>(
         `INSERT INTO app.leads
           (client_id, contact_id, project_id, provider, provider_external_id,
            source, source_payload_hash, status, current_stage, first_received_at)
@@ -159,7 +161,7 @@ export class LeadIntakeService {
           status=COALESCE(NULLIF(EXCLUDED.status, ''), app.leads.status),
           current_stage=COALESCE(NULLIF(EXCLUDED.current_stage, ''), app.leads.current_stage),
           updated_at=now()
-         RETURNING lead_id`,
+         RETURNING lead_id, legacy_airtable_id`,
         [
           clientId,
           contactRow.contact_id,
@@ -173,8 +175,9 @@ export class LeadIntakeService {
           parsed.receivedAt || null,
         ],
       );
-      const leadId = lead.rows[0]?.lead_id;
-      if (!leadId) throw new Error('lead_not_created');
+      const leadRow = lead.rows[0];
+      const leadId = leadRow?.lead_id;
+      if (!leadRow || !leadId) throw new Error('lead_not_created');
 
       const intakePayload = {
         contact: parsed.contact,
@@ -219,6 +222,42 @@ export class LeadIntakeService {
         intakeEventId = row?.intake_event_id || '';
       }
       if (!intakeEventId) throw new Error('lead_intake_event_not_created');
+
+      // Without this row the runtime answers the lead's first reply with
+      // `conversation_not_activated`. Activation is deliberately non-fatal:
+      // a client with no published configuration still gets its lead.
+      const scope = await client.query<{
+        client_record_id: string | null;
+        company_name: string;
+        project_name: string | null;
+        project_record_id: string | null;
+      }>(
+        `SELECT c.legacy_airtable_id AS client_record_id,
+                c.company_name,
+                p.project_name,
+                p.legacy_airtable_id AS project_record_id
+         FROM app.clients c
+         LEFT JOIN app.projects p ON p.project_id=$2
+         WHERE c.client_id=$1`,
+        [clientId, projectId],
+      );
+      const scopeRow = scope.rows[0];
+      if (scopeRow?.client_record_id) {
+        await this.activation.activate(client, {
+          clientId,
+          clientRecordId: scopeRow.client_record_id,
+          phoneE164,
+          leadId,
+          leadRecordId: leadRow.legacy_airtable_id || leadId,
+          leadName: parsed.contact.name,
+          companyName: scopeRow.company_name,
+          projectName: scopeRow.project_name || '',
+          projectRecordId: scopeRow.project_record_id || '',
+          ...(parsed.receivedAt ? { receivedAt: parsed.receivedAt } : {}),
+          actorId: parsed.actorId,
+          correlationId: idempotencyKey,
+        });
+      }
 
       let firstContact: LeadIntakeResult['firstContact'] = null;
       if (parsed.firstContact) {
