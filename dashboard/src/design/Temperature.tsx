@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { Text } from './Text';
-import { color, radius, space } from './tokens';
+import { color, radius, space, tracking } from './tokens';
 
 export type TemperatureValue = 'hot' | 'warm' | 'cold' | string;
 
@@ -61,7 +61,7 @@ export function Temperature({ value, compact = false }: { value: TemperatureValu
         ))}
       </View>
       {compact ? null : (
-        <Text size="micro" weight="bold" style={{ color: spec.fg, letterSpacing: 0.4 }}>
+        <Text size="micro" weight="bold" style={{ color: spec.fg, letterSpacing: tracking.label }}>
           {spec.label}
         </Text>
       )}

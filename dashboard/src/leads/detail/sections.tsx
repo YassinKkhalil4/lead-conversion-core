@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import type { ActivityItem, LeadDetail, QualificationAnswer, RoutingRun, ScoreRun } from '@/api/types';
 import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, radius, space } from '@/design/tokens';
+import { color, radius, space, tracking } from '@/design/tokens';
 import { eventLabel, factorLabel, questionLabel } from '@/leads/labels';
 import { indexAnswers, skipReason } from '@/leads/qualification';
 import { ageAgo, timestamp } from '@/time/format';
@@ -10,7 +10,7 @@ import { ageAgo, timestamp } from '@/time/format';
 function SectionHeading({ title, note }: { title: string; note?: string }) {
   return (
     <View style={{ paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space.md, gap: 2 }}>
-      <Text size="micro" weight="bold" tone="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>
+      <Text size="micro" weight="bold" tone="muted" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
         {title}
       </Text>
       {note ? (

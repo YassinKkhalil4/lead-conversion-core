@@ -5,7 +5,7 @@ import type { Lead, QualificationAnswer } from '@/api/types';
 import { Button } from '@/design/Button';
 import { Temperature } from '@/design/Temperature';
 import { Text } from '@/design/Text';
-import { color, hitSlop, radius, space } from '@/design/tokens';
+import { color, hitSlop, radius, space, tracking } from '@/design/tokens';
 import { fourFacts, indexAnswers, openingLine } from '@/leads/qualification';
 import { StagePicker } from './StagePicker';
 import { PAST_SLA_SECONDS } from '@/leads/queue';
@@ -162,7 +162,7 @@ function FactGrid({ facts }: { facts: ReturnType<typeof fourFacts> }) {
             gap: 2,
           }}
         >
-          <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
             {fact.label}
           </Text>
           {fact.value ? (
@@ -198,7 +198,7 @@ function OpeningLine({ text }: { text: string }) {
         gap: space.md,
       }}
     >
-      <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+      <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
         Open with
       </Text>
       <Text size="body" autoDirection>

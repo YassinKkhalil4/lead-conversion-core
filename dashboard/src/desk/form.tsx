@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { ApiError } from '@/api/client';
 import { Text } from '@/design/Text';
-import { color, fontFamily, fontSize, hitSlop, radius, space } from '@/design/tokens';
+import { color, fontFamily, fontSize, hitSlop, radius, space, tracking } from '@/design/tokens';
 
 /**
  * Field-level errors from the API's `issues` array, keyed by the field they
@@ -39,7 +39,7 @@ export function Field({
 }) {
   return (
     <View style={{ gap: space.sm, flexGrow: 1, flexBasis: width ?? 240 }}>
-      <Text size="micro" weight="semibold" tone="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+      <Text size="micro" weight="semibold" tone="muted" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
         {label}
       </Text>
       {children}
@@ -77,7 +77,7 @@ export function TextField({
       value={value}
       onChangeText={onChange}
       placeholder={placeholder ?? ''}
-      placeholderTextColor={color.inkFaint}
+      placeholderTextColor={color.inkPlaceholder}
       keyboardType={keyboardType ?? 'default'}
       autoCapitalize={autoCapitalize}
       autoCorrect={false}
@@ -125,7 +125,7 @@ export function MoneyField({
         }}
         keyboardType="numeric"
         placeholder="0"
-        placeholderTextColor={color.inkFaint}
+        placeholderTextColor={color.inkPlaceholder}
         style={{
           flex: 1,
           fontFamily,
@@ -261,7 +261,7 @@ export function TagInput({
           onBlur={() => add(draft)}
           blurOnSubmit={false}
           placeholder={values.length === 0 ? (placeholder ?? 'Type and press enter') : ''}
-          placeholderTextColor={color.inkFaint}
+          placeholderTextColor={color.inkPlaceholder}
           autoCapitalize="words"
           autoCorrect={false}
           style={{

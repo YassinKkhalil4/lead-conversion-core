@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 import { Temperature } from '@/design/Temperature';
 import { Text } from '@/design/Text';
-import { color, rowHeight, space } from '@/design/tokens';
+import { color, rowHeight, space, tracking } from '@/design/tokens';
 import { QueueState, type RankedLead, rowSummary } from '@/leads/queue';
 import { queueClock } from '@/time/format';
 
@@ -92,11 +92,11 @@ export const QueueRow = memo(function QueueRow({
         </View>
 
         {isUrgent ? (
-          <Text size="micro" weight="bold" style={{ color: clockColor, letterSpacing: 0.5 }}>
+          <Text size="micro" weight="bold" style={{ color: clockColor, letterSpacing: tracking.label }}>
             {pastSla ? 'NEEDS ACK · PAST SLA' : 'NEEDS ACK'}
           </Text>
         ) : state === QueueState.AwaitingReply ? (
-          <Text size="micro" weight="medium" tone="faint" style={{ letterSpacing: 0.4 }}>
+          <Text size="micro" weight="medium" tone="faint" style={{ letterSpacing: tracking.label }}>
             NO REPLY SINCE THEIR MESSAGE
           </Text>
         ) : null}

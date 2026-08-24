@@ -1,5 +1,5 @@
 import { Text as RNText, type StyleProp, type TextProps, type TextStyle } from 'react-native';
-import { color, fontFamily, fontSize, fontWeight, lineHeight } from './tokens';
+import { color, displayTracking, fontFamily, fontFamilyMono, fontSize, fontWeight, lineHeight } from './tokens';
 import { isArabic } from '@/i18n/direction';
 
 type Size = keyof typeof fontSize;
@@ -19,7 +19,11 @@ export interface AppTextProps extends TextProps {
   size?: Size;
   weight?: Weight;
   tone?: Tone;
-  /** Tabular figures, so numbers line up in columns. */
+  /**
+   * Marks the content as measured: a score, a phone number, a clock, a count,
+   * an identifier. Sets the mono face and tabular figures, so columns of
+   * numbers line up and a digit never changes width as a value ticks.
+   */
   numeric?: boolean;
   /**
    * Right-aligns and sets RTL writing direction when the content is Arabic,
@@ -45,17 +49,21 @@ export function Text({
       ? { writingDirection: 'rtl', textAlign: 'right' }
       : {};
 
+  // Brand tracking is a display device and is applied from `title` upward only.
+  const track = displayTracking[size];
+
   return (
     <RNText
       {...rest}
       style={[
         {
-          fontFamily,
+          fontFamily: numeric ? fontFamilyMono : fontFamily,
           fontSize: fontSize[size],
           lineHeight: lineHeight[size],
           fontWeight: fontWeight[weight],
           color: tone[toneName],
         },
+        track === undefined ? null : { letterSpacing: track },
         numeric ? { fontVariant: ['tabular-nums'] } : null,
         directionStyle,
         style,
