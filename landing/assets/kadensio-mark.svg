@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Kadensio">
+  <title>Kadensio</title>
+  <g fill="none" stroke-linecap="round" stroke-width="9">
+    <path d="M17 16 V48" stroke="#0C1F1A"/>
+    <path d="M29 30 L47 14" stroke="#0C1F1A"/>
+    <path d="M29 34 L47 50" stroke="#00B368"/>
+  </g>
+</svg>
