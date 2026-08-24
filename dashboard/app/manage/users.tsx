@@ -248,7 +248,7 @@ function InviteForm({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.surface, borderRadius: radius.md, maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
+          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
         >
           <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <View style={{ gap: space.xs }}>
@@ -285,11 +285,11 @@ function InviteForm({
                         paddingHorizontal: space.xl,
                         borderRadius: radius.md,
                         borderWidth: 1,
-                        borderColor: selected ? color.ink : color.hairlineStrong,
-                        backgroundColor: selected ? color.ink : pressed ? color.surfacePressed : color.surface,
+                        borderColor: selected ? color.accent : color.line,
+                        backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
                       })}
                     >
-                      <Text size="small" weight="semibold" style={{ color: selected ? color.inkInverse : color.inkMuted }}>
+                      <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
                         {option}
                       </Text>
                     </Pressable>
@@ -325,8 +325,8 @@ function InviteForm({
                             padding: space.md,
                             borderRadius: radius.sm,
                             borderWidth: 1,
-                            borderColor: selected ? color.ink : color.hairline,
-                            backgroundColor: pressed ? color.surfacePressed : color.surface,
+                            borderColor: selected ? color.accent : color.line2,
+                            backgroundColor: pressed ? color.line2 : color.paper,
                           })}
                         >
                           <Text size="small" weight={selected ? 'semibold' : 'regular'} style={{ flex: 1 }}>
@@ -370,7 +370,7 @@ function PasswordIssued({
       <View style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <View
           style={{
-            backgroundColor: color.surface,
+            backgroundColor: color.paper,
             borderRadius: radius.md,
             maxWidth: 560,
             width: '100%',
@@ -386,7 +386,7 @@ function PasswordIssued({
             This password is shown once and is not recoverable. Copy it now and send it to {issued.email} yourself — there is no email delivery.
           </Text>
 
-          <View style={{ backgroundColor: color.surfaceSunken, borderRadius: radius.md, padding: space.lg }}>
+          <View style={{ backgroundColor: color.tint, borderRadius: radius.md, padding: space.lg }}>
             <Text size="large" weight="semibold" numeric selectable>
               {issued.password}
             </Text>

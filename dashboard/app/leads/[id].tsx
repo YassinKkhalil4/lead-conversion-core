@@ -44,7 +44,7 @@ export default function CallPrepScreen() {
 
   if (query.isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: color.paper, paddingTop: insets.top + space.xl }}>
+      <View style={{ flex: 1, backgroundColor: color.tint, paddingTop: insets.top + space.xl }}>
         <DetailSkeleton />
       </View>
     );
@@ -53,7 +53,7 @@ export default function CallPrepScreen() {
   if (query.isError || !query.data) {
     const explained = explain(query.error, 'Loading this lead');
     return (
-      <View style={{ flex: 1, backgroundColor: color.paper, paddingTop: insets.top + space.xl }}>
+      <View style={{ flex: 1, backgroundColor: color.tint, paddingTop: insets.top + space.xl }}>
         <BackLink onPress={() => router.back()} />
         <ErrorState title={explained.title} detail={explained.detail} onRetry={() => void query.refetch()} />
       </View>
@@ -78,13 +78,13 @@ export default function CallPrepScreen() {
   const answered = detail.qualification.answers.filter((answer) => answer.answered).length;
 
   return (
-    <View style={{ flex: 1, backgroundColor: color.paper }}>
+    <View style={{ flex: 1, backgroundColor: color.tint }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: insets.top + space.sm }}
         refreshControl={
-          <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={color.inkMuted} />
+          <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={color.ink2} />
         }
       >
-        <View style={{ backgroundColor: color.surface }}>
+        <View style={{ backgroundColor: color.paper }}>
           <BackLink onPress={() => router.back()} />
         </View>
 
@@ -147,7 +147,7 @@ export default function CallPrepScreen() {
         <View
           style={{
             borderTopWidth: 1,
-            borderTopColor: color.hairline,
+            borderTopColor: color.line2,
             paddingHorizontal: space.xl,
             paddingVertical: space.xl,
             gap: space.lg,
@@ -185,7 +185,7 @@ export default function CallPrepScreen() {
           <Pressable
             onPress={(event) => event.stopPropagation()}
             style={{
-              backgroundColor: color.surface,
+              backgroundColor: color.paper,
               borderTopLeftRadius: radius.md,
               borderTopRightRadius: radius.md,
               paddingTop: space.xl,

@@ -9,7 +9,7 @@ import { explain } from '@/api/errors';
 import { useAuth } from '@/auth/AuthProvider';
 import { homeFor } from '@/nav/routes';
 import { Button } from '@/design/Button';
-import { Mark } from '@/design/Mark';
+import { Lockup } from '@/design/Mark';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
 import { color, fontFamily, fontSize, layout, radius, space, tracking } from '@/design/tokens';
@@ -95,22 +95,17 @@ export default function Login() {
    */
   if (isDesk) {
     return (
-      <View style={{ flex: 1, backgroundColor: color.paper }}>
+      <View style={{ flex: 1, backgroundColor: color.tint }}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: layout.pageDesk }}
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ width: '100%', maxWidth: 400, gap: layout.sectionGap }}>
             <View style={{ gap: layout.rowY }}>
-              <Mark size={40} />
-              <View style={{ gap: layout.stack }}>
-                <Text size="headline" weight="bold">
-                  Kadensio
-                </Text>
-                <Text size="small" tone="muted">
-                  Lead inbox for WhatsApp qualification.
-                </Text>
-              </View>
+              <Lockup height={30} />
+              <Text size="body" tone="muted">
+                Lead inbox for WhatsApp qualification.
+              </Text>
             </View>
 
             <View
@@ -118,15 +113,15 @@ export default function Login() {
                 padding: layout.panel,
                 gap: layout.panel,
                 borderWidth: 1,
-                borderColor: color.hairline,
+                borderColor: color.line2,
                 borderRadius: radius.md,
-                backgroundColor: color.surface,
+                backgroundColor: color.paper,
               }}
             >
               {fields}
               {explained ? (
                 <View style={{ gap: space.xs }}>
-                  <Text size="small" weight="semibold" style={{ color: color.alert }}>
+                  <Text size="small" weight="semibold" style={{ color: color.warn }}>
                     {explained.title}
                   </Text>
                   <Text size="small" tone="muted">
@@ -148,7 +143,7 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: color.paper }}
+      style={{ flex: 1, backgroundColor: color.tint }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
@@ -156,15 +151,10 @@ export default function Login() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ paddingHorizontal: space.xl, gap: space.lg }}>
-          <Mark size={40} />
-          <View style={{ gap: space.xs }}>
-            <Text size="title" weight="bold">
-              Kadensio
-            </Text>
-            <Text size="small" tone="muted">
-              Lead inbox for WhatsApp qualification.
-            </Text>
-          </View>
+          <Lockup height={28} />
+          <Text size="body" tone="muted">
+            Lead inbox for WhatsApp qualification.
+          </Text>
         </View>
 
         <View style={{ paddingHorizontal: space.xl, paddingTop: space.xxxl, gap: space.xl }}>
@@ -191,8 +181,8 @@ export default function Login() {
           paddingTop: space.lg,
           paddingBottom: insets.bottom + space.lg,
           borderTopWidth: 1,
-          borderTopColor: color.hairline,
-          backgroundColor: color.surface,
+          borderTopColor: color.line2,
+          backgroundColor: color.paper,
         }}
       >
         <Button label={submitLabel} variant="primary" grow busy={isSubmitting} onPress={() => void onSubmit()} />
@@ -229,14 +219,14 @@ function Field({
             value={value}
             onChangeText={onChange}
             onBlur={onBlur}
-            placeholderTextColor={color.inkPlaceholder}
+            placeholderTextColor={color.ink3}
             style={{
               fontFamily,
               fontSize: fontSize.body,
               color: color.ink,
-              backgroundColor: color.surface,
+              backgroundColor: color.paper,
               borderWidth: 1,
-              borderColor: error ? color.alert : color.hairlineStrong,
+              borderColor: error ? color.warn : color.line,
               borderRadius: radius.md,
               paddingHorizontal: space.lg,
               minHeight: 46,
@@ -245,7 +235,7 @@ function Field({
         )}
       />
       {error ? (
-        <Text size="micro" style={{ color: color.alert }}>
+        <Text size="micro" style={{ color: color.warn }}>
           {error}
         </Text>
       ) : null}

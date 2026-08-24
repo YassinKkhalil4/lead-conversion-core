@@ -4,15 +4,20 @@ import { isArabic } from '@/i18n/direction';
 
 type Size = keyof typeof fontSize;
 type Weight = keyof typeof fontWeight;
-type Tone = 'default' | 'muted' | 'faint' | 'inverse' | 'alert' | 'warning';
+type Tone = 'default' | 'muted' | 'faint' | 'inverse' | 'alert' | 'warning' | 'accent';
 
+/**
+ * The landing page's three ink steps, plus its two coloured roles.
+ * `.lead`/`.card p` use ink-2; `.muted`/`.microcopy`/`.eyebrow` use ink-3.
+ */
 const tone: Record<Tone, string> = {
   default: color.ink,
-  muted: color.inkMuted,
-  faint: color.inkFaint,
-  inverse: color.inkInverse,
-  alert: color.alert,
-  warning: color.warning,
+  muted: color.ink2,
+  faint: color.ink3,
+  inverse: color.tint,
+  alert: color.warn,
+  warning: color.warn,
+  accent: color.accent,
 };
 
 export interface AppTextProps extends TextProps {

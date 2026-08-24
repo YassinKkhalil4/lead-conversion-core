@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Role } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
-import { Mark } from '@/design/Mark';
+import { Lockup, Mark } from '@/design/Mark';
 import { Text } from '@/design/Text';
 import { color, hitSlop, radius, space } from '@/design/tokens';
 import { useIsDesk } from '@/desk/Page';
@@ -30,7 +30,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   if (user.role === 'salesperson') {
     return (
-      <View style={{ flex: 1, backgroundColor: color.paper }}>
+      <View style={{ flex: 1, backgroundColor: color.tint }}>
         <View style={{ flex: 1 }}>{children}</View>
         <BottomTabs role={user.role} />
       </View>
@@ -39,7 +39,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   if (isDesk) {
     return (
-      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: color.paper }}>
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: color.tint }}>
         <SideRail role={user.role} />
         <View style={{ flex: 1 }}>{children}</View>
       </View>
@@ -65,8 +65,8 @@ function SideRail({ role }: { role: Role }) {
       style={{
         width: 232,
         borderEndWidth: 1,
-        borderEndColor: color.hairline,
-        backgroundColor: color.surface,
+        borderEndColor: color.line,
+        backgroundColor: color.paper,
         paddingTop: insets.top + space.xxl,
         paddingBottom: insets.bottom + space.xl,
         paddingHorizontal: space.lg,
@@ -77,12 +77,7 @@ function SideRail({ role }: { role: Role }) {
         {/* Mark alone beside the name set in the app's own type. The brand's
             clear space is half the mark's height on every side; the rail's
             horizontal padding and the block's bottom padding both clear it. */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-          <Mark size={26} />
-          <Text size="large" weight="bold">
-            Kadensio
-          </Text>
-        </View>
+        <Lockup height={24} />
         <Text size="micro" tone="faint" numberOfLines={1}>
           {user?.companyName ?? ''}
         </Text>
@@ -100,10 +95,10 @@ function SideRail({ role }: { role: Role }) {
               paddingHorizontal: space.md,
               paddingVertical: space.lg,
               borderRadius: radius.md,
-              backgroundColor: active ? color.surfaceSunken : pressed ? color.surfacePressed : 'transparent',
+              backgroundColor: active ? color.accentBg : pressed ? color.tint : 'transparent',
             })}
           >
-            <Text size="small" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
+            <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'accent' : 'muted'}>
               {item.label}
             </Text>
           </Pressable>
@@ -128,7 +123,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
   const { user, signOut } = useAuth();
 
   return (
-    <View style={{ flex: 1, backgroundColor: color.paper }}>
+    <View style={{ flex: 1, backgroundColor: color.tint }}>
       <View
         style={{
           flexDirection: 'row',
@@ -137,9 +132,9 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
           paddingTop: insets.top + space.md,
           paddingBottom: space.md,
           paddingHorizontal: space.xl,
-          backgroundColor: color.surface,
+          backgroundColor: color.paper,
           borderBottomWidth: 1,
-          borderBottomColor: color.hairline,
+          borderBottomColor: color.line2,
         }}
       >
         <Pressable accessibilityRole="button" accessibilityLabel="Open navigation" onPress={() => setOpen(true)} hitSlop={hitSlop}>
@@ -162,7 +157,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
             style={{
               width: 264,
               height: '100%',
-              backgroundColor: color.surface,
+              backgroundColor: color.paper,
               paddingTop: insets.top + space.xxl,
               paddingBottom: insets.bottom + space.xl,
               paddingHorizontal: space.lg,
@@ -183,10 +178,10 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
                     paddingHorizontal: space.md,
                     paddingVertical: space.lg,
                     borderRadius: radius.md,
-                    backgroundColor: active ? color.surfaceSunken : pressed ? color.surfacePressed : 'transparent',
+                    backgroundColor: active ? color.accentBg : pressed ? color.tint : 'transparent',
                   })}
                 >
-                  <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
+                  <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'accent' : 'muted'}>
                     {item.label}
                   </Text>
                 </Pressable>
@@ -215,8 +210,8 @@ function BottomTabs({ role }: { role: Role }) {
       style={{
         flexDirection: 'row',
         borderTopWidth: 1,
-        borderTopColor: color.hairline,
-        backgroundColor: color.surface,
+        borderTopColor: color.line2,
+        backgroundColor: color.paper,
         paddingBottom: insets.bottom,
       }}
     >
@@ -233,12 +228,12 @@ function BottomTabs({ role }: { role: Role }) {
               minHeight: 48,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: pressed ? color.surfacePressed : 'transparent',
+              backgroundColor: pressed ? color.line2 : 'transparent',
               borderTopWidth: 2,
-              borderTopColor: active ? color.ink : 'transparent',
+              borderTopColor: active ? color.accent : 'transparent',
             })}
           >
-            <Text size="small" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
+            <Text size="small" weight={active ? 'semibold' : 'regular'} tone={active ? 'accent' : 'muted'}>
               {item.label}
             </Text>
           </Pressable>

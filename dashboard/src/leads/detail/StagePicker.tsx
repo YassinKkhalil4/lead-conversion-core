@@ -64,7 +64,7 @@ export function StagePicker({
           <Pressable
             onPress={(event) => event.stopPropagation()}
             style={{
-              backgroundColor: color.surface,
+              backgroundColor: color.paper,
               borderTopLeftRadius: radius.md,
               borderTopRightRadius: radius.md,
               paddingTop: space.xl,
@@ -92,8 +92,8 @@ export function StagePicker({
                     paddingHorizontal: space.xl,
                     paddingVertical: space.lg,
                     borderTopWidth: 1,
-                    borderTopColor: color.hairline,
-                    backgroundColor: pressed ? color.surfacePressed : 'transparent',
+                    borderTopColor: color.line2,
+                    backgroundColor: pressed ? color.line2 : 'transparent',
                   })}
                 >
                   <Text size="body" weight={selected ? 'semibold' : 'regular'} style={{ flex: 1 }}>

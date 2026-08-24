@@ -24,9 +24,9 @@ const PERIODS: { key: PeriodKey; label: string }[] = [
 ];
 
 const TEMPERATURE_COLOR: Record<string, string> = {
-  hot: color.hot,
-  warm: color.warm,
-  cold: color.cold,
+  hot: color.accent,
+  warm: color.ink2,
+  cold: color.ink3,
 };
 
 export default function ManagerOverview() {
@@ -69,7 +69,7 @@ export default function ManagerOverview() {
       title="Overview"
       subtitle={data ? `${data.timezone} · updated ${queueClock(data.generatedAt)} ago` : undefined}
       actions={
-        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.hairlineStrong, borderRadius: radius.md, overflow: 'hidden' }}>
+        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.line, borderRadius: radius.md, overflow: 'hidden' }}>
           {PERIODS.map((option) => {
             const selected = option.key === period;
             return (
@@ -82,10 +82,10 @@ export default function ManagerOverview() {
                   minHeight: 40,
                   justifyContent: 'center',
                   paddingHorizontal: space.xl,
-                  backgroundColor: selected ? color.ink : pressed ? color.surfacePressed : color.surface,
+                  backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
                 })}
               >
-                <Text size="small" weight="semibold" style={{ color: selected ? color.inkInverse : color.inkMuted }}>
+                <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
                   {option.label}
                 </Text>
               </Pressable>
@@ -104,8 +104,8 @@ export default function ManagerOverview() {
                 flexBasis: index === 0 ? 280 : 180,
                 padding: layout.panel,
                 borderWidth: 1,
-                borderColor: color.hairline,
-                backgroundColor: color.surface,
+                borderColor: color.line2,
+                backgroundColor: color.paper,
                 gap: space.md,
               }}
             >
@@ -215,7 +215,7 @@ export default function ManagerOverview() {
                   label: entry.temperature,
                   value: entry.count,
                 }))}
-                colorFor={(label) => TEMPERATURE_COLOR[label] ?? color.unscored}
+                colorFor={(label) => TEMPERATURE_COLOR[label] ?? color.ink3}
                 emptyLabel="No open leads yet. Temperature appears once a lead is scored."
               />
             </Panel>
@@ -296,7 +296,7 @@ const riskColumns: Column<Lead>[] = [
           size="small"
           weight="semibold"
           numeric
-          style={{ color: waited >= PAST_SLA_SECONDS ? color.alert : color.inkMuted }}
+          style={{ color: waited >= PAST_SLA_SECONDS ? color.warn : color.ink2 }}
         >
           {queueClock(since)}
         </Text>
@@ -335,7 +335,7 @@ const teamColumns: Column<TeamRow>[] = [
     render: (person) => {
       const full = atLeast(person.activeAssignmentCount, person.capacityLimit);
       return (
-        <Text size="small" weight="semibold" numeric style={full ? { color: color.warning } : undefined}>
+        <Text size="small" weight="semibold" numeric style={full ? { color: color.warn } : undefined}>
           {ratioLabel(person.activeAssignmentCount, person.capacityLimit)}
         </Text>
       );
@@ -352,7 +352,7 @@ const teamColumns: Column<TeamRow>[] = [
         size="small"
         weight={(optionalNumber(person.overdueAssignmentCount) ?? 0) > 0 ? 'bold' : 'regular'}
         numeric
-        style={(optionalNumber(person.overdueAssignmentCount) ?? 0) > 0 ? { color: color.alert } : undefined}
+        style={(optionalNumber(person.overdueAssignmentCount) ?? 0) > 0 ? { color: color.warn } : undefined}
       >
         {countLabel(person.overdueAssignmentCount)}
       </Text>

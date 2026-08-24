@@ -49,7 +49,7 @@ export function Field({
         </Text>
       ) : null}
       {error ? (
-        <Text size="micro" style={{ color: color.alert }}>
+        <Text size="micro" style={{ color: color.warn }}>
           {error}
         </Text>
       ) : null}
@@ -77,7 +77,7 @@ export function TextField({
       value={value}
       onChangeText={onChange}
       placeholder={placeholder ?? ''}
-      placeholderTextColor={color.inkPlaceholder}
+      placeholderTextColor={color.ink3}
       keyboardType={keyboardType ?? 'default'}
       autoCapitalize={autoCapitalize}
       autoCorrect={false}
@@ -85,9 +85,9 @@ export function TextField({
         fontFamily,
         fontSize: fontSize.body,
         color: color.ink,
-        backgroundColor: color.surface,
+        backgroundColor: color.paper,
         borderWidth: 1,
-        borderColor: invalid ? color.alert : color.hairlineStrong,
+        borderColor: invalid ? color.warn : color.line,
         borderRadius: radius.md,
         paddingHorizontal: space.lg,
         minHeight: 42,
@@ -125,16 +125,16 @@ export function MoneyField({
         }}
         keyboardType="numeric"
         placeholder="0"
-        placeholderTextColor={color.inkPlaceholder}
+        placeholderTextColor={color.ink3}
         style={{
           flex: 1,
           fontFamily,
           fontSize: fontSize.body,
           fontVariant: ['tabular-nums'],
           color: color.ink,
-          backgroundColor: color.surface,
+          backgroundColor: color.paper,
           borderWidth: 1,
-          borderColor: invalid ? color.alert : color.hairlineStrong,
+          borderColor: invalid ? color.warn : color.line,
           borderRadius: radius.md,
           paddingHorizontal: space.lg,
           minHeight: 42,
@@ -169,9 +169,9 @@ export function NumberField({
         fontSize: fontSize.body,
         fontVariant: ['tabular-nums'],
         color: color.ink,
-        backgroundColor: color.surface,
+        backgroundColor: color.paper,
         borderWidth: 1,
-        borderColor: invalid ? color.alert : color.hairlineStrong,
+        borderColor: invalid ? color.warn : color.line,
         borderRadius: radius.md,
         paddingHorizontal: space.lg,
         minHeight: 42,
@@ -220,10 +220,10 @@ export function TagInput({
           alignItems: 'center',
           gap: space.sm,
           borderWidth: 1,
-          borderColor: color.hairlineStrong,
+          borderColor: color.line,
           borderRadius: radius.md,
           padding: space.md,
-          backgroundColor: color.surface,
+          backgroundColor: color.paper,
           minHeight: 42,
         }}
       >
@@ -234,7 +234,7 @@ export function TagInput({
               flexDirection: 'row',
               alignItems: 'center',
               gap: space.sm,
-              backgroundColor: color.surfaceSunken,
+              backgroundColor: color.tint,
               borderRadius: radius.sm,
               paddingStart: space.md,
               paddingEnd: space.sm,
@@ -261,7 +261,7 @@ export function TagInput({
           onBlur={() => add(draft)}
           blurOnSubmit={false}
           placeholder={values.length === 0 ? (placeholder ?? 'Type and press enter') : ''}
-          placeholderTextColor={color.inkPlaceholder}
+          placeholderTextColor={color.ink3}
           autoCapitalize="words"
           autoCorrect={false}
           style={{
@@ -284,11 +284,11 @@ export function TagInput({
               onPress={() => add(entry)}
               style={({ pressed }) => ({
                 borderWidth: 1,
-                borderColor: color.hairline,
+                borderColor: color.line2,
                 borderRadius: radius.sm,
                 paddingHorizontal: space.md,
                 paddingVertical: 2,
-                backgroundColor: pressed ? color.surfacePressed : 'transparent',
+                backgroundColor: pressed ? color.line2 : 'transparent',
               })}
             >
               <Text size="micro" tone="muted">
@@ -312,7 +312,7 @@ export function Toggle({
   labels: [string, string];
 }) {
   return (
-    <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.hairlineStrong, borderRadius: radius.md, overflow: 'hidden', alignSelf: 'flex-start' }}>
+    <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.line, borderRadius: radius.md, overflow: 'hidden', alignSelf: 'flex-start' }}>
       {[true, false].map((option) => {
         const selected = option === value;
         return (
@@ -325,10 +325,10 @@ export function Toggle({
               minHeight: 42,
               justifyContent: 'center',
               paddingHorizontal: space.xl,
-              backgroundColor: selected ? color.ink : pressed ? color.surfacePressed : color.surface,
+              backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
             })}
           >
-            <Text size="small" weight="semibold" style={{ color: selected ? color.inkInverse : color.inkMuted }}>
+            <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
               {option ? labels[0] : labels[1]}
             </Text>
           </Pressable>

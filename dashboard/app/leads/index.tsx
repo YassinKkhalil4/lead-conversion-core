@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { explain } from '@/api/errors';
 import type { Lead, LeadFilters } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
-import { Mark } from '@/design/Mark';
+import { Lockup } from '@/design/Mark';
 import { LeadListSkeleton, Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
@@ -70,15 +70,15 @@ export default function Queue() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: color.paper }}>
-      <View style={{ paddingTop: insets.top + space.md, backgroundColor: color.surface }}>
+    <View style={{ flex: 1, backgroundColor: color.tint }}>
+      <View style={{ paddingTop: insets.top + space.md, backgroundColor: color.paper }}>
         {/* The salesperson never sees the side rail, so this is the one place
             the mark appears on their surfaces. It gets the corner to itself:
             sign-out used to sit opposite it and won the first glance on the
             screen this person works in all day. It now lives with the other
             controls at the bottom, in reach. */}
         <View style={{ paddingHorizontal: layout.rowX, paddingBottom: space.sm }}>
-          <Mark size={24} />
+          <Lockup height={22} />
         </View>
 
         {loading ? (
@@ -95,13 +95,13 @@ export default function Queue() {
               height: layout.queueHeader,
               justifyContent: 'center',
               paddingHorizontal: layout.rowX,
-              backgroundColor: pressed ? color.surfacePressed : 'transparent',
+              backgroundColor: pressed ? color.line2 : 'transparent',
             })}
           >
-            <Text size="display" weight="bold" numeric style={{ color: color.alert }}>
+            <Text size="display" weight="semibold" numeric style={{ color: color.warn }}>
               {urgent}
             </Text>
-            <Text size="large" weight="semibold" style={{ color: color.alert }}>
+            <Text size="body" weight="medium" style={{ color: color.warn }}>
               need you now
             </Text>
           </Pressable>
@@ -141,7 +141,7 @@ export default function Queue() {
             )
           }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={refreshAll} tintColor={color.inkMuted} />
+            <RefreshControl refreshing={refreshing} onRefresh={refreshAll} tintColor={color.ink2} />
           }
           onEndReachedThreshold={0.6}
           onEndReached={() => {
@@ -151,7 +151,7 @@ export default function Queue() {
           ListFooterComponent={
             recent.isFetchingNextPage ? (
               <View style={{ paddingVertical: space.xl }}>
-                <ActivityIndicator size="small" color={color.inkMuted} />
+                <ActivityIndicator size="small" color={color.ink2} />
               </View>
             ) : null
           }
@@ -170,8 +170,8 @@ export default function Queue() {
           alignItems: 'center',
           gap: space.md,
           borderTopWidth: 1,
-          borderTopColor: color.hairline,
-          backgroundColor: color.surface,
+          borderTopColor: color.line2,
+          backgroundColor: color.paper,
           paddingHorizontal: space.xl,
           paddingTop: space.lg,
           paddingBottom: insets.bottom + space.lg,
@@ -237,11 +237,11 @@ function SinceDivider({ label }: { label: string }) {
         paddingVertical: space.lg,
       }}
     >
-      <View style={{ height: 1, width: space.xxl, backgroundColor: color.hairlineStrong }} />
+      <View style={{ height: 1, width: space.xxl, backgroundColor: color.line }} />
       <Text size="micro" tone="faint" style={{ letterSpacing: tracking.label }}>
         {label}
       </Text>
-      <View style={{ height: 1, flex: 1, backgroundColor: color.hairline }} />
+      <View style={{ height: 1, flex: 1, backgroundColor: color.line2 }} />
     </View>
   );
 }
@@ -297,11 +297,11 @@ function Control({
         paddingHorizontal: space.lg,
         borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: active ? color.ink : color.hairlineStrong,
-        backgroundColor: active ? color.ink : pressed ? color.surfacePressed : color.surface,
+        borderColor: active ? color.accent : color.line,
+        backgroundColor: active ? color.accent : pressed ? color.tint : color.paper,
       })}
     >
-      <Text size="small" weight="semibold" style={{ color: active ? color.inkInverse : color.ink }}>
+      <Text size="small" weight="semibold" style={{ color: active ? color.onAccent : color.ink }}>
         {label}
       </Text>
     </Pressable>
@@ -322,7 +322,7 @@ function Segmented({
       style={{
         flexDirection: 'row',
         borderWidth: 1,
-        borderColor: color.hairlineStrong,
+        borderColor: color.line,
         borderRadius: radius.md,
         overflow: 'hidden',
       }}
@@ -339,10 +339,10 @@ function Segmented({
               minHeight: 44,
               justifyContent: 'center',
               paddingHorizontal: space.xl,
-              backgroundColor: selected ? color.ink : pressed ? color.surfacePressed : color.surface,
+              backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
             })}
           >
-            <Text size="small" weight="semibold" style={{ color: selected ? color.inkInverse : color.inkMuted }}>
+            <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
               {option.label}
             </Text>
           </Pressable>

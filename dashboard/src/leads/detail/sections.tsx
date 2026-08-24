@@ -29,8 +29,8 @@ function Row({ children, last = false }: { children: React.ReactNode; last?: boo
         paddingHorizontal: space.xl,
         paddingVertical: space.lg,
         borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: color.hairline,
-        backgroundColor: color.surface,
+        borderBottomColor: color.line2,
+        backgroundColor: color.paper,
       }}
     >
       {children}
@@ -147,7 +147,7 @@ export function ScoreTab({ scoreRun }: { scoreRun: ScoreRun | null }) {
       {scoreRun.missingAnswers.length > 0 ? (
         <Row last>
           <View style={{ gap: space.xs }}>
-            <Text size="small" weight="semibold" style={{ color: color.warm }}>
+            <Text size="small" weight="semibold" style={{ color: color.ink2 }}>
               Scored without {scoreRun.missingAnswers.length} answer
               {scoreRun.missingAnswers.length === 1 ? '' : 's'}
             </Text>
@@ -170,11 +170,11 @@ function MatchFlag({ label, matched }: { label: string; matched: boolean }) {
           height: 8,
           borderRadius: 2,
           borderWidth: 1,
-          borderColor: matched ? color.ink : color.inkFaint,
-          backgroundColor: matched ? color.ink : 'transparent',
+          borderColor: matched ? color.accent : color.line,
+          backgroundColor: matched ? color.accentBg : 'transparent',
         }}
       />
-      <Text size="micro" style={{ color: matched ? color.ink : color.inkFaint }}>
+      <Text size="micro" style={{ color: matched ? color.accent : color.ink3 }}>
         {label}
         {matched ? '' : ' ✕'}
       </Text>
@@ -218,7 +218,7 @@ export function RoutingTab({ routingRun }: { routingRun: RoutingRun | null }) {
                 {candidate.selected ? (
                   <View
                     style={{
-                      backgroundColor: color.surfaceSunken,
+                      backgroundColor: color.tint,
                       borderRadius: radius.sm,
                       paddingHorizontal: space.md,
                       paddingVertical: 2,

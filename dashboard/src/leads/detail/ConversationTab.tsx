@@ -64,8 +64,8 @@ export function ConversationTab({
       <View
         style={{
           borderTopWidth: 1,
-          borderTopColor: color.hairline,
-          backgroundColor: color.surface,
+          borderTopColor: color.line2,
+          backgroundColor: color.paper,
           padding: space.lg,
           gap: space.md,
         }}
@@ -77,13 +77,13 @@ export function ConversationTab({
               value={draft}
               onChangeText={setDraft}
               placeholder="Write a reply"
-              placeholderTextColor={color.inkPlaceholder}
+              placeholderTextColor={color.ink3}
               multiline
               style={{
                 fontFamily,
                 fontSize: fontSize.body,
                 color: color.ink,
-                backgroundColor: color.surfaceSunken,
+                backgroundColor: color.tint,
                 borderRadius: radius.md,
                 paddingHorizontal: space.lg,
                 paddingVertical: space.md,
@@ -111,12 +111,12 @@ export function ConversationTab({
           <View style={{ gap: space.sm }}>
             <View
               style={{
-                backgroundColor: color.surfaceSunken,
+                backgroundColor: color.tint,
                 borderRadius: radius.md,
                 paddingHorizontal: space.lg,
                 paddingVertical: space.lg,
                 borderWidth: 1,
-                borderColor: color.hairline,
+                borderColor: color.line2,
               }}
             >
               <Text size="small" weight="semibold">
@@ -155,9 +155,9 @@ function MessageBubble({ message, showDay }: { message: Message; showDay: boolea
         <View
           style={{
             maxWidth: '86%',
-            backgroundColor: outbound ? color.surfaceSunken : color.surface,
+            backgroundColor: outbound ? color.tint : color.paper,
             borderWidth: 1,
-            borderColor: outbound ? color.surfaceSunken : color.hairline,
+            borderColor: outbound ? color.tint : color.line2,
             borderRadius: radius.md,
             paddingHorizontal: space.lg,
             paddingVertical: space.md,
@@ -181,7 +181,7 @@ function MessageBubble({ message, showDay }: { message: Message; showDay: boolea
               {clock(message.createdAt)}
             </Text>
             {outbound ? (
-              <Text size="micro" numeric style={{ color: failed ? color.alert : color.inkFaint }}>
+              <Text size="micro" numeric style={{ color: failed ? color.warn : color.ink3 }}>
                 {deliveryLabel(message.state)}
               </Text>
             ) : null}

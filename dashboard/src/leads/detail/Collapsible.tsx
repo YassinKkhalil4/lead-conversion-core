@@ -22,7 +22,7 @@ export function Collapsible({
   const [open, setOpen] = useState(initiallyOpen);
 
   return (
-    <View style={{ borderTopWidth: 1, borderTopColor: color.hairline, backgroundColor: color.surface }}>
+    <View style={{ borderTopWidth: 1, borderTopColor: color.line2, backgroundColor: color.paper }}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
@@ -33,7 +33,7 @@ export function Collapsible({
           gap: space.lg,
           paddingHorizontal: space.xl,
           paddingVertical: space.lg,
-          backgroundColor: pressed ? color.surfacePressed : 'transparent',
+          backgroundColor: pressed ? color.line2 : 'transparent',
         })}
       >
         <View style={{ flex: 1, gap: 1 }}>
@@ -50,7 +50,7 @@ export function Collapsible({
           {open ? '−' : '+'}
         </Text>
       </Pressable>
-      {open ? <View style={{ borderTopWidth: 1, borderTopColor: color.hairline }}>{children}</View> : null}
+      {open ? <View style={{ borderTopWidth: 1, borderTopColor: color.line2 }}>{children}</View> : null}
     </View>
   );
 }

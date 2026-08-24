@@ -5,6 +5,7 @@ import { color, radius, space, tracking } from './tokens';
 export type TemperatureValue = 'hot' | 'warm' | 'cold' | string;
 
 interface Spec {
+  value: string;
   label: string;
   bars: number;
   fg: string;
@@ -12,20 +13,21 @@ interface Spec {
 }
 
 /**
- * Temperature is the only place colour carries meaning, so it never carries it
- * alone: each value also has a distinct filled-bar count and a text label.
- * Readable with any colour vision, and in greyscale.
+ * Shaped like the landing page's `.chip`, coloured by its own model: the site
+ * marks a strong score with `--accent` (`.score-hi`) and leaves the rest in
+ * ink. Colour still never travels alone here — each value keeps a distinct
+ * filled-bar count and a text label, so the chip reads in greyscale.
  */
 function specFor(value: TemperatureValue): Spec {
   switch (value) {
     case 'hot':
-      return { label: 'HOT', bars: 3, fg: color.hot, bg: color.hotWash };
+      return { value: 'hot', label: 'HOT', bars: 3, fg: color.accent, bg: color.accentBg };
     case 'warm':
-      return { label: 'WARM', bars: 2, fg: color.warm, bg: color.warmWash };
+      return { value: 'warm', label: 'WARM', bars: 2, fg: color.ink2, bg: color.tint };
     case 'cold':
-      return { label: 'COLD', bars: 1, fg: color.cold, bg: color.coldWash };
+      return { value: 'cold', label: 'COLD', bars: 1, fg: color.ink3, bg: color.tint };
     default:
-      return { label: 'UNSCORED', bars: 0, fg: color.unscored, bg: color.unscoredWash };
+      return { value: 'unscored', label: 'UNSCORED', bars: 0, fg: color.ink3, bg: color.tint };
   }
 }
 
@@ -39,8 +41,10 @@ export function Temperature({ value, compact = false }: { value: TemperatureValu
         alignItems: 'center',
         gap: space.sm,
         backgroundColor: spec.bg,
-        borderRadius: radius.sm,
-        paddingHorizontal: space.sm,
+        borderWidth: 1,
+        borderColor: spec.value === 'hot' ? color.accent : color.line,
+        borderRadius: radius.md,
+        paddingHorizontal: 7,
         paddingVertical: 3,
       }}
     >
@@ -61,7 +65,7 @@ export function Temperature({ value, compact = false }: { value: TemperatureValu
         ))}
       </View>
       {compact ? null : (
-        <Text size="micro" weight="bold" style={{ color: spec.fg, letterSpacing: tracking.label }}>
+        <Text size="micro" weight="semibold" numeric style={{ color: spec.fg, letterSpacing: tracking.label }}>
           {spec.label}
         </Text>
       )}

@@ -54,7 +54,7 @@ export function CallPrep({
     );
 
   return (
-    <View style={{ backgroundColor: color.surface, paddingBottom: space.xl }}>
+    <View style={{ backgroundColor: color.paper, paddingBottom: space.xl }}>
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.md, gap: space.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: space.lg }}>
           <Text size="headline" weight="bold" autoDirection style={{ flex: 1 }}>
@@ -66,9 +66,9 @@ export function CallPrep({
         {/* Only the clock is a figure. Setting the whole sentence in the mono
             face made a status line read as a code string. */}
         {needsAcknowledgement ? (
-          <Text size="small" weight="semibold" style={{ color: pastSla ? color.alert : color.warning }}>
+          <Text size="small" weight="semibold" style={{ color: pastSla ? color.warn : color.warn }}>
             Unacknowledged{' '}
-            <Text size="small" weight="semibold" numeric style={{ color: pastSla ? color.alert : color.warning }}>
+            <Text size="small" weight="semibold" numeric style={{ color: pastSla ? color.warn : color.warn }}>
               {queueClock(lead.assignment?.assignedAt ?? null)}
             </Text>
             {pastSla ? ' · past SLA' : ''}
@@ -87,8 +87,8 @@ export function CallPrep({
               paddingHorizontal: space.lg,
               borderRadius: radius.md,
               borderWidth: 1,
-              borderColor: color.hairlineStrong,
-              backgroundColor: pressed ? color.surfacePressed : color.surface,
+              borderColor: color.line,
+              backgroundColor: pressed ? color.line2 : color.paper,
             })}
           >
             <Text size="large" weight="semibold" numeric>
@@ -108,8 +108,8 @@ export function CallPrep({
               justifyContent: 'center',
               borderRadius: radius.md,
               borderWidth: 1,
-              borderColor: color.hairlineStrong,
-              backgroundColor: pressed ? color.surfacePressed : color.surface,
+              borderColor: color.line,
+              backgroundColor: pressed ? color.line2 : color.paper,
             })}
           >
             <Text size="small" weight="semibold">
@@ -149,7 +149,7 @@ export function CallPrep({
  */
 function FactGrid({ facts }: { facts: ReturnType<typeof fourFacts> }) {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: color.hairline }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: color.line2 }}>
       {facts.map((fact, index) => (
         <View
           key={fact.label}
@@ -158,7 +158,7 @@ function FactGrid({ facts }: { facts: ReturnType<typeof fourFacts> }) {
             paddingVertical: space.lg,
             paddingRight: space.lg,
             borderBottomWidth: index < 2 ? 1 : 0,
-            borderBottomColor: color.hairline,
+            borderBottomColor: color.line2,
             gap: 2,
           }}
         >
@@ -192,7 +192,7 @@ function OpeningLine({ text }: { text: string }) {
   return (
     <View
       style={{
-        backgroundColor: color.surfaceSunken,
+        backgroundColor: color.tint,
         borderRadius: radius.md,
         padding: space.lg,
         gap: space.md,

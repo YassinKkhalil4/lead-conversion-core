@@ -32,8 +32,8 @@ export const QueueRow = memo(function QueueRow({
   const withinSla = state === QueueState.UnacknowledgedWithinSla;
   const isUrgent = pastSla || withinSla;
 
-  const edge = pastSla ? color.alert : withinSla ? color.warning : 'transparent';
-  const clockColor = pastSla ? color.alert : withinSla ? color.warning : color.inkMuted;
+  const edge = pastSla ? color.warn : withinSla ? color.warn : 'transparent';
+  const clockColor = pastSla ? color.warn : withinSla ? color.warn : color.ink2;
   const summary = rowSummary(lead);
   const clock = queueClock(entry.clockFrom);
 
@@ -53,9 +53,9 @@ export const QueueRow = memo(function QueueRow({
       style={({ pressed }) => ({
         minHeight: isUrgent ? rowHeight.urgent : rowHeight.standard,
         flexDirection: 'row',
-        backgroundColor: pressed ? color.surfacePressed : color.surface,
+        backgroundColor: pressed ? color.line2 : color.paper,
         borderBottomWidth: 1,
-        borderBottomColor: color.hairline,
+        borderBottomColor: color.line2,
       })}
     >
       <View style={{ width: isUrgent ? layout.edgeMarker : 0, backgroundColor: edge }} />

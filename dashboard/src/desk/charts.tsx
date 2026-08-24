@@ -47,13 +47,13 @@ export function BarChart({
               {Math.round((row.value / total) * 100)}%
             </Text>
           </View>
-          <View style={{ height: 8, backgroundColor: color.surfaceSunken, borderRadius: radius.sm }}>
+          <View style={{ height: 8, backgroundColor: color.line2, borderRadius: 2 }}>
             <View
               style={{
                 height: 8,
                 width: `${Math.max(2, (row.value / max) * 100)}%`,
-                backgroundColor: colorFor?.(row.label) ?? color.ink,
-                borderRadius: radius.sm,
+                backgroundColor: colorFor?.(row.label) ?? color.accent,
+                borderRadius: 2,
               }}
             />
           </View>
@@ -106,13 +106,13 @@ export function DistributionBar({
       </Text>
 
       <View style={{ height: 22, justifyContent: 'center' }}>
-        <View style={{ height: 10, backgroundColor: color.surfaceSunken, borderRadius: radius.sm }} />
+        <View style={{ height: 10, backgroundColor: color.tint, borderRadius: radius.sm }} />
         <View
           style={{
             position: 'absolute',
             height: 10,
             width: `${position(p90)}%`,
-            backgroundColor: color.hairlineStrong,
+            backgroundColor: color.line,
             borderRadius: radius.sm,
           }}
         />
@@ -133,7 +133,7 @@ export function DistributionBar({
               width: 2,
               height: 22,
               marginStart: -1,
-              backgroundColor: color.alert,
+              backgroundColor: color.warn,
             }}
           />
         )}
@@ -166,7 +166,7 @@ function Reading({
         size="body"
         weight="semibold"
         numeric
-        style={tone === 'alert' ? { color: color.alert } : tone === 'muted' ? { color: color.inkMuted } : undefined}
+        style={tone === 'alert' ? { color: color.warn } : tone === 'muted' ? { color: color.ink2 } : undefined}
       >
         {duration(value)}
       </Text>
@@ -217,18 +217,19 @@ export function StatTile({
         gap: space.sm,
         padding: layout.panel,
         borderWidth: 1,
-        borderColor: color.hairline,
-        backgroundColor: color.surface,
+        borderColor: color.line,
+        borderRadius: radius.md,
+        backgroundColor: color.paper,
       }}
     >
-      <Text size="micro" tone="muted" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
+      <Text size="micro" tone="faint" numeric style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
         {label}
       </Text>
       <Text
         size={primary ? 'display' : 'headline'}
-        weight="bold"
+        weight="semibold"
         numeric
-        style={late ? { color: color.alert } : undefined}
+        style={{ color: late ? color.warn : primary ? color.accent : color.ink }}
       >
         {value === null ? '—' : format(value)}
       </Text>
@@ -240,7 +241,7 @@ export function StatTile({
         <Text
           size="micro"
           numeric
-          style={{ color: unchanged ? color.inkFaint : better ? color.ink : color.alert }}
+          style={{ color: unchanged ? color.ink3 : better ? color.accent : color.warn }}
         >
           {unchanged ? 'level with' : `${delta > 0 ? '+' : ''}${format(delta)} vs`} previous
         </Text>

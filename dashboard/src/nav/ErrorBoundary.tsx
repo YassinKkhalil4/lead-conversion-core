@@ -44,7 +44,7 @@ export class ScreenErrorBoundary extends Component<Props, State> {
 
     return (
       <ScrollView
-        style={{ flex: 1, backgroundColor: color.paper }}
+        style={{ flex: 1, backgroundColor: color.tint }}
         contentContainerStyle={{ padding: space.xxl, gap: space.lg }}
       >
         <Text size="title" weight="bold">
@@ -58,11 +58,11 @@ export class ScreenErrorBoundary extends Component<Props, State> {
 
         <View
           style={{
-            backgroundColor: color.surfaceSunken,
+            backgroundColor: color.tint,
             borderRadius: radius.md,
             padding: space.lg,
             borderStartWidth: 3,
-            borderStartColor: color.alert,
+            borderStartColor: color.warn,
           }}
         >
           <Text size="micro" tone="muted" numeric>

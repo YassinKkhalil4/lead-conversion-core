@@ -142,7 +142,7 @@ export default function ProjectsScreen() {
       sortValue: (project) => (project.salespersonIds ?? []).length,
       render: (project) =>
         (project.salespersonIds ?? []).length === 0 ? (
-          <Text size="small" style={{ color: color.warning }}>
+          <Text size="small" style={{ color: color.warn }}>
             None — cannot be routed
           </Text>
         ) : (
@@ -285,7 +285,7 @@ function ProjectForm({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.surface, borderRadius: radius.md, maxWidth: 720, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
+          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 720, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
         >
           <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">
@@ -368,7 +368,7 @@ function AssignSheet({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.surface, borderRadius: radius.md, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '85%' }}
+          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '85%' }}
         >
           <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.lg }}>
             <View style={{ gap: space.xs }}>
@@ -400,9 +400,9 @@ function AssignSheet({
                       paddingVertical: space.lg,
                       paddingHorizontal: space.md,
                       borderRadius: radius.sm,
-                      backgroundColor: pressed ? color.surfacePressed : 'transparent',
+                      backgroundColor: pressed ? color.line2 : 'transparent',
                       borderBottomWidth: 1,
-                      borderBottomColor: color.hairline,
+                      borderBottomColor: color.line2,
                     })}
                   >
                     <View
@@ -411,8 +411,8 @@ function AssignSheet({
                         height: 18,
                         borderRadius: 3,
                         borderWidth: 1,
-                        borderColor: checked ? color.ink : color.hairlineStrong,
-                        backgroundColor: checked ? color.ink : 'transparent',
+                        borderColor: checked ? color.accent : color.line,
+                        backgroundColor: checked ? color.accent : 'transparent',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
