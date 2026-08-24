@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 64" width="256" height="64" role="img" aria-label="Kadensio">
+  <title>Kadensio</title>
+  <g fill="none" stroke-linecap="round" stroke-width="9">
+    <path d="M17 16 V48" stroke="#0C1F1A"/>
+    <path d="M29 30 L47 14" stroke="#0C1F1A"/>
+    <path d="M29 34 L47 50" stroke="#00B368"/>
+  </g>
+  <text x="74" y="32" dominant-baseline="central"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="33" font-weight="600" letter-spacing="-0.8"
+        fill="#0C1F1A">kadensio</text>
+</svg>

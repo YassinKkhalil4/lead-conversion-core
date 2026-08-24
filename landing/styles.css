@@ -2,7 +2,7 @@
    System font stack, one accent colour, no dependencies. */
 
 :root {
-  --ink:        #0b0d0e;
+  --ink:        #0C1F1A;
   --ink-2:      #474f52;
   --ink-3:      #6d7679;
   --paper:      #ffffff;
@@ -10,13 +10,13 @@
   --line:       #e3e7e5;
   --line-2:     #eef1ef;
 
-  --accent:     #0a5c3f;
-  --accent-dk:  #084a33;
-  --accent-lt:  #4fd6a3;
-  --accent-bg:  #edf4f1;
+  --accent:     #007A47;
+  --accent-dk:  #00603A;
+  --accent-lt:  #00B368;
+  --accent-bg:  #E8F5EE;
   --warn:       #9a4b1e;
 
-  --d-bg:       #0b0d0e;
+  --d-bg:       #0C1F1A;
   --d-ink:      #f3f5f4;
   --d-ink-2:    #a3adaa;
   --d-line:     rgba(255,255,255,.13);
@@ -105,17 +105,13 @@ a { color: inherit; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; min-height: 60px;
 }
-.wordmark {
-  font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em;
-  text-decoration: none; color: var(--ink);
+.logo { display: inline-flex; text-decoration: none; }
+.logo img {
+  display: block;
+  width: auto; height: 26px;
 }
-.wordmark::before {
-  content: ""; display: inline-block;
-  width: 8px; height: 8px; margin-right: .55rem;
-  background: var(--accent); border-radius: 50%;
-  vertical-align: 1px;
-}
-.wordmark-sm { font-size: 1rem; }
+.logo-footer { margin: 0; }
+.logo-footer img { height: 24px; }
 
 /* ---------- buttons ---------- */
 
@@ -132,7 +128,7 @@ a { color: inherit; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-dk); }
 .section-dark .btn-primary { background: var(--accent-lt); color: #06231a; }
-.section-dark .btn-primary:hover { background: #6ee2b6; }
+.section-dark .btn-primary:hover { background: #16CE81; }
 
 .btn-ghost { border-color: var(--line); color: var(--ink); }
 .btn-ghost:hover { border-color: var(--ink); }
@@ -643,7 +639,7 @@ a { color: inherit; }
 }
 .dare-cta { margin-top: 1.75rem; }
 .dare .btn-primary { background: var(--accent-lt); color: #06231a; }
-.dare .btn-primary:hover { background: #6ee2b6; }
+.dare .btn-primary:hover { background: #16CE81; }
 .dare :focus-visible { outline-color: var(--accent-lt); }
 
 @media (max-width: 479px) { .dare .btn { display: block; text-align: center; } }
