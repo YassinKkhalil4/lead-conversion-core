@@ -4,11 +4,14 @@ import { isArabic } from '@/i18n/direction';
 
 type Size = keyof typeof fontSize;
 type Weight = keyof typeof fontWeight;
-type Tone = 'default' | 'muted' | 'faint' | 'inverse' | 'alert' | 'warning' | 'accent';
+type Tone = 'default' | 'muted' | 'faint' | 'inverse' | 'alert' | 'warning';
 
 /**
- * The landing page's three ink steps, plus its two coloured roles.
- * `.lead`/`.card p` use ink-2; `.muted`/`.microcopy`/`.eyebrow` use ink-3.
+ * The landing page's three ink steps, plus lateness.
+ *
+ * There is deliberately no accent tone. Accent belongs to the logo, the focus
+ * ring and the hot chip, none of which route through here — exposing it as a
+ * text tone is how it would creep back across the screens.
  */
 const tone: Record<Tone, string> = {
   default: color.ink,
@@ -17,7 +20,6 @@ const tone: Record<Tone, string> = {
   inverse: color.tint,
   alert: color.warn,
   warning: color.warn,
-  accent: color.accent,
 };
 
 export interface AppTextProps extends TextProps {

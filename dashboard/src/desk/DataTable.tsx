@@ -178,7 +178,7 @@ export function DataTable<T>({
               onPress={() => onRowPress(row)}
               style={({ pressed }) => ({
                 flexDirection: 'row',
-                backgroundColor: pressed ? color.accentBg : color.paper,
+                backgroundColor: pressed ? color.tint : color.paper,
                 ...border,
               })}
             >

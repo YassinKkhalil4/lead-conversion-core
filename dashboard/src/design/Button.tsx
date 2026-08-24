@@ -6,11 +6,12 @@ import { color, fontSize, radius, space } from './tokens';
  * The landing page's `.btn`.
  *
  * `.btn`         — 15px/500, padding .72rem 1.1rem, radius --r, 1px border
- * `.btn-primary` — background --accent, white text, --accent-dk when pressed
- * `.btn-ghost`   — --line border, ink text, --ink border when pressed
- * `.mini-btn`    — 13px/500, .45rem .7rem, --accent border and text, radius 3
+ * `.btn-ghost`   — border, ink text
+ * `.mini-btn`    — 13px/500, .45rem .7rem, radius 3
  *
- * `mini` is what the landing page's own queue mockup uses for the row action.
+ * The site fills its primary button with accent. Here it is solid ink: a
+ * button is neither a temperature nor a deadline, and green spent on the
+ * dominant action of every screen is green the eye stops reading as meaning.
  */
 type Variant = 'primary' | 'outline' | 'mini' | 'text';
 
@@ -37,11 +38,11 @@ export function Button({
 
   const skin =
     variant === 'primary'
-      ? { bg: color.accent, pressed: color.accentDk, fg: color.onAccent, border: color.accent }
+      ? { bg: color.ink, pressed: color.inkStrong, fg: color.onInk, border: color.ink }
       : variant === 'outline'
-        ? { bg: color.paper, pressed: color.tint, fg: color.ink, border: color.line }
+        ? { bg: color.paper, pressed: color.tint, fg: color.ink, border: color.lineStrong }
         : variant === 'mini'
-          ? { bg: color.paper, pressed: color.accentBg, fg: color.accent, border: color.accent }
+          ? { bg: color.paper, pressed: color.tint, fg: color.ink, border: color.lineStrong }
           : { bg: 'transparent', pressed: 'transparent', fg: color.ink2, border: 'transparent' };
 
   const mini = variant === 'mini';

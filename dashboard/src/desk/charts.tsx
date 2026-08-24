@@ -52,7 +52,7 @@ export function BarChart({
               style={{
                 height: 8,
                 width: `${Math.max(2, (row.value / max) * 100)}%`,
-                backgroundColor: colorFor?.(row.label) ?? color.accent,
+                backgroundColor: colorFor?.(row.label) ?? color.ink,
                 borderRadius: 2,
               }}
             />
@@ -229,7 +229,7 @@ export function StatTile({
         size={primary ? 'display' : 'headline'}
         weight="semibold"
         numeric
-        style={{ color: late ? color.warn : primary ? color.accent : color.ink }}
+        style={{ color: late ? color.warn : color.ink }}
       >
         {value === null ? '—' : format(value)}
       </Text>
@@ -241,7 +241,7 @@ export function StatTile({
         <Text
           size="micro"
           numeric
-          style={{ color: unchanged ? color.ink3 : better ? color.accent : color.warn }}
+          style={{ color: unchanged ? color.ink3 : better ? color.ink : color.warn }}
         >
           {unchanged ? 'level with' : `${delta > 0 ? '+' : ''}${format(delta)} vs`} previous
         </Text>

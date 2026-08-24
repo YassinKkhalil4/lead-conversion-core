@@ -297,11 +297,11 @@ function Control({
         paddingHorizontal: space.lg,
         borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: active ? color.accent : color.line,
-        backgroundColor: active ? color.accent : pressed ? color.tint : color.paper,
+        borderColor: active ? color.ink : color.lineStrong,
+        backgroundColor: active ? color.ink : pressed ? color.tint : color.paper,
       })}
     >
-      <Text size="small" weight="semibold" style={{ color: active ? color.onAccent : color.ink }}>
+      <Text size="small" weight="semibold" style={{ color: active ? color.onInk : color.ink }}>
         {label}
       </Text>
     </Pressable>
@@ -322,7 +322,7 @@ function Segmented({
       style={{
         flexDirection: 'row',
         borderWidth: 1,
-        borderColor: color.line,
+        borderColor: color.lineStrong,
         borderRadius: radius.md,
         overflow: 'hidden',
       }}
@@ -339,10 +339,10 @@ function Segmented({
               minHeight: 44,
               justifyContent: 'center',
               paddingHorizontal: space.xl,
-              backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
+              backgroundColor: selected ? color.ink : pressed ? color.tint : color.paper,
             })}
           >
-            <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
+            <Text size="small" weight="semibold" style={{ color: selected ? color.onInk : color.ink2 }}>
               {option.label}
             </Text>
           </Pressable>

@@ -10,26 +10,61 @@ import { Platform } from 'react-native';
  * can be compared line by line.
  *
  * The landing page carries its own dashboard mockup (`.panel-queue`, `.queue`,
- * `.score-hi`, `.mini-btn`, `.prep`, `.score-big`). That mockup is the
- * reference for these screens: accent green marks a high score, the current
- * row and the primary controls; `warn` marks a lead that has waited too long.
+ * `.score-hi`, `.mini-btn`, `.prep`, `.score-big`), and its shapes are the
+ * reference for these screens: panel, panel-head, queue table, score figure.
+ *
+ * Its *use of accent* is not. A marketing mockup can spend green on a row, a
+ * button and a score at once because none of them mean anything. On a working
+ * queue they compete with the two signals that do — see `accent` below.
  */
 export const color = {
   ink: '#0C1F1A',
+  /** Pressed state of an ink fill. */
+  inkStrong: '#061310',
   ink2: '#474f52',
-  ink3: '#6d7679',
+  /**
+   * Darkened from the landing page's `--ink-3` (#6d7679).
+   *
+   * That value reaches 4.65:1 on white and fails AA on every other ground this
+   * app has — 4.32 on tint, which is the page ground, 4.15 on the highlighted
+   * row, 4.09 on a pressed row. Lightening the grounds could not fix it,
+   * because the failure is against the page itself. This measures 5.71 / 5.31 /
+   * 5.09 / 5.02 across paper, tint, accentBg and line2.
+   */
+  ink3: '#5f686b',
 
   paper: '#ffffff',
   tint: '#f5f7f6',
+  /** Panel edges and separators. Decorative, so 1.4.11's 3:1 does not apply. */
   line: '#e3e7e5',
+  /** Row rules, from `--line-2`. Also decorative. */
   line2: '#eef1ef',
+  /**
+   * Control boundaries: inputs, outline buttons, segmented controls.
+   *
+   * These are covered by WCAG 1.4.11 and `line` is 1.25:1, so they cannot use
+   * it. Clears 3:1 on every ground here — 3.96 paper, 3.68 tint, 3.53 accentBg,
+   * 3.48 line2. The landing page has no equivalent because it has no forms.
+   */
+  lineStrong: '#75837E',
 
+  /**
+   * Accent is not a general-purpose colour here.
+   *
+   * Lead temperature and lateness have to stay the most visually distinct
+   * things on a screen. Accent spent on navigation, buttons, stat figures and
+   * chart fills is accent the eye stops reading as meaning, so it survives in
+   * three places only: the logo, the focus ring, and the hot temperature chip
+   * — which is the signal itself. Everything else is ink.
+   */
   accent: '#007A47',
   accentDk: '#00603A',
-  /** Dark grounds only — 2.75:1 on paper, so it never carries text on light. */
+  /** The logo's diagonal. 2.75:1 on paper — logotype only, never text. */
   accentLt: '#00B368',
+  /** Ground of the hot chip, and nothing else. */
   accentBg: '#E8F5EE',
 
+  /** Lateness. The only other colour that carries meaning. */
   warn: '#9a4b1e',
 
   // Dark section palette, for surfaces that invert.
@@ -43,6 +78,8 @@ export const color = {
   scrim: 'rgba(12,31,26,0.45)',
 
   onAccent: '#ffffff',
+  /** Label on an ink fill. 17.12:1. */
+  onInk: '#ffffff',
 } as const;
 
 /** `--r: 4px`, plus the two other radii the landing page uses. */

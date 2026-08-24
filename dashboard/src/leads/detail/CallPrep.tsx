@@ -87,7 +87,7 @@ export function CallPrep({
               paddingHorizontal: space.lg,
               borderRadius: radius.md,
               borderWidth: 1,
-              borderColor: color.line,
+              borderColor: color.lineStrong,
               backgroundColor: pressed ? color.line2 : color.paper,
             })}
           >
@@ -108,7 +108,7 @@ export function CallPrep({
               justifyContent: 'center',
               borderRadius: radius.md,
               borderWidth: 1,
-              borderColor: color.line,
+              borderColor: color.lineStrong,
               backgroundColor: pressed ? color.line2 : color.paper,
             })}
           >

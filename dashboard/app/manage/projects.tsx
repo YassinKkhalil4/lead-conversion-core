@@ -411,8 +411,8 @@ function AssignSheet({
                         height: 18,
                         borderRadius: 3,
                         borderWidth: 1,
-                        borderColor: checked ? color.accent : color.line,
-                        backgroundColor: checked ? color.accent : 'transparent',
+                        borderColor: checked ? color.ink : color.lineStrong,
+                        backgroundColor: checked ? color.ink : 'transparent',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
