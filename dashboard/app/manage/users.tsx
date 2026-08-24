@@ -285,11 +285,11 @@ function InviteForm({
                         paddingHorizontal: space.xl,
                         borderRadius: radius.md,
                         borderWidth: 1,
-                        borderColor: selected ? color.accent : color.line,
-                        backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
+                        borderColor: selected ? color.ink : color.lineStrong,
+                        backgroundColor: selected ? color.ink : pressed ? color.tint : color.paper,
                       })}
                     >
-                      <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
+                      <Text size="small" weight="semibold" style={{ color: selected ? color.onInk : color.ink2 }}>
                         {option}
                       </Text>
                     </Pressable>
@@ -325,7 +325,7 @@ function InviteForm({
                             padding: space.md,
                             borderRadius: radius.sm,
                             borderWidth: 1,
-                            borderColor: selected ? color.accent : color.line2,
+                            borderColor: selected ? color.ink : color.line2,
                             backgroundColor: pressed ? color.line2 : color.paper,
                           })}
                         >

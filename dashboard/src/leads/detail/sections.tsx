@@ -170,11 +170,11 @@ function MatchFlag({ label, matched }: { label: string; matched: boolean }) {
           height: 8,
           borderRadius: 2,
           borderWidth: 1,
-          borderColor: matched ? color.accent : color.line,
-          backgroundColor: matched ? color.accentBg : 'transparent',
+          borderColor: matched ? color.ink : color.lineStrong,
+          backgroundColor: matched ? color.tint : 'transparent',
         }}
       />
-      <Text size="micro" style={{ color: matched ? color.accent : color.ink3 }}>
+      <Text size="micro" style={{ color: matched ? color.ink : color.ink3 }}>
         {label}
         {matched ? '' : ' ✕'}
       </Text>

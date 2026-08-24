@@ -226,7 +226,7 @@ function Field({
               color: color.ink,
               backgroundColor: color.paper,
               borderWidth: 1,
-              borderColor: error ? color.warn : color.line,
+              borderColor: error ? color.warn : color.lineStrong,
               borderRadius: radius.md,
               paddingHorizontal: space.lg,
               minHeight: 46,

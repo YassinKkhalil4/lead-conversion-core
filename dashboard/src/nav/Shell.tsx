@@ -95,10 +95,10 @@ function SideRail({ role }: { role: Role }) {
               paddingHorizontal: space.md,
               paddingVertical: space.lg,
               borderRadius: radius.md,
-              backgroundColor: active ? color.accentBg : pressed ? color.tint : 'transparent',
+              backgroundColor: active ? color.tint : pressed ? color.line2 : 'transparent',
             })}
           >
-            <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'accent' : 'muted'}>
+            <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
               {item.label}
             </Text>
           </Pressable>
@@ -178,10 +178,10 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
                     paddingHorizontal: space.md,
                     paddingVertical: space.lg,
                     borderRadius: radius.md,
-                    backgroundColor: active ? color.accentBg : pressed ? color.tint : 'transparent',
+                    backgroundColor: active ? color.tint : pressed ? color.line2 : 'transparent',
                   })}
                 >
-                  <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'accent' : 'muted'}>
+                  <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
                     {item.label}
                   </Text>
                 </Pressable>
@@ -230,10 +230,10 @@ function BottomTabs({ role }: { role: Role }) {
               justifyContent: 'center',
               backgroundColor: pressed ? color.line2 : 'transparent',
               borderTopWidth: 2,
-              borderTopColor: active ? color.accent : 'transparent',
+              borderTopColor: active ? color.ink : 'transparent',
             })}
           >
-            <Text size="small" weight={active ? 'semibold' : 'regular'} tone={active ? 'accent' : 'muted'}>
+            <Text size="small" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
               {item.label}
             </Text>
           </Pressable>

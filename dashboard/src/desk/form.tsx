@@ -87,7 +87,7 @@ export function TextField({
         color: color.ink,
         backgroundColor: color.paper,
         borderWidth: 1,
-        borderColor: invalid ? color.warn : color.line,
+        borderColor: invalid ? color.warn : color.lineStrong,
         borderRadius: radius.md,
         paddingHorizontal: space.lg,
         minHeight: 42,
@@ -134,7 +134,7 @@ export function MoneyField({
           color: color.ink,
           backgroundColor: color.paper,
           borderWidth: 1,
-          borderColor: invalid ? color.warn : color.line,
+          borderColor: invalid ? color.warn : color.lineStrong,
           borderRadius: radius.md,
           paddingHorizontal: space.lg,
           minHeight: 42,
@@ -171,7 +171,7 @@ export function NumberField({
         color: color.ink,
         backgroundColor: color.paper,
         borderWidth: 1,
-        borderColor: invalid ? color.warn : color.line,
+        borderColor: invalid ? color.warn : color.lineStrong,
         borderRadius: radius.md,
         paddingHorizontal: space.lg,
         minHeight: 42,
@@ -220,7 +220,7 @@ export function TagInput({
           alignItems: 'center',
           gap: space.sm,
           borderWidth: 1,
-          borderColor: color.line,
+          borderColor: color.lineStrong,
           borderRadius: radius.md,
           padding: space.md,
           backgroundColor: color.paper,
@@ -312,7 +312,7 @@ export function Toggle({
   labels: [string, string];
 }) {
   return (
-    <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.line, borderRadius: radius.md, overflow: 'hidden', alignSelf: 'flex-start' }}>
+    <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.lineStrong, borderRadius: radius.md, overflow: 'hidden', alignSelf: 'flex-start' }}>
       {[true, false].map((option) => {
         const selected = option === value;
         return (
@@ -325,10 +325,10 @@ export function Toggle({
               minHeight: 42,
               justifyContent: 'center',
               paddingHorizontal: space.xl,
-              backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
+              backgroundColor: selected ? color.ink : pressed ? color.tint : color.paper,
             })}
           >
-            <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
+            <Text size="small" weight="semibold" style={{ color: selected ? color.onInk : color.ink2 }}>
               {option ? labels[0] : labels[1]}
             </Text>
           </Pressable>

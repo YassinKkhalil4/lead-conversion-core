@@ -69,7 +69,7 @@ export default function ManagerOverview() {
       title="Overview"
       subtitle={data ? `${data.timezone} · updated ${queueClock(data.generatedAt)} ago` : undefined}
       actions={
-        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.line, borderRadius: radius.md, overflow: 'hidden' }}>
+        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.lineStrong, borderRadius: radius.md, overflow: 'hidden' }}>
           {PERIODS.map((option) => {
             const selected = option.key === period;
             return (
@@ -82,10 +82,10 @@ export default function ManagerOverview() {
                   minHeight: 40,
                   justifyContent: 'center',
                   paddingHorizontal: space.xl,
-                  backgroundColor: selected ? color.accent : pressed ? color.tint : color.paper,
+                  backgroundColor: selected ? color.ink : pressed ? color.tint : color.paper,
                 })}
               >
-                <Text size="small" weight="semibold" style={{ color: selected ? color.onAccent : color.ink2 }}>
+                <Text size="small" weight="semibold" style={{ color: selected ? color.onInk : color.ink2 }}>
                   {option.label}
                 </Text>
               </Pressable>
