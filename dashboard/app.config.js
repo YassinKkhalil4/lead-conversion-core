@@ -1,8 +1,8 @@
 /**
  * Dynamic Expo config layered over app.json.
  *
- * The production web build is served from https://core.tryrolefit.com/app so
- * that it shares an origin with the API at /api/*. Sharing the origin is what
+ * The production web build is served from the same host as the API, under
+ * /app, so that it shares an origin with /api/*. Sharing the origin is what
  * lets the existing HttpOnly, Secure, SameSite=Lax session cookie keep working
  * with no CORS configuration on the server.
  *

@@ -77,7 +77,7 @@ export function ConversationTab({
               value={draft}
               onChangeText={setDraft}
               placeholder="Write a reply"
-              placeholderTextColor={color.inkFaint}
+              placeholderTextColor={color.inkPlaceholder}
               multiline
               style={{
                 fontFamily,

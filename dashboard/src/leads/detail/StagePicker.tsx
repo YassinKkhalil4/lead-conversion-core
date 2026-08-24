@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/design/Text';
-import { color, hitSlop, radius, space } from '@/design/tokens';
+import { color, hitSlop, radius, space, tracking } from '@/design/tokens';
 import { PIPELINE_STAGES, stageLabel } from '@/leads/labels';
 
 /**
@@ -33,7 +33,7 @@ export function StagePicker({
         paddingTop: space.lg,
       }}
     >
-      <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+      <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
         Stage
       </Text>
       <Text size="small" weight="semibold" style={{ flex: 1 }}>
@@ -59,7 +59,7 @@ export function StagePicker({
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable
           onPress={() => setOpen(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(12,11,9,0.4)', justifyContent: 'flex-end' }}
+          style={{ flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' }}
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
@@ -100,7 +100,7 @@ export function StagePicker({
                     {stageLabel(option)}
                   </Text>
                   {selected ? (
-                    <Text size="micro" tone="faint" style={{ letterSpacing: 0.4 }}>
+                    <Text size="micro" tone="faint" style={{ letterSpacing: tracking.label }}>
                       CURRENT
                     </Text>
                   ) : null}

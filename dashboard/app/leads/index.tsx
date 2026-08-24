@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { explain } from '@/api/errors';
 import type { Lead, LeadFilters } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
+import { Mark } from '@/design/Mark';
 import { Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, hitSlop, radius, rowHeight, space } from '@/design/tokens';
+import { color, hitSlop, radius, rowHeight, space, tracking } from '@/design/tokens';
 import { QueueRow } from '@/leads/QueueRow';
 import { useLeadList, useUnacknowledgedLeads } from '@/leads/hooks';
 import { useLastLook } from '@/leads/lastLook';
@@ -71,7 +72,19 @@ export default function Queue() {
   return (
     <View style={{ flex: 1, backgroundColor: color.paper }}>
       <View style={{ paddingTop: insets.top + space.md, backgroundColor: color.surface }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: space.xl }}>
+        {/* The salesperson never sees the side rail, so this is the one place
+            the mark appears on their surfaces. `paddingBottom` plus the next
+            block's `paddingTop` clears the brand's half-height rule at 24. */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: space.xl,
+            paddingBottom: space.sm,
+          }}
+        >
+          <Mark size={24} />
           <Pressable onPress={() => void signOut()} hitSlop={hitSlop} accessibilityRole="button">
             <Text size="micro" tone="faint">
               {user?.name ? `${user.name} · sign out` : 'Sign out'}
@@ -222,7 +235,7 @@ function SinceDivider({ label }: { label: string }) {
       }}
     >
       <View style={{ height: 1, width: space.xxl, backgroundColor: color.hairlineStrong }} />
-      <Text size="micro" tone="faint" style={{ letterSpacing: 0.4 }}>
+      <Text size="micro" tone="faint" style={{ letterSpacing: tracking.label }}>
         {label}
       </Text>
       <View style={{ height: 1, flex: 1, backgroundColor: color.hairline }} />

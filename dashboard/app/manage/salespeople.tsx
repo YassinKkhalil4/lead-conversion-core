@@ -266,7 +266,7 @@ function SalespersonForm({
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: 'rgba(12,11,9,0.4)', padding: space.xl, justifyContent: 'center' }}>
+      <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
           style={{

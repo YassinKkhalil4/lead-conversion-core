@@ -241,7 +241,7 @@ function InviteForm({
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: 'rgba(12,11,9,0.4)', padding: space.xl, justifyContent: 'center' }}>
+      <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
           style={{ backgroundColor: color.surface, borderRadius: radius.md, maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
@@ -363,7 +363,7 @@ function PasswordIssued({
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(12,11,9,0.5)', padding: space.xl, justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <View
           style={{
             backgroundColor: color.surface,

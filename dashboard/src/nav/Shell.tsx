@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Role } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
+import { Mark } from '@/design/Mark';
 import { Text } from '@/design/Text';
 import { color, hitSlop, radius, space } from '@/design/tokens';
 import { useIsDesk } from '@/desk/Page';
@@ -73,9 +74,15 @@ function SideRail({ role }: { role: Role }) {
       }}
     >
       <View style={{ paddingHorizontal: space.md, paddingBottom: space.xl, gap: 2 }}>
-        <Text size="large" weight="bold">
-          Rolefit
-        </Text>
+        {/* Mark alone beside the name set in the app's own type. The brand's
+            clear space is half the mark's height on every side; the rail's
+            horizontal padding and the block's bottom padding both clear it. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          <Mark size={26} />
+          <Text size="large" weight="bold">
+            Kadensio
+          </Text>
+        </View>
         <Text size="micro" tone="faint" numberOfLines={1}>
           {user?.companyName ?? ''}
         </Text>
@@ -140,15 +147,16 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
             ☰
           </Text>
         </Pressable>
+        <Mark size={24} />
         <Text size="small" weight="semibold" style={{ flex: 1 }} numberOfLines={1}>
-          {user?.companyName ?? 'Rolefit'}
+          {user?.companyName ?? 'Kadensio'}
         </Text>
       </View>
 
       <View style={{ flex: 1 }}>{children}</View>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(12,11,9,0.4)' }}>
+        <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: color.scrim }}>
           <Pressable
             onPress={(event) => event.stopPropagation()}
             style={{

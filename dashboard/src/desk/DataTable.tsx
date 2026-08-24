@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, space } from '@/design/tokens';
+import { color, space, tracking } from '@/design/tokens';
 
 export interface Column<T> {
   key: string;
@@ -104,7 +104,7 @@ export function DataTable<T>({
                   alignItems: column.numeric ? 'flex-end' : 'flex-start',
                 }}
               >
-                <Text size="micro" weight="bold" tone={active ? 'default' : 'muted'} style={{ letterSpacing: 0.5 }}>
+                <Text size="micro" weight="bold" tone={active ? 'default' : 'muted'} style={{ letterSpacing: tracking.label }}>
                   {column.header.toUpperCase()}
                   {active ? (sort?.direction === 'asc' ? ' ↑' : ' ↓') : ''}
                 </Text>

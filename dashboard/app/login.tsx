@@ -9,9 +9,10 @@ import { explain } from '@/api/errors';
 import { useAuth } from '@/auth/AuthProvider';
 import { homeFor } from '@/nav/routes';
 import { Button } from '@/design/Button';
+import { Mark } from '@/design/Mark';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, fontFamily, fontSize, radius, space } from '@/design/tokens';
+import { color, fontFamily, fontSize, radius, space, tracking } from '@/design/tokens';
 
 const schema = z.object({
   email: z.string().min(1, 'Enter your email address').email('That is not a valid email address'),
@@ -57,13 +58,16 @@ export default function Login() {
         contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + space.xxxl }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
-          <Text size="title" weight="bold">
-            Rolefit
-          </Text>
-          <Text size="small" tone="muted">
-            Lead inbox for WhatsApp qualification.
-          </Text>
+        <View style={{ paddingHorizontal: space.xl, gap: space.lg }}>
+          <Mark size={40} />
+          <View style={{ gap: space.xs }}>
+            <Text size="title" weight="bold">
+              Kadensio
+            </Text>
+            <Text size="small" tone="muted">
+              Lead inbox for WhatsApp qualification.
+            </Text>
+          </View>
         </View>
 
         <View style={{ paddingHorizontal: space.xl, paddingTop: space.xxxl, gap: space.xl }}>
@@ -143,7 +147,7 @@ function Field({
 }) {
   return (
     <View style={{ gap: space.sm }}>
-      <Text size="micro" weight="semibold" tone="muted" style={{ letterSpacing: 0.5, textTransform: 'uppercase' }}>
+      <Text size="micro" weight="semibold" tone="muted" style={{ letterSpacing: tracking.label, textTransform: 'uppercase' }}>
         {label}
       </Text>
       <Controller
@@ -156,7 +160,7 @@ function Field({
             value={value}
             onChangeText={onChange}
             onBlur={onBlur}
-            placeholderTextColor={color.inkFaint}
+            placeholderTextColor={color.inkPlaceholder}
             style={{
               fontFamily,
               fontSize: fontSize.body,

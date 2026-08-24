@@ -180,7 +180,7 @@ export default function CallPrepScreen() {
       <Modal visible={closing} transparent animationType="fade" onRequestClose={() => setClosing(false)}>
         <Pressable
           onPress={() => setClosing(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(12,11,9,0.4)', justifyContent: 'flex-end' }}
+          style={{ flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' }}
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}

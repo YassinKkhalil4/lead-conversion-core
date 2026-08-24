@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 221 64" width="221" height="64" role="img" aria-label="Kadensio">
+  <title>Kadensio</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+    <path d="M12 20 L24 32 L12 44" stroke="#FFFFFF" opacity="0.25"/>
+    <path d="M26 20 L38 32 L26 44" stroke="#FFFFFF" opacity="0.55"/>
+    <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+  </g>
+  <text x="76" y="32" dominant-baseline="central"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="33" font-weight="600" letter-spacing="-0.8"
+        textLength="136.5" lengthAdjust="spacingAndGlyphs"
+        fill="#FFFFFF">kadensio</text>
+</svg>

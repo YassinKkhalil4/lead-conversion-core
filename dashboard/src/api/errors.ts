@@ -22,7 +22,7 @@ export function explain(error: unknown, context: string): Explained {
   if (error.isOffline) {
     return {
       title: 'No connection to the server',
-      detail: `${context} could not reach core.tryrolefit.com. Check your signal — anything you have already loaded is still readable, and queued actions will be sent when you are back online.`,
+      detail: `${context} could not reach the Kadensio server. Check your signal — anything you have already loaded is still readable, and queued actions will be sent when you are back online.`,
     };
   }
 
@@ -83,7 +83,7 @@ export function explain(error: unknown, context: string): Explained {
     case 'dev_proxy_unreachable':
       return {
         title: 'The development proxy could not reach the API',
-        detail: `${String(error.details.detail ?? 'The upstream request failed.')} Confirm core.tryrolefit.com is reachable from this machine.`,
+        detail: `${String(error.details.detail ?? 'The upstream request failed.')} Confirm the Kadensio server is reachable from this machine.`,
       };
     default:
       break;
