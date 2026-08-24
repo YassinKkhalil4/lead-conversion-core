@@ -9,15 +9,16 @@ type Tone = 'default' | 'muted' | 'faint' | 'inverse' | 'alert' | 'warning';
 /**
  * The landing page's three ink steps, plus lateness.
  *
- * There is deliberately no accent tone. Accent belongs to the logo, the focus
- * ring and the hot chip, none of which route through here — exposing it as a
- * text tone is how it would creep back across the screens.
+ * There is deliberately no accent tone. The handful of places that do carry
+ * accent — the active nav item, the stat figures — set it by style at the call
+ * site, because they are countable. A tone would make it available everywhere
+ * and that is how it would creep back across the screens.
  */
 const tone: Record<Tone, string> = {
   default: color.ink,
   muted: color.ink2,
   faint: color.ink3,
-  inverse: color.tint,
+  inverse: color.paper,
   alert: color.warn,
   warning: color.warn,
 };
