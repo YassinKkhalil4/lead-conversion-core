@@ -7,7 +7,7 @@ import { Temperature } from '@/design/Temperature';
 import { ErrorState } from '@/design/StateBlock';
 import { Skeleton } from '@/design/Skeleton';
 import { Text } from '@/design/Text';
-import { color, radius, space } from '@/design/tokens';
+import { colWidth, color, layout, radius, space } from '@/design/tokens';
 import { BarChart, DistributionBar, StatTile } from '@/desk/charts';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Page, Panel, Section } from '@/desk/Page';
@@ -97,17 +97,41 @@ export default function ManagerOverview() {
       {summary.isLoading || !current ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.lg }}>
           {[0, 1, 2, 3].map((index) => (
-            <View key={index} style={{ flexGrow: 1, flexBasis: 180, padding: space.xl, borderWidth: 1, borderColor: color.hairline, gap: space.md }}>
-              <Skeleton width={90} height={11} />
-              <Skeleton width={64} height={28} />
+            <View
+              key={index}
+              style={{
+                flexGrow: index === 0 ? 2 : 1,
+                flexBasis: index === 0 ? 280 : 180,
+                padding: layout.panel,
+                borderWidth: 1,
+                borderColor: color.hairline,
+                backgroundColor: color.surface,
+                gap: space.md,
+              }}
+            >
+              <Skeleton width={index === 0 ? 150 : 90} height={11} />
+              <Skeleton width={index === 0 ? 110 : 64} height={index === 0 ? 56 : 28} />
               <Skeleton width={110} height={11} />
             </View>
           ))}
         </View>
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.lg }}>
-          <StatTile label="New leads" value={current.newLeads} previous={previous?.newLeads ?? null} />
-          <StatTile label="Qualified" value={current.qualifiedLeads} previous={previous?.qualifiedLeads ?? null} />
+          {/* First, and the only one that is a job rather than a number.
+              It carries alert when non-zero because it measures lateness. */}
+          <StatTile
+            label="Pending acknowledgement"
+            value={responseTime?.pendingAcknowledgements ?? null}
+            previous={previous?.assignedUnacknowledged ?? null}
+            lowerIsBetter
+            primary
+            overdue
+            hint={
+              responseTime?.oldestPendingAcknowledgementSeconds
+                ? `oldest ${duration(responseTime.oldestPendingAcknowledgementSeconds)}`
+                : undefined
+            }
+          />
           <StatTile
             label="Speed to acknowledge"
             value={responseTime?.medianAcknowledgementSeconds ?? null}
@@ -116,19 +140,51 @@ export default function ManagerOverview() {
             lowerIsBetter
             hint="median, all time"
           />
-          <StatTile
-            label="Pending acknowledgement"
-            value={responseTime?.pendingAcknowledgements ?? null}
-            previous={previous?.assignedUnacknowledged ?? null}
-            lowerIsBetter
-            hint={
-              responseTime?.oldestPendingAcknowledgementSeconds
-                ? `oldest ${duration(responseTime.oldestPendingAcknowledgementSeconds)}`
-                : undefined
-            }
-          />
+          <StatTile label="New leads" value={current.newLeads} previous={previous?.newLeads ?? null} />
+          <StatTile label="Qualified" value={current.qualifiedLeads} previous={previous?.qualifiedLeads ?? null} />
         </View>
       )}
+
+      {/* Action first, measurement second. This section's own note says it
+          is revenue leaking right now, and it used to sit fourth, below two
+          charts that are context rather than something to do. */}
+      <Section
+        title="Leads at risk"
+        note="Qualified and still unacknowledged, highest score first. This is revenue leaking right now."
+      >
+        <DataTable
+          rows={riskLeads}
+          loading={atRisk.isLoading}
+          keyOf={(lead) => lead.leadId}
+          onRowPress={(lead) => router.push(`/leads/${lead.leadId}`)}
+          initialSort={{ key: 'score', direction: 'desc' }}
+          emptyTitle="Nothing at risk"
+          emptyDetail="Qualified leads appear here while they are waiting to be acknowledged. An empty table means the team is keeping up."
+          columns={riskColumns}
+        />
+      </Section>
+
+      <Section title="Team" note="Sortable. Acknowledgement figures are all time.">
+        {salespeople.isError ? (
+          <ErrorState
+            title="Could not load the team"
+            detail={explain(salespeople.error, 'Loading salespeople').detail}
+            onRetry={() => void salespeople.refetch()}
+          />
+        ) : (
+          <DataTable
+            rows={salespeople.data?.salespeople ?? []}
+            loading={salespeople.isLoading}
+            keyOf={(person) => person.salespersonId}
+            initialSort={{ key: 'overdue', direction: 'desc' }}
+            emptyTitle="No salespeople yet"
+            emptyDetail="Routing cannot assign a lead until at least one salesperson exists."
+            emptyActionLabel="Add salespeople"
+            onEmptyAction={() => router.push('/manage/salespeople')}
+            columns={teamColumns}
+          />
+        )}
+      </Section>
 
       <Section
         title="Response time"
@@ -177,39 +233,9 @@ export default function ManagerOverview() {
         </View>
       </View>
 
-      <Section
-        title="Leads at risk"
-        note="Qualified and still unacknowledged, highest score first. This is revenue leaking right now."
-      >
-        <DataTable
-          rows={riskLeads}
-          keyOf={(lead) => lead.leadId}
-          onRowPress={(lead) => router.push(`/leads/${lead.leadId}`)}
-          initialSort={{ key: 'score', direction: 'desc' }}
-          emptyTitle="Nothing at risk"
-          emptyDetail="Qualified leads appear here while they are waiting to be acknowledged. An empty table means the team is keeping up."
-          columns={riskColumns}
-        />
-      </Section>
 
-      <Section title="Team" note="Sortable. Acknowledgement figures are all time.">
-        {salespeople.isError ? (
-          <ErrorState
-            title="Could not load the team"
-            detail={explain(salespeople.error, 'Loading salespeople').detail}
-            onRetry={() => void salespeople.refetch()}
-          />
-        ) : (
-          <DataTable
-            rows={salespeople.data?.salespeople ?? []}
-            keyOf={(person) => person.salespersonId}
-            initialSort={{ key: 'overdue', direction: 'desc' }}
-            emptyTitle="No salespeople yet"
-            emptyDetail="Add salespeople under Salespeople. Routing cannot assign a lead until at least one exists."
-            columns={teamColumns}
-          />
-        )}
-      </Section>
+
+
     </Page>
   );
 }
@@ -218,7 +244,7 @@ const riskColumns: Column<Lead>[] = [
   {
     key: 'contact',
     header: 'Contact',
-    width: 220,
+    width: colWidth.long,
     sortValue: (lead) => lead.contact.name || lead.contact.phoneE164,
     render: (lead) => (
       <Text size="small" weight="semibold" autoDirection numberOfLines={1}>
@@ -229,7 +255,7 @@ const riskColumns: Column<Lead>[] = [
   {
     key: 'score',
     header: 'Score',
-    width: 90,
+    width: colWidth.num,
     numeric: true,
     sortValue: (lead) => lead.leadScore,
     render: (lead) => (
@@ -241,14 +267,14 @@ const riskColumns: Column<Lead>[] = [
   {
     key: 'temperature',
     header: 'Temp',
-    width: 120,
+    width: colWidth.short,
     sortValue: (lead) => lead.temperature,
     render: (lead) => <Temperature value={lead.temperature} />,
   },
   {
     key: 'assignee',
     header: 'Assigned to',
-    width: 190,
+    width: colWidth.name,
     sortValue: (lead) => lead.assignment?.salespersonName ?? null,
     render: (lead) => (
       <Text size="small" tone={lead.assignment ? 'default' : 'faint'} numberOfLines={1}>
@@ -259,7 +285,7 @@ const riskColumns: Column<Lead>[] = [
   {
     key: 'waiting',
     header: 'Waiting',
-    width: 120,
+    width: colWidth.short,
     numeric: true,
     sortValue: (lead) => (lead.assignment ? -Date.parse(lead.assignment.assignedAt) : null),
     render: (lead) => {
@@ -285,7 +311,7 @@ const teamColumns: Column<TeamRow>[] = [
   {
     key: 'name',
     header: 'Salesperson',
-    width: 200,
+    width: colWidth.name,
     sortValue: (person) => person.name,
     render: (person) => (
       <View style={{ gap: 1 }}>
@@ -303,7 +329,7 @@ const teamColumns: Column<TeamRow>[] = [
   {
     key: 'load',
     header: 'Active / capacity',
-    width: 150,
+    width: colWidth.medium,
     numeric: true,
     sortValue: (person) => (optionalNumber(person.activeAssignmentCount) ?? 0) / Math.max(1, optionalNumber(person.capacityLimit) ?? 1),
     render: (person) => {
@@ -318,7 +344,7 @@ const teamColumns: Column<TeamRow>[] = [
   {
     key: 'overdue',
     header: 'Overdue',
-    width: 110,
+    width: colWidth.short,
     numeric: true,
     sortValue: (person) => optionalNumber(person.overdueAssignmentCount),
     render: (person) => (
@@ -335,7 +361,7 @@ const teamColumns: Column<TeamRow>[] = [
   {
     key: 'acknowledged',
     header: 'Acknowledged',
-    width: 140,
+    width: colWidth.medium,
     numeric: true,
     sortValue: (person) => optionalNumber(person.acknowledgedCount),
     render: (person) => (
@@ -347,7 +373,7 @@ const teamColumns: Column<TeamRow>[] = [
   {
     key: 'avgAck',
     header: 'Avg to ack',
-    width: 130,
+    width: colWidth.short,
     numeric: true,
     sortValue: (person) => optionalNumber(person.avgAcknowledgementSeconds),
     render: (person) => (
@@ -361,7 +387,7 @@ const teamColumns: Column<TeamRow>[] = [
   {
     key: 'priority',
     header: 'Priority',
-    width: 100,
+    width: colWidth.num,
     numeric: true,
     sortValue: (person) => optionalNumber(person.priorityRank),
     render: (person) => (

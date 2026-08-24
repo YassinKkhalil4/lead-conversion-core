@@ -7,10 +7,11 @@ import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/design/Button';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, radius, space } from '@/design/tokens';
+import { colWidth, color, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, TextField, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
+import { countLabel } from '@/desk/safe';
 import { RequireRole } from '@/nav/RequireRole';
 import { useCreateUser, useSalespeople, useUpdateUser, useUsers } from '@/manage/hooks';
 import { timestamp } from '@/time/format';
@@ -52,7 +53,7 @@ function UsersInner() {
     {
       key: 'name',
       header: 'Name',
-      width: 200,
+      width: colWidth.name,
       sortValue: (row) => row.name,
       render: (row) => (
         <View style={{ gap: 1 }}>
@@ -70,7 +71,7 @@ function UsersInner() {
     {
       key: 'email',
       header: 'Email',
-      width: 250,
+      width: colWidth.wide,
       sortValue: (row) => row.email,
       render: (row) => (
         <Text size="small" tone="muted" numberOfLines={1}>
@@ -81,14 +82,14 @@ function UsersInner() {
     {
       key: 'role',
       header: 'Role',
-      width: 130,
+      width: colWidth.short,
       sortValue: (row) => row.role,
       render: (row) => <Text size="small">{row.role}</Text>,
     },
     {
       key: 'salesperson',
       header: 'Salesperson record',
-      width: 200,
+      width: colWidth.name,
       sortValue: (row) => (row.salespersonId ? (byId.get(row.salespersonId)?.name ?? 'unknown') : null),
       render: (row) => (
         <Text size="small" tone={row.salespersonId ? 'muted' : 'faint'} numberOfLines={1}>
@@ -99,7 +100,7 @@ function UsersInner() {
     {
       key: 'lastLogin',
       header: 'Last login',
-      width: 180,
+      width: colWidth.medium,
       numeric: true,
       sortValue: (row) => (row.lastLoginAt ? Date.parse(row.lastLoginAt) : null),
       render: (row) => (
@@ -111,7 +112,7 @@ function UsersInner() {
     {
       key: 'active',
       header: 'Status',
-      width: 160,
+      width: colWidth.medium,
       sortValue: (row) => (row.active ? 1 : 0),
       render: (row) => {
         const isSelf = row.userId === currentUser?.userId;
@@ -164,9 +165,12 @@ function UsersInner() {
           onRetry={() => void users.refetch()}
         />
       ) : (
-        <Section title={`${users.data?.users?.length ?? 0} accounts`}>
+        <Section title={`${countLabel(users.data?.users?.length)} accounts`}>
           <DataTable
             rows={users.data?.users ?? []}
+            loading={users.isLoading}
+            emptyActionLabel="Invite user"
+            onEmptyAction={() => setInviting(true)}
             keyOf={(row) => row.userId}
             initialSort={{ key: 'name', direction: 'asc' }}
             emptyTitle="No users yet"

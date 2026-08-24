@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { Text } from '@/design/Text';
-import { color, radius, space, tracking } from '@/design/tokens';
+import { color, layout, radius, space, tracking } from '@/design/tokens';
 import { duration } from '@/time/format';
 
 /**
@@ -182,6 +182,8 @@ export function StatTile({
   format = (input) => String(input),
   lowerIsBetter = false,
   hint,
+  primary = false,
+  overdue = false,
 }: {
   label: string;
   value: number | null;
@@ -189,18 +191,31 @@ export function StatTile({
   format?: (value: number) => string;
   lowerIsBetter?: boolean;
   hint?: string;
+  /**
+   * Gives the tile the strip's first fixation: wider, and a display-weight
+   * figure. One tile per strip, for the one figure a reader would act on.
+   */
+  primary?: boolean;
+  /**
+   * Colours the figure when it is non-zero. Only legitimate on a tile that
+   * measures lateness — that is one of the two things colour means here, and
+   * the tile must not reach for it to mean anything else.
+   */
+  overdue?: boolean;
 }) {
   const delta = value !== null && previous !== null && previous !== 0 ? value - previous : null;
   const better = delta === null ? null : lowerIsBetter ? delta < 0 : delta > 0;
   const unchanged = delta === 0;
 
+  const late = overdue && value !== null && value > 0;
+
   return (
     <View
       style={{
-        flexGrow: 1,
-        flexBasis: 180,
+        flexGrow: primary ? 2 : 1,
+        flexBasis: primary ? 280 : 180,
         gap: space.sm,
-        padding: space.xl,
+        padding: layout.panel,
         borderWidth: 1,
         borderColor: color.hairline,
         backgroundColor: color.surface,
@@ -209,7 +224,12 @@ export function StatTile({
       <Text size="micro" tone="muted" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
         {label}
       </Text>
-      <Text size="headline" weight="bold" numeric>
+      <Text
+        size={primary ? 'display' : 'headline'}
+        weight="bold"
+        numeric
+        style={late ? { color: color.alert } : undefined}
+      >
         {value === null ? '—' : format(value)}
       </Text>
       {delta === null ? (

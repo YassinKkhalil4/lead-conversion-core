@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Redirect } from 'expo-router';
 import type { Role } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
-import { DetailSkeleton } from '@/design/Skeleton';
+import { PageSkeleton } from '@/design/Skeleton';
 import { color } from '@/design/tokens';
 import { canAccess, homeFor } from './routes';
 
@@ -21,7 +21,7 @@ export function RequireRole({ allowed, children }: { allowed: Role[]; children: 
   if (status === 'restoring') {
     return (
       <View style={{ flex: 1, backgroundColor: color.paper }}>
-        <DetailSkeleton />
+        <PageSkeleton />
       </View>
     );
   }

@@ -6,7 +6,7 @@ import type { Salesperson } from '@/api/types';
 import { Button } from '@/design/Button';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, radius, space } from '@/design/tokens';
+import { colWidth, color, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, NumberField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
@@ -67,9 +67,12 @@ export default function SalespeopleScreen() {
           onRetry={() => void query.refetch()}
         />
       ) : (
-        <Section title={`${query.data?.salespeople?.length ?? 0} on the team`}>
+        <Section title={`${countLabel(query.data?.salespeople?.length)} on the team`}>
           <DataTable
             rows={query.data?.salespeople ?? []}
+            loading={query.isLoading}
+            emptyActionLabel="Add salesperson"
+            onEmptyAction={() => open()}
             keyOf={(person) => person.salespersonId}
             onRowPress={open}
             initialSort={{ key: 'priority', direction: 'asc' }}
@@ -103,7 +106,7 @@ const columns: Column<Salesperson>[] = [
   {
     key: 'name',
     header: 'Name',
-    width: 190,
+    width: colWidth.name,
     sortValue: (person) => person.name,
     render: (person) => (
       <View style={{ gap: 1 }}>
@@ -119,7 +122,7 @@ const columns: Column<Salesperson>[] = [
   {
     key: 'email',
     header: 'Email',
-    width: 210,
+    width: colWidth.long,
     sortValue: (person) => person.email,
     render: (person) => (
       <Text size="small" tone={person.email ? 'muted' : 'faint'} numberOfLines={1}>
@@ -130,7 +133,7 @@ const columns: Column<Salesperson>[] = [
   {
     key: 'active',
     header: 'Status',
-    width: 100,
+    width: colWidth.num,
     sortValue: (person) => (person.active ? 1 : 0),
     render: (person) => (
       <Text size="small" tone={person.active ? 'default' : 'faint'}>
@@ -141,25 +144,25 @@ const columns: Column<Salesperson>[] = [
   {
     key: 'specialties',
     header: 'Unit types',
-    width: 190,
+    width: colWidth.name,
     render: (person) => <Tags values={person.unitSpecialties} />,
   },
   {
     key: 'locations',
     header: 'Locations',
-    width: 190,
+    width: colWidth.name,
     render: (person) => <Tags values={person.locations} />,
   },
   {
     key: 'languages',
     header: 'Languages',
-    width: 150,
+    width: colWidth.medium,
     render: (person) => <Tags values={person.languages} />,
   },
   {
     key: 'priority',
     header: 'Priority',
-    width: 100,
+    width: colWidth.num,
     numeric: true,
     sortValue: (person) => optionalNumber(person.priorityRank),
     render: (person) => (
@@ -171,7 +174,7 @@ const columns: Column<Salesperson>[] = [
   {
     key: 'load',
     header: 'Active / capacity',
-    width: 150,
+    width: colWidth.medium,
     numeric: true,
     sortValue: (person) => optionalNumber(person.activeAssignmentCount),
     render: (person) => (
@@ -188,7 +191,7 @@ const columns: Column<Salesperson>[] = [
   {
     key: 'avgAck',
     header: 'Avg to ack',
-    width: 120,
+    width: colWidth.short,
     numeric: true,
     sortValue: (person) => optionalNumber(person.avgAcknowledgementSeconds),
     render: (person) => (

@@ -12,7 +12,8 @@ import { Button } from '@/design/Button';
 import { Mark } from '@/design/Mark';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, fontFamily, fontSize, radius, space, tracking } from '@/design/tokens';
+import { color, fontFamily, fontSize, layout, radius, space, tracking } from '@/design/tokens';
+import { useIsDesk } from '@/desk/Page';
 
 const schema = z.object({
   email: z.string().min(1, 'Enter your email address').email('That is not a valid email address'),
@@ -25,6 +26,7 @@ export default function Login() {
   const { status, user, signIn } = useAuth();
   const [failure, setFailure] = useState<unknown>(null);
   const insets = useSafeAreaInsets();
+  const isDesk = useIsDesk();
 
   const {
     control,
@@ -49,6 +51,101 @@ export default function Login() {
 
   const explained = failure ? explain(failure, 'Sign-in') : null;
 
+  const fields = (
+    <>
+      <Field
+        control={control}
+        name="email"
+        label="Email"
+        error={errors.email?.message}
+        inputProps={{
+          autoCapitalize: 'none',
+          autoComplete: 'email',
+          autoCorrect: false,
+          inputMode: 'email',
+          keyboardType: 'email-address',
+          textContentType: 'username',
+          returnKeyType: 'next',
+        }}
+      />
+      <Field
+        control={control}
+        name="password"
+        label="Password"
+        error={errors.password?.message}
+        inputProps={{
+          autoCapitalize: 'none',
+          autoComplete: 'current-password',
+          secureTextEntry: true,
+          textContentType: 'password',
+          returnKeyType: 'go',
+          onSubmitEditing: () => void onSubmit(),
+        }}
+      />
+    </>
+  );
+
+  const submitLabel = isSubmitting ? 'Signing in…' : 'Sign in';
+
+  /**
+   * At desk width the same form spanned the whole window — a 1250-point field
+   * for a 40-character address. It becomes a measured column instead. The phone
+   * layout below is unchanged: full-bleed fields and a button pinned in thumb
+   * reach is already right for a phone, and a card would only shrink both.
+   */
+  if (isDesk) {
+    return (
+      <View style={{ flex: 1, backgroundColor: color.paper }}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: layout.pageDesk }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ width: '100%', maxWidth: 400, gap: layout.sectionGap }}>
+            <View style={{ gap: layout.rowY }}>
+              <Mark size={40} />
+              <View style={{ gap: layout.stack }}>
+                <Text size="headline" weight="bold">
+                  Kadensio
+                </Text>
+                <Text size="small" tone="muted">
+                  Lead inbox for WhatsApp qualification.
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                padding: layout.panel,
+                gap: layout.panel,
+                borderWidth: 1,
+                borderColor: color.hairline,
+                borderRadius: radius.md,
+                backgroundColor: color.surface,
+              }}
+            >
+              {fields}
+              {explained ? (
+                <View style={{ gap: space.xs }}>
+                  <Text size="small" weight="semibold" style={{ color: color.alert }}>
+                    {explained.title}
+                  </Text>
+                  <Text size="small" tone="muted">
+                    {explained.detail}
+                  </Text>
+                </View>
+              ) : null}
+              <Button label={submitLabel} variant="primary" grow busy={isSubmitting} onPress={() => void onSubmit()} />
+            </View>
+
+            <Text size="micro" tone="faint">
+              Accounts are created by your admin. There is no self-service sign-up.
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: color.paper }}
@@ -71,35 +168,7 @@ export default function Login() {
         </View>
 
         <View style={{ paddingHorizontal: space.xl, paddingTop: space.xxxl, gap: space.xl }}>
-          <Field
-            control={control}
-            name="email"
-            label="Email"
-            error={errors.email?.message}
-            inputProps={{
-              autoCapitalize: 'none',
-              autoComplete: 'email',
-              autoCorrect: false,
-              inputMode: 'email',
-              keyboardType: 'email-address',
-              textContentType: 'username',
-              returnKeyType: 'next',
-            }}
-          />
-          <Field
-            control={control}
-            name="password"
-            label="Password"
-            error={errors.password?.message}
-            inputProps={{
-              autoCapitalize: 'none',
-              autoComplete: 'current-password',
-              secureTextEntry: true,
-              textContentType: 'password',
-              returnKeyType: 'go',
-              onSubmitEditing: () => void onSubmit(),
-            }}
-          />
+          {fields}
         </View>
 
         {explained ? (
@@ -126,7 +195,7 @@ export default function Login() {
           backgroundColor: color.surface,
         }}
       >
-        <Button label={isSubmitting ? 'Signing in…' : 'Sign in'} variant="primary" grow busy={isSubmitting} onPress={() => void onSubmit()} />
+        <Button label={submitLabel} variant="primary" grow busy={isSubmitting} onPress={() => void onSubmit()} />
       </View>
     </KeyboardAvoidingView>
   );

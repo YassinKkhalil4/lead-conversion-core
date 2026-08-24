@@ -63,14 +63,14 @@ export function CallPrep({
           <Temperature value={lead.temperature} />
         </View>
 
+        {/* Only the clock is a figure. Setting the whole sentence in the mono
+            face made a status line read as a code string. */}
         {needsAcknowledgement ? (
-          <Text
-            size="small"
-            weight="semibold"
-            numeric
-            style={{ color: pastSla ? color.alert : color.warning }}
-          >
-            Unacknowledged {queueClock(lead.assignment?.assignedAt ?? null)}
+          <Text size="small" weight="semibold" style={{ color: pastSla ? color.alert : color.warning }}>
+            Unacknowledged{' '}
+            <Text size="small" weight="semibold" numeric style={{ color: pastSla ? color.alert : color.warning }}>
+              {queueClock(lead.assignment?.assignedAt ?? null)}
+            </Text>
             {pastSla ? ' · past SLA' : ''}
           </Text>
         ) : null}

@@ -6,10 +6,11 @@ import type { Project, Salesperson } from '@/api/types';
 import { Button } from '@/design/Button';
 import { ErrorState, InlineNotice } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, hitSlop, radius, space } from '@/design/tokens';
+import { colWidth, color, hitSlop, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, MoneyField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
+import { countLabel } from '@/desk/safe';
 import { useProjects, useSalespeople, useSaveProject, useSetProjectSalespeople } from '@/manage/hooks';
 
 const UNIT_SUGGESTIONS = ['Apartment', 'Villa', 'Townhouse', 'Duplex', 'Studio', 'Chalet', 'Commercial'];
@@ -65,7 +66,7 @@ export default function ProjectsScreen() {
     {
       key: 'name',
       header: 'Project',
-      width: 220,
+      width: colWidth.long,
       sortValue: (project) => project.projectName,
       render: (project) => (
         <Text size="small" weight="semibold" autoDirection numberOfLines={1}>
@@ -76,7 +77,7 @@ export default function ProjectsScreen() {
     {
       key: 'location',
       header: 'Location',
-      width: 180,
+      width: colWidth.medium,
       sortValue: (project) => project.location,
       render: (project) => (
         <Text size="small" tone={project.location ? 'muted' : 'faint'} autoDirection numberOfLines={1}>
@@ -87,7 +88,7 @@ export default function ProjectsScreen() {
     {
       key: 'active',
       header: 'Status',
-      width: 100,
+      width: colWidth.num,
       sortValue: (project) => (project.active ? 1 : 0),
       render: (project) => (
         <Text size="small" tone={project.active ? 'default' : 'faint'}>
@@ -98,7 +99,7 @@ export default function ProjectsScreen() {
     {
       key: 'starting',
       header: 'From',
-      width: 140,
+      width: colWidth.medium,
       numeric: true,
       sortValue: (project) => project.startingPrice,
       render: (project) => (
@@ -110,7 +111,7 @@ export default function ProjectsScreen() {
     {
       key: 'max',
       header: 'To',
-      width: 140,
+      width: colWidth.medium,
       numeric: true,
       sortValue: (project) => project.maxPrice,
       render: (project) => (
@@ -122,7 +123,7 @@ export default function ProjectsScreen() {
     {
       key: 'units',
       header: 'Unit types',
-      width: 200,
+      width: colWidth.name,
       render: (project) =>
         project.unitTypes.length === 0 ? (
           <Text size="small" tone="faint">
@@ -137,7 +138,7 @@ export default function ProjectsScreen() {
     {
       key: 'salespeople',
       header: 'Salespeople',
-      width: 230,
+      width: colWidth.long,
       sortValue: (project) => (project.salespersonIds ?? []).length,
       render: (project) =>
         (project.salespersonIds ?? []).length === 0 ? (
@@ -156,7 +157,7 @@ export default function ProjectsScreen() {
       // itself is not pressable on this table.
       key: 'actions',
       header: 'Actions',
-      width: 150,
+      width: colWidth.medium,
       render: (project) => (
         <View style={{ flexDirection: 'row', gap: space.lg }}>
           <Pressable accessibilityRole="button" onPress={() => open(project)} hitSlop={hitSlop}>
@@ -194,9 +195,12 @@ export default function ProjectsScreen() {
           onRetry={() => void projects.refetch()}
         />
       ) : (
-        <Section title={`${projects.data?.projects?.length ?? 0} projects`}>
+        <Section title={`${countLabel(projects.data?.projects?.length)} projects`}>
           <DataTable
             rows={projects.data?.projects ?? []}
+            loading={projects.isLoading}
+            emptyActionLabel="Add project"
+            onEmptyAction={() => open()}
             keyOf={(project) => project.projectId}
             initialSort={{ key: 'name', direction: 'asc' }}
             emptyTitle="No projects yet"
