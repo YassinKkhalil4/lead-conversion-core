@@ -34,7 +34,7 @@ export function Skeleton({
           borderRadius: radius.sm,
           backgroundColor: pulse.interpolate({
             inputRange: [0, 1],
-            outputRange: [color.surfaceSunken, color.hairline],
+            outputRange: [color.tint, color.line2],
           }),
         },
         style,
@@ -57,7 +57,7 @@ export function LeadRowSkeleton({ urgent = false }: { urgent?: boolean }) {
         height: urgent ? rowHeight.urgent : rowHeight.standard,
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: color.hairline,
+        borderBottomColor: color.line2,
       }}
     >
       {/* The urgency edge marker occupies its width even before we know a row
@@ -123,9 +123,9 @@ export function PageSkeleton() {
               flexBasis: index === 0 ? 280 : 180,
               padding: layout.panel,
               borderWidth: 1,
-              borderColor: color.hairline,
+              borderColor: color.line2,
               borderRadius: radius.sm,
-              backgroundColor: color.surface,
+              backgroundColor: color.paper,
               gap: space.md,
             }}
           >
@@ -138,8 +138,8 @@ export function PageSkeleton() {
 
       <View style={{ gap: layout.rowY }}>
         <Skeleton width={140} height={17} />
-        <View style={{ borderWidth: 1, borderColor: color.hairline, borderRadius: radius.sm, backgroundColor: color.surface, overflow: 'hidden' }}>
-          <View style={{ backgroundColor: color.surfaceSunken, paddingHorizontal: layout.rowX, paddingVertical: layout.headerY }}>
+        <View style={{ borderWidth: 1, borderColor: color.line2, borderRadius: radius.sm, backgroundColor: color.paper, overflow: 'hidden' }}>
+          <View style={{ backgroundColor: color.tint, paddingHorizontal: layout.rowX, paddingVertical: layout.headerY }}>
             <Skeleton width={90} height={11} />
           </View>
           {[0, 1, 2, 3].map((index) => (
@@ -151,7 +151,7 @@ export function PageSkeleton() {
                 minHeight: layout.tableRow,
                 justifyContent: 'center',
                 borderBottomWidth: index === 3 ? 0 : 1,
-                borderBottomColor: color.hairline,
+                borderBottomColor: color.line2,
               }}
             >
               <Skeleton width={`${58 - index * 6}%`} height={13} />

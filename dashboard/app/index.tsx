@@ -11,7 +11,7 @@ export default function Index() {
   if (status === 'restoring') {
     // The shape of the inbox, so the first paint does not jump.
     return (
-      <View style={{ flex: 1, backgroundColor: color.paper, paddingTop: layout.queueHeader }}>
+      <View style={{ flex: 1, backgroundColor: color.tint, paddingTop: layout.queueHeader }}>
         <LeadListSkeleton rows={6} />
       </View>
     );

@@ -94,7 +94,7 @@ export function DataTable<T>({
             style={{
               flexDirection: 'row',
               borderBottomWidth: index === 4 ? 0 : 1,
-              borderBottomColor: color.hairline,
+              borderBottomColor: color.line2,
             }}
           >
             {columns.map((column) => (
@@ -155,7 +155,7 @@ export function DataTable<T>({
 
           const border = {
             borderBottomWidth: index === sorted.length - 1 ? 0 : 1,
-            borderBottomColor: color.hairline,
+            borderBottomColor: color.line2,
           } as const;
 
           // A table without a row action renders plain Views, so a cell may
@@ -164,7 +164,7 @@ export function DataTable<T>({
             return (
               <View
                 key={keyOf(row)}
-                style={{ flexDirection: 'row', backgroundColor: color.surface, ...border }}
+                style={{ flexDirection: 'row', backgroundColor: color.paper, ...border }}
               >
                 {cells}
               </View>
@@ -178,7 +178,7 @@ export function DataTable<T>({
               onPress={() => onRowPress(row)}
               style={({ pressed }) => ({
                 flexDirection: 'row',
-                backgroundColor: pressed ? color.surfacePressed : color.surface,
+                backgroundColor: pressed ? color.accentBg : color.paper,
                 ...border,
               })}
             >
@@ -205,10 +205,10 @@ function Frame({ children, minWidth }: { children: ReactNode; minWidth?: number 
           flex: 1,
           minWidth,
           borderWidth: 1,
-          borderColor: color.hairline,
-          borderRadius: radius.sm,
+          borderColor: color.line,
+          borderRadius: radius.md,
           overflow: 'hidden',
-          backgroundColor: color.surface,
+          backgroundColor: color.paper,
         }}
       >
         {children}
@@ -227,7 +227,7 @@ function HeaderRow<T>({
   onSort?: (update: (current: { key: string; direction: Direction } | null) => { key: string; direction: Direction }) => void;
 }) {
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: color.surfaceSunken }}>
+    <View style={{ flexDirection: 'row', backgroundColor: color.paper }}>
       {columns.map((column) => {
         const sortable = Boolean(column.sortValue) && Boolean(onSort);
         const active = sort?.key === column.key;
@@ -250,11 +250,12 @@ function HeaderRow<T>({
               // a first row that happens to be shouting.
               paddingVertical: layout.headerY,
               borderBottomWidth: 1,
-              borderBottomColor: color.hairlineStrong,
+              borderBottomColor: color.line,
+              backgroundColor: color.paper,
               alignItems: column.numeric ? 'flex-end' : 'flex-start',
             }}
           >
-            <Text size="micro" weight="bold" tone={active ? 'default' : 'muted'} style={{ letterSpacing: tracking.label }}>
+            <Text size="micro" weight="medium" numeric tone={active ? 'default' : 'faint'} style={{ letterSpacing: tracking.label }}>
               {column.header.toUpperCase()}
               {active ? (sort?.direction === 'asc' ? ' ↑' : ' ↓') : ''}
             </Text>

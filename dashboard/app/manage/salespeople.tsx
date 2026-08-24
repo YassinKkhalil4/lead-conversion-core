@@ -182,7 +182,7 @@ const columns: Column<Salesperson>[] = [
         size="small"
         numeric
         weight="semibold"
-        style={atLeast(person.activeAssignmentCount, person.capacityLimit) ? { color: color.warning } : undefined}
+        style={atLeast(person.activeAssignmentCount, person.capacityLimit) ? { color: color.warn } : undefined}
       >
         {ratioLabel(person.activeAssignmentCount, person.capacityLimit)}
       </Text>
@@ -218,7 +218,7 @@ function Tags({ values }: { values: string[] }) {
         <View
           key={value}
           style={{
-            backgroundColor: color.surfaceSunken,
+            backgroundColor: color.tint,
             borderRadius: radius.sm,
             paddingHorizontal: space.sm,
             paddingVertical: 1,
@@ -273,7 +273,7 @@ function SalespersonForm({
         <Pressable
           onPress={(event) => event.stopPropagation()}
           style={{
-            backgroundColor: color.surface,
+            backgroundColor: color.paper,
             borderRadius: radius.md,
             maxWidth: 760,
             width: '100%',

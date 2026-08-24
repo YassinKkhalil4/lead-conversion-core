@@ -1,13 +1,18 @@
 import { ActivityIndicator, Pressable, View, type ViewStyle } from 'react-native';
 import { Text } from './Text';
-import { color, radius, space } from './tokens';
+import { color, fontSize, radius, space } from './tokens';
 
 /**
- * There is one dominant action per screen and it is `primary`. It is solid ink
- * rather than a coloured accent, because colour in this app means temperature
- * or lateness and a button is neither. Everything else is a `text` control.
+ * The landing page's `.btn`.
+ *
+ * `.btn`         — 15px/500, padding .72rem 1.1rem, radius --r, 1px border
+ * `.btn-primary` — background --accent, white text, --accent-dk when pressed
+ * `.btn-ghost`   — --line border, ink text, --ink border when pressed
+ * `.mini-btn`    — 13px/500, .45rem .7rem, --accent border and text, radius 3
+ *
+ * `mini` is what the landing page's own queue mockup uses for the row action.
  */
-type Variant = 'primary' | 'outline' | 'text';
+type Variant = 'primary' | 'outline' | 'mini' | 'text';
 
 export function Button({
   label,
@@ -29,14 +34,18 @@ export function Button({
   style?: ViewStyle;
 }) {
   const inactive = disabled || busy;
-  const height = size === 'large' ? 54 : 44;
 
-  const surface =
+  const skin =
     variant === 'primary'
-      ? { bg: color.ink, pressed: color.inkStrong, fg: color.inkInverse, border: color.ink }
+      ? { bg: color.accent, pressed: color.accentDk, fg: color.onAccent, border: color.accent }
       : variant === 'outline'
-        ? { bg: color.surface, pressed: color.surfacePressed, fg: color.ink, border: color.hairlineStrong }
-        : { bg: 'transparent', pressed: 'transparent', fg: color.inkMuted, border: 'transparent' };
+        ? { bg: color.paper, pressed: color.tint, fg: color.ink, border: color.line }
+        : variant === 'mini'
+          ? { bg: color.paper, pressed: color.accentBg, fg: color.accent, border: color.accent }
+          : { bg: 'transparent', pressed: 'transparent', fg: color.ink2, border: 'transparent' };
+
+  const mini = variant === 'mini';
+  const plain = variant === 'text';
 
   return (
     <Pressable
@@ -46,27 +55,26 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         {
-          minHeight: variant === 'text' ? 36 : height,
+          minHeight: plain ? 32 : mini ? 30 : size === 'large' ? 48 : 40,
           flexGrow: grow ? 1 : 0,
           flexBasis: grow ? 0 : 'auto',
-          paddingHorizontal: variant === 'text' ? 0 : space.lg,
-          borderRadius: variant === 'text' ? 0 : radius.md,
-          borderWidth: variant === 'text' ? 0 : 1,
-          borderColor: surface.border,
-          backgroundColor: pressed ? surface.pressed : surface.bg,
-          alignItems: variant === 'text' ? 'flex-start' : 'center',
+          paddingHorizontal: plain ? 0 : mini ? 11 : 18,
+          borderRadius: plain ? 0 : mini ? radius.sm : radius.md,
+          borderWidth: plain ? 0 : 1,
+          borderColor: skin.border,
+          backgroundColor: pressed ? skin.pressed : skin.bg,
+          alignItems: plain ? 'flex-start' : 'center',
           justifyContent: 'center',
-          opacity: inactive ? 0.4 : 1,
+          opacity: inactive ? 0.45 : 1,
         },
         style,
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-        {busy ? <ActivityIndicator size="small" color={surface.fg} /> : null}
+        {busy ? <ActivityIndicator size="small" color={skin.fg} /> : null}
         <Text
-          size={size === 'large' ? 'large' : 'small'}
-          weight={variant === 'text' ? 'medium' : 'semibold'}
-          style={{ color: surface.fg }}
+          weight="medium"
+          style={{ color: skin.fg, fontSize: mini || plain ? fontSize.small : fontSize.body }}
         >
           {label}
         </Text>

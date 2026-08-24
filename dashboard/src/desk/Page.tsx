@@ -2,10 +2,13 @@ import { type ReactNode } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/design/Text';
-import { color, layout, radius, space } from '@/design/tokens';
+import { color, layout, radius, space, tracking } from '@/design/tokens';
 
 /** Below this the side navigation collapses into a drawer. */
 export const DESK_BREAKPOINT = 900;
+
+/** The landing page's `--wrap`. */
+const WRAP = 1120;
 
 export function useIsDesk(): boolean {
   const { width } = useWindowDimensions();
@@ -13,9 +16,8 @@ export function useIsDesk(): boolean {
 }
 
 /**
- * The management surfaces are read at a desk, so they get a wide measure and
- * generous spacing rather than the phone-first density of the queue. The tokens
- * and type scale are shared, which is what keeps them one product.
+ * A page on the landing page's tinted section ground, with its content held to
+ * the same `--wrap` measure the site uses.
  */
 export function Page({
   title,
@@ -30,36 +32,28 @@ export function Page({
 }) {
   const insets = useSafeAreaInsets();
   const isDesk = useIsDesk();
+  const pad = isDesk ? layout.pageDesk : layout.pagePhone;
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: color.paper }}
+      style={{ flex: 1, backgroundColor: color.tint }}
       contentContainerStyle={{
-        padding: isDesk ? layout.pageDesk : layout.pagePhone,
-        paddingTop: (isDesk ? layout.pageDesk : layout.pagePhone) + (isDesk ? 0 : insets.top),
+        padding: pad,
+        paddingTop: pad + (isDesk ? 0 : insets.top),
         paddingBottom: insets.bottom + space.huge,
         gap: layout.sectionGap,
-        maxWidth: 1280,
+        maxWidth: WRAP,
         width: '100%',
-        // Centred, so an ultrawide window does not pin the page to the left
-        // edge with the measure's worth of dead space beside it.
         alignSelf: 'center',
       }}
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          alignItems: 'flex-end',
-          gap: space.lg,
-        }}
-      >
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: space.lg }}>
         <View style={{ flexGrow: 1, flexBasis: 260, gap: layout.stack }}>
-          <Text size="title" weight="bold">
+          <Text size="headline" weight="semibold">
             {title}
           </Text>
           {subtitle ? (
-            <Text size="small" tone="muted">
+            <Text size="body" tone="muted">
               {subtitle}
             </Text>
           ) : null}
@@ -83,12 +77,12 @@ export function Section({
 }) {
   return (
     <View style={{ gap: layout.rowY }}>
-      <View style={{ gap: 2 }}>
-        <Text size="large" weight="semibold">
+      <View style={{ gap: layout.stack }}>
+        <Text size="title" weight="semibold">
           {title}
         </Text>
         {note ? (
-          <Text size="small" tone="muted">
+          <Text size="small" tone="faint">
             {note}
           </Text>
         ) : null}
@@ -98,19 +92,40 @@ export function Section({
   );
 }
 
-export function Panel({ children }: { children: ReactNode }) {
+/**
+ * The landing page's `.panel`: paper ground, one hairline, 4px corners.
+ * `head` renders its `.panel-head` — mono, uppercase, opened up, ink-3.
+ */
+export function Panel({ head, children }: { head?: string; children: ReactNode }) {
   return (
     <View
       style={{
-        padding: layout.panel,
-        gap: layout.panel,
+        backgroundColor: color.paper,
         borderWidth: 1,
-        borderColor: color.hairline,
-        borderRadius: radius.sm,
-        backgroundColor: color.surface,
+        borderColor: color.line,
+        borderRadius: radius.md,
+        overflow: 'hidden',
       }}
     >
-      {children}
+      {head ? <PanelHead>{head}</PanelHead> : null}
+      <View style={{ padding: layout.panel, gap: layout.panel }}>{children}</View>
+    </View>
+  );
+}
+
+export function PanelHead({ children }: { children: string }) {
+  return (
+    <View
+      style={{
+        paddingHorizontal: layout.rowX,
+        paddingVertical: layout.headerY,
+        borderBottomWidth: 1,
+        borderBottomColor: color.line2,
+      }}
+    >
+      <Text size="micro" tone="faint" numeric style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
+        {children}
+      </Text>
     </View>
   );
 }

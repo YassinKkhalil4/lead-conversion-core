@@ -9,7 +9,7 @@ export default function LeadsLayout() {
 
   if (status === 'restoring') {
     return (
-      <View style={{ flex: 1, backgroundColor: color.paper, paddingTop: layout.queueHeader }}>
+      <View style={{ flex: 1, backgroundColor: color.tint, paddingTop: layout.queueHeader }}>
         <LeadListSkeleton rows={6} />
       </View>
     );
@@ -17,5 +17,5 @@ export default function LeadsLayout() {
 
   if (status === 'anonymous') return <Redirect href="/login" />;
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.paper } }} />;
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.tint } }} />;
 }

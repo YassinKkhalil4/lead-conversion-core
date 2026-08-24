@@ -67,7 +67,7 @@ export default function NotificationsScreen() {
       {query.isLoading ? (
         <View style={{ gap: space.lg }}>
           {[0, 1, 2, 3].map((index) => (
-            <View key={index} style={{ gap: space.sm, padding: space.lg, borderWidth: 1, borderColor: color.hairline, backgroundColor: color.surface }}>
+            <View key={index} style={{ gap: space.sm, padding: space.lg, borderWidth: 1, borderColor: color.line2, backgroundColor: color.paper }}>
               <Skeleton width={200} height={14} />
               <Skeleton width={120} height={11} />
             </View>
@@ -81,7 +81,7 @@ export default function NotificationsScreen() {
       ) : (
         grouped.map((group) => (
           <Section key={group.day} title={group.day}>
-            <View style={{ borderWidth: 1, borderColor: color.hairline, backgroundColor: color.surface }}>
+            <View style={{ borderWidth: 1, borderColor: color.line2, backgroundColor: color.paper }}>
               {group.items.map((item, index) => (
                 <Pressable
                   key={item.notificationId}
@@ -95,9 +95,9 @@ export default function NotificationsScreen() {
                     alignItems: 'flex-start',
                     gap: space.lg,
                     padding: space.lg,
-                    backgroundColor: pressed ? color.surfacePressed : 'transparent',
+                    backgroundColor: pressed ? color.line2 : 'transparent',
                     borderBottomWidth: index === group.items.length - 1 ? 0 : 1,
-                    borderBottomColor: color.hairline,
+                    borderBottomColor: color.line2,
                   })}
                 >
                   {/* Unread is a filled marker plus weight, never colour alone. */}
@@ -108,7 +108,7 @@ export default function NotificationsScreen() {
                       marginTop: 6,
                       borderRadius: 4,
                       borderWidth: 1,
-                      borderColor: item.readAt ? color.hairlineStrong : color.ink,
+                      borderColor: item.readAt ? color.line : color.ink,
                       backgroundColor: item.readAt ? 'transparent' : color.ink,
                     }}
                   />
@@ -121,8 +121,8 @@ export default function NotificationsScreen() {
                     </Text>
                   </View>
                   {item.priority === 'high' ? (
-                    <View style={{ backgroundColor: color.alertWash, borderRadius: radius.sm, paddingHorizontal: space.sm, paddingVertical: 1 }}>
-                      <Text size="micro" weight="bold" style={{ color: color.alert }}>
+                    <View style={{ backgroundColor: color.tint, borderRadius: radius.sm, paddingHorizontal: space.sm, paddingVertical: 1 }}>
+                      <Text size="micro" weight="bold" style={{ color: color.warn }}>
                         HIGH
                       </Text>
                     </View>

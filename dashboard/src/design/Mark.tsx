@@ -1,72 +1,98 @@
-import Svg, { Path } from 'react-native-svg';
-import { brand, color } from './tokens';
+import Svg, { Path, Rect, Text as SvgText } from 'react-native-svg';
+import { color } from './tokens';
 
 /**
- * The Kadensio cadence mark.
+ * The logo, matching what the landing page ships.
  *
- * Every value below — the path data, the stroke width, the caps and joins, the
- * opacity ramp — is taken from `assets/kadensio-mark.svg` and its reversed
- * twin. Nothing here is reconstructed: `<Path d="…">` renders the file's own
- * geometry, so the mark cannot drift from the artwork by arithmetic.
- *
- * The ramp is the idea, not decoration. Two chevrons wait, faint; the third
- * arrives solid green. It is never reordered, never equalised, and the terminal
- * chevron is #00B368 on every ground.
+ * Geometry is the `d`, stroke width and cap from
+ * `landing/assets/kadensio-mark.svg` and `kadensio-lockup.svg`, so the header
+ * of the app and the header of the site draw the same artwork.
  */
 
-/** From the source file: `viewBox="0 0 64 64"`. */
-const VIEW_BOX = '0 0 64 64';
-const STROKE_WIDTH = 8;
+const STROKE_WIDTH = 9;
 
-const CHEVRONS = [
-  'M12 20 L24 32 L12 44',
-  'M26 20 L38 32 L26 44',
-  'M40 20 L52 32 L40 44',
+/** From `kadensio-mark.svg`, viewBox 0 0 64 64. */
+const GLYPH = [
+  { d: 'M17 16 V48', accent: false },
+  { d: 'M29 30 L47 14', accent: false },
+  { d: 'M29 34 L47 50', accent: true },
 ] as const;
 
-/** Light ground, then dark. Both pairs are the values the two files carry. */
-const RAMP = {
-  light: [0.28, 0.6],
-  dark: [0.25, 0.55],
-} as const;
+function Glyph({ reversed }: { reversed: boolean }) {
+  const base = reversed ? color.tint : color.ink;
+  return (
+    <>
+      {GLYPH.map((stroke) => (
+        <Path
+          key={stroke.d}
+          d={stroke.d}
+          fill="none"
+          stroke={stroke.accent ? color.accentLt : base}
+          strokeWidth={STROKE_WIDTH}
+          strokeLinecap="round"
+        />
+      ))}
+    </>
+  );
+}
+
+/** Mark alone. Use where the name is already present. */
+export function Mark({ size = 26, reversed = false }: { size?: number; reversed?: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityRole="image" accessibilityLabel="Kadensio">
+      <Glyph reversed={reversed} />
+    </Svg>
+  );
+}
 
 /**
- * @param size Rendered height in points. The brand's floor for the
- *   three-chevron mark is 24 — below that the faded chevrons merge and the
- *   two-chevron small icon should be used instead.
+ * Mark plus wordmark, at the lockup's own 256 × 64 proportions. Scale by
+ * height and let the width follow, exactly as the landing header does.
  */
-export function Mark({ size = 24, reversed = false }: { size?: number; reversed?: boolean }) {
-  const base = reversed ? color.inkInverse : color.ink;
-  const [faint, mid] = reversed ? RAMP.dark : RAMP.light;
-
+export function Lockup({ height = 26, reversed = false }: { height?: number; reversed?: boolean }) {
   return (
-    <Svg width={size} height={size} viewBox={VIEW_BOX} accessibilityRole="image" accessibilityLabel="Kadensio">
-      <Path
-        d={CHEVRONS[0]}
-        fill="none"
-        stroke={base}
-        strokeWidth={STROKE_WIDTH}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity={faint}
-      />
-      <Path
-        d={CHEVRONS[1]}
-        fill="none"
-        stroke={base}
-        strokeWidth={STROKE_WIDTH}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity={mid}
-      />
-      <Path
-        d={CHEVRONS[2]}
-        fill="none"
-        stroke={brand.green}
-        strokeWidth={STROKE_WIDTH}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <Svg
+      width={height * (256 / 64)}
+      height={height}
+      viewBox="0 0 256 64"
+      accessibilityRole="image"
+      accessibilityLabel="Kadensio"
+    >
+      <Glyph reversed={reversed} />
+      {/* The source sets `dominant-baseline: central` at y=32; that attribute
+          is unreliable across react-native-svg targets, so the baseline is
+          resolved here instead — same result on every platform. */}
+      <SvgText
+        x={74}
+        y={43}
+        fill={reversed ? color.tint : color.ink}
+        fontSize={33}
+        fontWeight="600"
+        letterSpacing={-0.8}
+        fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif"
+      >
+        kadensio
+      </SvgText>
+    </Svg>
+  );
+}
+
+/** Rounded tile, from `kadensio-icon.svg`. */
+export function Icon({ size = 32 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityRole="image" accessibilityLabel="Kadensio">
+      <Rect width={64} height={64} rx={14} fill={color.ink} />
+      {GLYPH.map((stroke) => (
+        <Path
+          key={stroke.d}
+          d={stroke.d}
+          fill="none"
+          stroke={stroke.accent ? color.accentLt : color.tint}
+          strokeWidth={7}
+          strokeLinecap="round"
+          transform="translate(32 32) scale(0.78) translate(-32 -32)"
+        />
+      ))}
     </Svg>
   );
 }

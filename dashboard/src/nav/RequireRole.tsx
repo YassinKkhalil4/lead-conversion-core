@@ -20,7 +20,7 @@ export function RequireRole({ allowed, children }: { allowed: Role[]; children: 
 
   if (status === 'restoring') {
     return (
-      <View style={{ flex: 1, backgroundColor: color.paper }}>
+      <View style={{ flex: 1, backgroundColor: color.tint }}>
         <PageSkeleton />
       </View>
     );

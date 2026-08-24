@@ -61,13 +61,15 @@ export function ErrorState({
         marginVertical: space.xl,
         padding: space.lg,
         gap: space.sm,
-        backgroundColor: color.alertWash,
+        backgroundColor: color.tint,
+        borderWidth: 1,
+        borderColor: color.line,
         borderLeftWidth: 3,
-        borderLeftColor: color.alert,
-        borderRadius: radius.sm,
+        borderLeftColor: color.warn,
+        borderRadius: radius.md,
       }}
     >
-      <Text size="small" weight="semibold" style={{ color: color.alert }}>
+      <Text size="small" weight="semibold" style={{ color: color.warn }}>
         {title}
       </Text>
       <Text size="small" tone="muted">
@@ -98,12 +100,12 @@ export function InlineNotice({
       style={{
         paddingHorizontal: space.xl,
         paddingVertical: space.md,
-        backgroundColor: isWarning ? color.alertWash : color.surfaceSunken,
+        backgroundColor: isWarning ? color.tint : color.tint,
         borderBottomWidth: 1,
-        borderBottomColor: isWarning ? color.alert : color.hairline,
+        borderBottomColor: isWarning ? color.warn : color.line2,
       }}
     >
-      <Text size="small" style={{ color: isWarning ? color.alert : color.inkMuted }}>
+      <Text size="small" style={{ color: isWarning ? color.warn : color.ink2 }}>
         {text}
       </Text>
     </View>
