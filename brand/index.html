@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kadensio Brand Guidelines</title>
+<meta name="description" content="The cadence mark, the palette, the type and the voice — how Kadensio is put together, and the rules for using it.">
+<link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
+<style>
+/* ============================================================
+   Kadensio brand guidelines
+   The page is built from the same tokens it documents.
+   ============================================================ */
+
+:root {
+  --ink:       #0C1F1A;
+  --ink-2:     #46534E;
+  --ink-3:     #6D7B76;
+  --paper:     #FFFFFF;
+  --surface:   #F5F7F6;
+  --line:      #E3E7E5;
+  --line-soft: #EEF1EF;
+  --accent:    #007A47;
+  --accent-bg: #E8F5EE;
+
+  --brand-ink:   #0C1F1A;
+  --brand-green: #00B368;
+
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --wrap: 940px;
+  --gut: clamp(1.25rem, 4vw, 2.75rem);
+  --sec: clamp(3.25rem, 6vw, 5rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink:       #F1F4F3;
+    --ink-2:     #AEBCB7;
+    --ink-3:     #849690;
+    --paper:     #0C1F1A;
+    --surface:   #122A24;
+    --line:      #21382F;
+    --line-soft: #1A2F28;
+    --accent:    #00B368;
+    --accent-bg: #123326;
+  }
+}
+:root[data-theme="dark"] {
+  --ink:       #F1F4F3;
+  --ink-2:     #AEBCB7;
+  --ink-3:     #849690;
+  --paper:     #0C1F1A;
+  --surface:   #122A24;
+  --line:      #21382F;
+  --line-soft: #1A2F28;
+  --accent:    #00B368;
+  --accent-bg: #123326;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.022em; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(1.9rem, 1.4rem + 2.2vw, 3rem); letter-spacing: -0.032em; }
+h2 { font-size: clamp(1.35rem, 1.1rem + 1.1vw, 1.9rem); letter-spacing: -0.026em; }
+h3 { font-size: 1rem; letter-spacing: -0.01em; }
+p, ul, ol { margin: 0; }
+a { color: var(--accent); text-underline-offset: 2px; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+.wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gut); }
+
+/* ---------- masthead ---------- */
+
+.masthead { padding: clamp(2.5rem, 6vw, 4.5rem) 0 0; }
+.masthead-logo { display: block; height: 30px; width: auto; }
+.masthead h1 { margin-top: clamp(2rem, 5vw, 3.25rem); max-width: 16ch; }
+.masthead .standfirst {
+  margin-top: 1.25rem; max-width: 60ch;
+  font-size: clamp(1.0625rem, 1rem + .35vw, 1.2rem);
+  line-height: 1.55; color: var(--ink-2); text-wrap: pretty;
+}
+.meta {
+  display: flex; flex-wrap: wrap; gap: .5rem 1.5rem;
+  margin-top: 2.25rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: .75rem;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* ---------- sections ---------- */
+
+section { padding: var(--sec) 0; border-top: 1px solid var(--line); }
+section:first-of-type { border-top: 0; }
+.eyebrow {
+  font-family: var(--mono); font-size: .75rem; font-weight: 500;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: 1rem;
+}
+.lede { margin-top: 1.15rem; max-width: 66ch; color: var(--ink-2); line-height: 1.65; text-wrap: pretty; }
+.lede + .lede { margin-top: .9rem; }
+
+.stack { display: grid; gap: clamp(1.5rem, 3vw, 2.25rem); margin-top: clamp(2rem, 4vw, 2.75rem); }
+
+/* ---------- specimen panels ---------- */
+/* Fixed colours on purpose: a specimen must show the asset on its real
+   ground, whatever theme the reader is in. */
+
+.spec {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(1.5rem, 5vw, 4rem); flex-wrap: wrap;
+  padding: clamp(1.75rem, 5vw, 3.25rem);
+  border-radius: 6px;
+  min-height: 150px;
+}
+.spec-light { background: #FFFFFF; border: 1px solid #E3E7E5; }
+.spec-dark  { background: #0C1F1A; border: 1px solid #21382F; }
+.spec-tint  { background: #F5F7F6; border: 1px solid #E3E7E5; }
+.spec svg, .spec img { display: block; }
+
+.spec-cap {
+  font-family: var(--mono); font-size: .6875rem;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); margin-top: .75rem;
+}
+.spec-item { text-align: center; }
+.spec-item .spec-cap { margin-top: 1rem; }
+.spec-light .spec-cap { color: #6D7B76; }
+.spec-dark  .spec-cap { color: #849690; }
+
+/* ---------- asset table ---------- */
+
+.table-scroll { overflow-x: auto; margin-top: clamp(2rem, 4vw, 2.75rem); }
+table { width: 100%; border-collapse: collapse; min-width: 560px; }
+caption { text-align: left; font-size: .8125rem; color: var(--ink-3); margin-bottom: .85rem; }
+th, td { text-align: left; padding: .8rem 1rem .8rem 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+thead th {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 500;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+  border-bottom-color: var(--line);
+}
+td code, .file { font-family: var(--mono); font-size: .8125rem; color: var(--ink); white-space: nowrap; }
+td p { font-size: .9375rem; color: var(--ink-2); line-height: 1.5; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: .8125rem; }
+
+/* ---------- swatches ---------- */
+
+.swatches {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-top: clamp(2rem, 4vw, 2.75rem);
+}
+.sw { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.sw-chip { height: 84px; }
+.sw-body { padding: .85rem 1rem 1rem; }
+.sw-name { font-size: .9375rem; font-weight: 600; }
+.sw-hex { font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); margin-top: .2rem; }
+.sw-use { font-size: .8125rem; color: var(--ink-2); margin-top: .55rem; line-height: 1.45; }
+
+/* ---------- do / don't ---------- */
+
+.rules { display: grid; gap: 1px; margin-top: clamp(2rem, 4vw, 2.75rem);
+         background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+@media (min-width: 720px) { .rules { grid-template-columns: 1fr 1fr; } }
+.rule { background: var(--paper); padding: 1.25rem 1.35rem 1.4rem; }
+.rule-tag {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase;
+}
+.rule-do   .rule-tag { color: var(--accent); }
+.rule-dont .rule-tag { color: #C2410C; }
+:root[data-theme="dark"] .rule-dont .rule-tag { color: #F2915C; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rule-dont .rule-tag { color: #F2915C; } }
+.rule h3 { margin-top: .55rem; }
+.rule p { margin-top: .45rem; font-size: .9375rem; color: var(--ink-2); line-height: 1.55; }
+
+/* ---------- callout ---------- */
+
+.note {
+  margin-top: clamp(2rem, 4vw, 2.75rem);
+  background: var(--accent-bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 1.15rem 1.35rem;
+}
+.note p { font-size: .9375rem; line-height: 1.6; color: var(--ink-2); }
+.note p + p { margin-top: .7rem; }
+.note strong { color: var(--ink); }
+
+/* ---------- clear space diagram ---------- */
+
+.clearspace { display: flex; justify-content: center; padding: clamp(1.5rem, 4vw, 2.5rem); }
+.clearspace svg { width: 100%; max-width: 460px; height: auto; }
+
+/* ---------- type specimen ---------- */
+
+.typerow { border-top: 1px solid var(--line-soft); padding: 1.1rem 0; display: grid; gap: .4rem; }
+.typerow:first-child { border-top: 0; }
+.typerow-label {
+  font-family: var(--mono); font-size: .6875rem;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+.t-h1 { font-size: clamp(1.6rem, 1.2rem + 2vw, 2.6rem); font-weight: 600; letter-spacing: -0.032em; line-height: 1.12; }
+.t-h2 { font-size: clamp(1.25rem, 1.05rem + 1vw, 1.75rem); font-weight: 600; letter-spacing: -0.026em; }
+.t-body { font-size: 1.0625rem; line-height: 1.6; color: var(--ink-2); max-width: 60ch; }
+.t-mono { font-family: var(--mono); font-size: .9375rem; letter-spacing: .01em; }
+.t-label { font-family: var(--mono); font-size: .75rem; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); }
+
+/* ---------- voice list ---------- */
+
+.voice { display: grid; gap: 1px; margin-top: clamp(2rem, 4vw, 2.75rem);
+         background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.voice li { background: var(--paper); padding: 1.1rem 1.35rem; list-style: none; }
+.voice-h { font-size: .9375rem; font-weight: 600; }
+.voice-p { font-size: .9375rem; color: var(--ink-2); margin-top: .35rem; line-height: 1.55; }
+.voice-eg { font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); margin-top: .5rem; line-height: 1.5; }
+
+/* ---------- footer ---------- */
+
+footer { border-top: 1px solid var(--line); padding: 2.5rem 0 3.5rem; }
+.foot-inner { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center; justify-content: space-between; }
+.foot-logo { height: 22px; width: auto; display: block; }
+.foot-meta { font-size: .8125rem; color: var(--ink-3); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <svg class="masthead-logo" viewBox="0 0 221 64" role="img" aria-label="Kadensio">
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+        <path d="M12 20 L24 32 L12 44" stroke="currentColor" opacity="0.28"/>
+        <path d="M26 20 L38 32 L26 44" stroke="currentColor" opacity="0.6"/>
+        <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+      </g>
+      <text x="76" y="32" dominant-baseline="central"
+            font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+            font-size="33" font-weight="600" letter-spacing="-0.8"
+            textLength="136.5" lengthAdjust="spacingAndGlyphs"
+            fill="currentColor">kadensio</text>
+    </svg>
+
+    <h1>Brand guidelines</h1>
+    <p class="standfirst">Kadensio answers property leads on WhatsApp in seconds. The identity has one job: look like infrastructure that is already running, not like a startup asking for attention.</p>
+
+    <p class="meta">
+      <span>Cadence mark</span>
+      <span>Six assets</span>
+      <span>Two greens, one ink</span>
+    </p>
+  </header>
+
+  <main>
+
+    <section aria-labelledby="idea">
+      <p class="eyebrow">The idea</p>
+      <h2 id="idea">Three beats, then the reply.</h2>
+      <p class="lede">The name carries it: <em>cadence</em> — rhythm, interval, the beat of a reply. The mark is that beat drawn out. Two chevrons wait in the background, faint. The third arrives in full green. It is the shape of a message answered before the sender has put the phone down.</p>
+      <p class="lede">This is why the opacity ramp is not decoration and cannot be reordered. The fade running into the solid <em>is</em> the idea. Flatten the three to one weight and the mark becomes a generic fast-forward icon.</p>
+
+      <div class="stack">
+        <div>
+          <div class="spec spec-light">
+            <svg width="132" height="132" viewBox="0 0 64 64" role="img" aria-label="Kadensio mark">
+              <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+                <path d="M12 20 L24 32 L12 44" stroke="#0C1F1A" opacity="0.28"/>
+                <path d="M26 20 L38 32 L26 44" stroke="#0C1F1A" opacity="0.6"/>
+                <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+              </g>
+            </svg>
+          </div>
+          <p class="spec-cap">The mark &middot; 28% &rarr; 60% &rarr; solid green</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="assets">
+      <p class="eyebrow">Assets</p>
+      <h2 id="assets">Six files, and when each one is right.</h2>
+      <p class="lede">Everything ships as SVG. There is no raster logo, and none should be made — export from these when a fixed-size PNG is genuinely required.</p>
+
+      <div class="table-scroll">
+        <table>
+          <caption>All paths relative to <code>brand/assets/</code>. The landing page carries its own copy in <code>landing/assets/</code>.</caption>
+          <thead>
+            <tr><th scope="col">File</th><th scope="col">Use it for</th><th scope="col">Min size</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="file">kadensio-lockup.svg</span></td>
+              <td><p>The default. Mark plus wordmark, for light backgrounds.</p></td>
+              <td class="num">18px tall</td>
+            </tr>
+            <tr>
+              <td><span class="file">kadensio-lockup-reversed.svg</span></td>
+              <td><p>The same lockup on brand ink or any dark ground.</p></td>
+              <td class="num">18px tall</td>
+            </tr>
+            <tr>
+              <td><span class="file">kadensio-mark.svg</span></td>
+              <td><p>Mark alone, light grounds — where the name is already present.</p></td>
+              <td class="num">24px</td>
+            </tr>
+            <tr>
+              <td><span class="file">kadensio-mark-reversed.svg</span></td>
+              <td><p>Mark alone, dark grounds.</p></td>
+              <td class="num">24px</td>
+            </tr>
+            <tr>
+              <td><span class="file">kadensio-icon.svg</span></td>
+              <td><p>Rounded tile. Home-screen icon, app listing, social avatar.</p></td>
+              <td class="num">32px</td>
+            </tr>
+            <tr>
+              <td><span class="file">kadensio-icon-small.svg</span></td>
+              <td><p>Two-chevron tile for favicons and anything under 32px.</p></td>
+              <td class="num">16px</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="lockup">
+      <p class="eyebrow">The lockup</p>
+      <h2 id="lockup">Fixed proportions, two finishes.</h2>
+      <p class="lede">The lockup is a single locked artwork at <span class="file">221&nbsp;&times;&nbsp;64</span>. Scale it by height and let the width follow. Never rebuild it by setting the wordmark next to the mark yourself — the gap and the optical alignment are already resolved.</p>
+
+      <div class="stack">
+        <div>
+          <div class="spec spec-light">
+            <svg width="280" height="81" viewBox="0 0 221 64" role="img" aria-label="Kadensio">
+              <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+                <path d="M12 20 L24 32 L12 44" stroke="#0C1F1A" opacity="0.28"/>
+                <path d="M26 20 L38 32 L26 44" stroke="#0C1F1A" opacity="0.6"/>
+                <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+              </g>
+              <text x="76" y="32" dominant-baseline="central"
+                    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+                    font-size="33" font-weight="600" letter-spacing="-0.8"
+                    textLength="136.5" lengthAdjust="spacingAndGlyphs" fill="#0C1F1A">kadensio</text>
+            </svg>
+          </div>
+          <p class="spec-cap">Primary &middot; on paper</p>
+        </div>
+
+        <div>
+          <div class="spec spec-dark">
+            <svg width="280" height="81" viewBox="0 0 221 64" role="img" aria-label="Kadensio">
+              <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+                <path d="M12 20 L24 32 L12 44" stroke="#FFFFFF" opacity="0.25"/>
+                <path d="M26 20 L38 32 L26 44" stroke="#FFFFFF" opacity="0.55"/>
+                <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+              </g>
+              <text x="76" y="32" dominant-baseline="central"
+                    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+                    font-size="33" font-weight="600" letter-spacing="-0.8"
+                    textLength="136.5" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF">kadensio</text>
+            </svg>
+          </div>
+          <p class="spec-cap">Reversed &middot; on brand ink</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>The faded chevrons carry less contrast than the green one.</strong> That is intended, and it is also the mark's one fragility: on a mid-tone ground — a photograph, a mid-grey, a saturated fill — the first chevron disappears and the cadence collapses. Place the lockup on paper, on brand ink, or on the pale surface tint. Nowhere else.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="icons">
+      <p class="eyebrow">Marks and icons</p>
+      <h2 id="icons">The mark drops a beat when it gets small.</h2>
+      <p class="lede">Three chevrons need room. Below roughly 24px the two faded ones merge into a smudge and the mark reads as noise, so the small-size icon carries two chevrons instead of three at a heavier weight. It is the same idea told in fewer beats, and it is the only sanctioned simplification.</p>
+
+      <div class="stack">
+        <div>
+          <div class="spec spec-tint">
+            <div class="spec-item">
+              <svg width="96" height="96" viewBox="0 0 64 64" role="img" aria-label="Kadensio icon">
+                <rect width="64" height="64" rx="14" fill="#0C1F1A"/>
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"
+                   transform="translate(32 32) scale(0.74) translate(-32 -32)">
+                  <path d="M12 20 L24 32 L12 44" stroke="#FFFFFF" opacity="0.25"/>
+                  <path d="M26 20 L38 32 L26 44" stroke="#FFFFFF" opacity="0.55"/>
+                  <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+                </g>
+              </svg>
+              <p class="spec-cap">Icon &middot; 32px and up</p>
+            </div>
+            <div class="spec-item">
+              <svg width="96" height="96" viewBox="0 0 64 64" role="img" aria-label="Kadensio small icon">
+                <rect width="64" height="64" rx="14" fill="#0C1F1A"/>
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="9">
+                  <path d="M20 21 L33 32 L20 43" stroke="#FFFFFF" opacity="0.5"/>
+                  <path d="M35 21 L48 32 L35 43" stroke="#00B368"/>
+                </g>
+              </svg>
+              <p class="spec-cap">Small icon &middot; 16&ndash;24px</p>
+            </div>
+            <div class="spec-item">
+              <svg width="32" height="32" viewBox="0 0 64 64" role="img" aria-label="Kadensio small icon at 32 pixels">
+                <rect width="64" height="64" rx="14" fill="#0C1F1A"/>
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="9">
+                  <path d="M20 21 L33 32 L20 43" stroke="#FFFFFF" opacity="0.5"/>
+                  <path d="M35 21 L48 32 L35 43" stroke="#00B368"/>
+                </g>
+              </svg>
+              <p class="spec-cap">Actual size &middot; 32</p>
+            </div>
+            <div class="spec-item">
+              <svg width="16" height="16" viewBox="0 0 64 64" role="img" aria-label="Kadensio small icon at 16 pixels">
+                <rect width="64" height="64" rx="14" fill="#0C1F1A"/>
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="9">
+                  <path d="M20 21 L33 32 L20 43" stroke="#FFFFFF" opacity="0.5"/>
+                  <path d="M35 21 L48 32 L35 43" stroke="#00B368"/>
+                </g>
+              </svg>
+              <p class="spec-cap">Actual size &middot; 16</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="clearspace">
+      <p class="eyebrow">Clear space</p>
+      <h2 id="clearspace">Half the lockup's height, on every side.</h2>
+      <p class="lede">One rule, easy to check: measure the lockup's height, halve it, and keep that much empty on all four sides. A lockup set 26px tall wants 13px of clear space. Nothing sits inside it — no rules, no type, no photo edge, no button.</p>
+
+      <div class="spec spec-light clearspace">
+        <svg viewBox="0 0 361 136" role="img" aria-label="Diagram: clear space equals half the lockup height on all four sides">
+          <rect x="1" y="1" width="359" height="134" fill="none" stroke="#C9D3CE" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <rect x="35" y="35" width="291" height="66" fill="#F5F7F6"/>
+          <g transform="translate(35 35) scale(1.316)">
+            <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+              <path d="M12 20 L24 32 L12 44" stroke="#0C1F1A" opacity="0.28"/>
+              <path d="M26 20 L38 32 L26 44" stroke="#0C1F1A" opacity="0.6"/>
+              <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+            </g>
+            <text x="76" y="32" dominant-baseline="central"
+                  font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+                  font-size="33" font-weight="600" letter-spacing="-0.8"
+                  textLength="136.5" lengthAdjust="spacingAndGlyphs" fill="#0C1F1A">kadensio</text>
+          </g>
+          <g stroke="#00B368" stroke-width="1.5">
+            <path d="M18 35 V101"/><path d="M14 35 H22"/><path d="M14 101 H22"/>
+          </g>
+          <text x="26" y="72" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="#6D7B76">&frac12;h</text>
+          <g stroke="#00B368" stroke-width="1.5">
+            <path d="M35 18 H326"/><path d="M35 14 V22"/><path d="M326 14 V22"/>
+          </g>
+        </svg>
+      </div>
+      <p class="spec-cap" style="text-align:center">Dashed line marks the outer boundary. The tinted block is the lockup's own box.</p>
+    </section>
+
+    <section aria-labelledby="misuse">
+      <p class="eyebrow">Misuse</p>
+      <h2 id="misuse">What breaks it.</h2>
+
+      <div class="rules">
+        <div class="rule rule-do">
+          <p class="rule-tag">Do</p>
+          <h3>Scale by height</h3>
+          <p>Set a height, let width follow. The lockup's ratio is fixed at 221&nbsp;&times;&nbsp;64.</p>
+        </div>
+        <div class="rule rule-dont">
+          <p class="rule-tag">Don't</p>
+          <h3>Stretch or squash</h3>
+          <p>Any non-uniform scale distorts the chevron angles, which are the one thing the eye reads first.</p>
+        </div>
+
+        <div class="rule rule-do">
+          <p class="rule-tag">Do</p>
+          <h3>Keep the ramp in order</h3>
+          <p>Faint, mid, solid — left to right, always resolving into green.</p>
+        </div>
+        <div class="rule rule-dont">
+          <p class="rule-tag">Don't</p>
+          <h3>Reorder or equalise the opacities</h3>
+          <p>Reversed, the mark reads as something slowing down. Flattened, it is a stock fast-forward glyph.</p>
+        </div>
+
+        <div class="rule rule-do">
+          <p class="rule-tag">Do</p>
+          <h3>Use the reversed art on dark</h3>
+          <p>There is a made-for-purpose file. The faded chevrons are re-tuned in it, not just inverted.</p>
+        </div>
+        <div class="rule rule-dont">
+          <p class="rule-tag">Don't</p>
+          <h3>Place it over photos or mid-tones</h3>
+          <p>The 28% chevron vanishes and the cadence with it. Paper, brand ink, or surface tint only.</p>
+        </div>
+
+        <div class="rule rule-do">
+          <p class="rule-tag">Do</p>
+          <h3>Leave the green alone</h3>
+          <p>The terminal chevron is always <span class="file">#00B368</span>, on every ground.</p>
+        </div>
+        <div class="rule rule-dont">
+          <p class="rule-tag">Don't</p>
+          <h3>Recolour, rotate, or add effects</h3>
+          <p>No gradients, shadows, outlines, or tilts. It points forward because a reply moves forward.</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="colour">
+      <p class="eyebrow">Colour</p>
+      <h2 id="colour">One ink, two greens, and a reason for the second.</h2>
+      <p class="lede">The brand green is bright by design — it is the moment the reply lands. But at <span class="file">#00B368</span> it reaches only 2.75:1 against white, which fails WCAG AA for text. So the green splits by surface: the brand value on dark grounds, a darkened version of the same hue for anything that has to be read on light.</p>
+
+      <div class="swatches">
+        <div class="sw">
+          <div class="sw-chip" style="background:#0C1F1A"></div>
+          <div class="sw-body">
+            <p class="sw-name">Brand ink</p>
+            <p class="sw-hex">#0C1F1A</p>
+            <p class="sw-use">Body type on light, and the ground for every dark surface. A green-biased near-black, never pure #000.</p>
+          </div>
+        </div>
+        <div class="sw">
+          <div class="sw-chip" style="background:#00B368"></div>
+          <div class="sw-body">
+            <p class="sw-name">Brand green</p>
+            <p class="sw-hex">#00B368</p>
+            <p class="sw-use">The mark's terminal chevron, always. As a UI accent it is for dark grounds only — 6.24:1 on brand ink.</p>
+          </div>
+        </div>
+        <div class="sw">
+          <div class="sw-chip" style="background:#007A47"></div>
+          <div class="sw-body">
+            <p class="sw-name">Deep green</p>
+            <p class="sw-hex">#007A47</p>
+            <p class="sw-use">Accent text, links and filled buttons on light grounds. 5.42:1 on white, 5.04:1 on surface tint.</p>
+          </div>
+        </div>
+        <div class="sw">
+          <div class="sw-chip" style="background:#F5F7F6; box-shadow: inset 0 0 0 1px #E3E7E5"></div>
+          <div class="sw-body">
+            <p class="sw-name">Surface tint</p>
+            <p class="sw-hex">#F5F7F6</p>
+            <p class="sw-use">Alternating section grounds. Carries the same green bias as the ink, so it never reads as cold grey.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <caption>Measured contrast. Every pair in use clears WCAG AA for normal text.</caption>
+          <thead>
+            <tr><th scope="col">Foreground</th><th scope="col">On</th><th scope="col">Ratio</th><th scope="col">Verdict</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="file">#0C1F1A</span></td><td><span class="file">#FFFFFF</span></td><td class="num">17.12:1</td><td class="num">Pass</td></tr>
+            <tr><td><span class="file">#007A47</span></td><td><span class="file">#FFFFFF</span></td><td class="num">5.42:1</td><td class="num">Pass</td></tr>
+            <tr><td><span class="file">#007A47</span></td><td><span class="file">#F5F7F6</span></td><td class="num">5.04:1</td><td class="num">Pass</td></tr>
+            <tr><td><span class="file">#00B368</span></td><td><span class="file">#0C1F1A</span></td><td class="num">6.24:1</td><td class="num">Pass</td></tr>
+            <tr><td><span class="file">#00B368</span></td><td><span class="file">#FFFFFF</span></td><td class="num">2.75:1</td><td class="num">Mark only &mdash; never text</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="type">
+      <p class="eyebrow">Typography</p>
+      <h2 id="type">The system stack, on purpose.</h2>
+      <p class="lede">No webfont. A brokerage opens the page on a mid-range Android over a hotel connection, and a font that arrives late is a page that flashes. The system stack renders instantly and looks native on every device — San Francisco on Apple, Segoe on Windows, Roboto on Android. The monospace face is the second voice, reserved for anything measured: figures, phone numbers, scores, labels, timings.</p>
+
+      <div class="stack">
+        <div>
+          <div class="typerow">
+            <p class="typerow-label">Display &middot; 600 &middot; &minus;0.032em</p>
+            <p class="t-h1">Every property lead answered in seconds.</p>
+          </div>
+          <div class="typerow">
+            <p class="typerow-label">Section &middot; 600 &middot; &minus;0.026em</p>
+            <p class="t-h2">You have already paid for the lead.</p>
+          </div>
+          <div class="typerow">
+            <p class="typerow-label">Body &middot; 400 &middot; 1.6 line height &middot; ~65 characters</p>
+            <p class="t-body">Your CRM stores the lead. Kadensio answers it — on WhatsApp, seconds after it arrives, in the language the buyer picked.</p>
+          </div>
+          <div class="typerow">
+            <p class="typerow-label">Mono &middot; figures and identifiers</p>
+            <p class="t-mono">+20 104 144 5227 &nbsp; &middot; &nbsp; 42 hours &nbsp; &middot; &nbsp; 21× &nbsp; &middot; &nbsp; Score 87</p>
+          </div>
+          <div class="typerow">
+            <p class="typerow-label">Mono label &middot; uppercase &middot; 0.09em</p>
+            <p class="t-label">The cost of slow response</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>The wordmark is live text, not outlined paths.</strong> It asks for Helvetica Neue and falls back to Helvetica or Arial. To stop the lockup breaking its box on machines that have none of them, the text is pinned with <span class="file">textLength</span>, so the width is identical everywhere and only the glyph spacing gives slightly.</p>
+        <p>This is a working compromise, not the finished state. When the identity is next touched, convert the wordmark to outlines — then the file is truly self-contained and the fallback question disappears.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="voice">
+      <p class="eyebrow">Voice</p>
+      <h2 id="voice">Arithmetic, not adjectives.</h2>
+      <p class="lede">The product's strongest argument is a number and its strongest proof is a live phone number. The writing should get out of the way of both. Sales-oriented is fine. Salesy is not.</p>
+
+      <ul class="voice">
+        <li>
+          <p class="voice-h">Lead with what it costs them today</p>
+          <p class="voice-p">Open on the reader's problem, not the software's features. The spend is already gone; the question is what happens in the next five minutes.</p>
+          <p class="voice-eg">“You have already paid for the lead.” — not “Powerful AI-driven lead qualification.”</p>
+        </li>
+        <li>
+          <p class="voice-h">No exclamation marks, no hype vocabulary</p>
+          <p class="voice-p">Nothing is revolutionary, game-changing, seamless, or effortless. No emoji anywhere — not in copy, not as section markers.</p>
+        </li>
+        <li>
+          <p class="voice-h">Name the limit before someone else does</p>
+          <p class="voice-p">Where a claim has a caveat, the caveat ships with it. Research gets its funding disclosed; mockups are labelled as sample data.</p>
+          <p class="voice-eg">“Five of ten weighted factors shown.”</p>
+        </li>
+        <li>
+          <p class="voice-h">Never imply customers we do not have</p>
+          <p class="voice-p">No testimonials, logos, case studies, or “trusted by”. Positioning by market is fine — Dubai first, Egypt second — but a market is not a customer.</p>
+        </li>
+        <li>
+          <p class="voice-h">Be precise about what ships</p>
+          <p class="voice-p">Arabic and English ship and are verified. Other languages are written and loaded during setup. Never name a language we have not built, and never imply a menu.</p>
+        </li>
+        <li>
+          <p class="voice-h">The brand stays neutral international</p>
+          <p class="voice-p">The product runs in Arabic; the identity does not signal it. No Arabic script in the logo, no geometric or regional visual motifs. There is deliberately no Arabic-script lockup — the mark is the mark in every market.</p>
+        </li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap foot-inner">
+    <svg class="foot-logo" viewBox="0 0 221 64" role="img" aria-label="Kadensio">
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+        <path d="M12 20 L24 32 L12 44" stroke="currentColor" opacity="0.28"/>
+        <path d="M26 20 L38 32 L26 44" stroke="currentColor" opacity="0.6"/>
+        <path d="M40 20 L52 32 L40 44" stroke="#00B368"/>
+      </g>
+      <text x="76" y="32" dominant-baseline="central"
+            font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+            font-size="33" font-weight="600" letter-spacing="-0.8"
+            textLength="136.5" lengthAdjust="spacingAndGlyphs" fill="currentColor">kadensio</text>
+    </svg>
+    <p class="foot-meta">Source files in <span class="file">brand/assets/</span>. Questions: <a href="mailto:yassin@kadensio.com">yassin@kadensio.com</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
