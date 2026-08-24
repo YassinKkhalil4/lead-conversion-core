@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/design/Text';
-import { color, space } from '@/design/tokens';
+import { color, layout, radius, space } from '@/design/tokens';
 
 /** Below this the side navigation collapses into a drawer. */
 export const DESK_BREAKPOINT = 900;
@@ -35,12 +35,15 @@ export function Page({
     <ScrollView
       style={{ flex: 1, backgroundColor: color.paper }}
       contentContainerStyle={{
-        padding: isDesk ? space.xxxl : space.xl,
-        paddingTop: (isDesk ? space.xxxl : space.xl) + (isDesk ? 0 : insets.top),
+        padding: isDesk ? layout.pageDesk : layout.pagePhone,
+        paddingTop: (isDesk ? layout.pageDesk : layout.pagePhone) + (isDesk ? 0 : insets.top),
         paddingBottom: insets.bottom + space.huge,
-        gap: space.xxl,
+        gap: layout.sectionGap,
         maxWidth: 1280,
         width: '100%',
+        // Centred, so an ultrawide window does not pin the page to the left
+        // edge with the measure's worth of dead space beside it.
+        alignSelf: 'center',
       }}
     >
       <View
@@ -51,7 +54,7 @@ export function Page({
           gap: space.lg,
         }}
       >
-        <View style={{ flexGrow: 1, flexBasis: 260, gap: space.xs }}>
+        <View style={{ flexGrow: 1, flexBasis: 260, gap: layout.stack }}>
           <Text size="title" weight="bold">
             {title}
           </Text>
@@ -61,7 +64,7 @@ export function Page({
             </Text>
           ) : null}
         </View>
-        {actions ? <View style={{ flexDirection: 'row', gap: space.md }}>{actions}</View> : null}
+        {actions ? <View style={{ flexDirection: 'row', gap: layout.inline }}>{actions}</View> : null}
       </View>
 
       {children}
@@ -79,7 +82,7 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <View style={{ gap: space.lg }}>
+    <View style={{ gap: layout.rowY }}>
       <View style={{ gap: 2 }}>
         <Text size="large" weight="semibold">
           {title}
@@ -99,10 +102,11 @@ export function Panel({ children }: { children: ReactNode }) {
   return (
     <View
       style={{
-        padding: space.xl,
-        gap: space.xl,
+        padding: layout.panel,
+        gap: layout.panel,
         borderWidth: 1,
         borderColor: color.hairline,
+        borderRadius: radius.sm,
         backgroundColor: color.surface,
       }}
     >

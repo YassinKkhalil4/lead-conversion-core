@@ -6,10 +6,10 @@ import { explain } from '@/api/errors';
 import type { Lead, LeadFilters } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { Mark } from '@/design/Mark';
-import { Skeleton } from '@/design/Skeleton';
+import { LeadListSkeleton, Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, hitSlop, radius, rowHeight, space, tracking } from '@/design/tokens';
+import { color, hitSlop, layout, radius, space, tracking } from '@/design/tokens';
 import { QueueRow } from '@/leads/QueueRow';
 import { useLeadList, useUnacknowledgedLeads } from '@/leads/hooks';
 import { useLastLook } from '@/leads/lastLook';
@@ -73,27 +73,16 @@ export default function Queue() {
     <View style={{ flex: 1, backgroundColor: color.paper }}>
       <View style={{ paddingTop: insets.top + space.md, backgroundColor: color.surface }}>
         {/* The salesperson never sees the side rail, so this is the one place
-            the mark appears on their surfaces. `paddingBottom` plus the next
-            block's `paddingTop` clears the brand's half-height rule at 24. */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: space.xl,
-            paddingBottom: space.sm,
-          }}
-        >
+            the mark appears on their surfaces. It gets the corner to itself:
+            sign-out used to sit opposite it and won the first glance on the
+            screen this person works in all day. It now lives with the other
+            controls at the bottom, in reach. */}
+        <View style={{ paddingHorizontal: layout.rowX, paddingBottom: space.sm }}>
           <Mark size={24} />
-          <Pressable onPress={() => void signOut()} hitSlop={hitSlop} accessibilityRole="button">
-            <Text size="micro" tone="faint">
-              {user?.name ? `${user.name} · sign out` : 'Sign out'}
-            </Text>
-          </Pressable>
         </View>
 
         {loading ? (
-          <View style={{ paddingHorizontal: space.xl, paddingVertical: space.xl, gap: space.md }}>
+          <View style={{ height: layout.queueHeader, paddingHorizontal: layout.rowX, justifyContent: 'center', gap: space.md }}>
             <Skeleton width={140} height={52} />
             <Skeleton width={180} height={14} />
           </View>
@@ -103,9 +92,9 @@ export default function Queue() {
             accessibilityLabel={`${urgent} assignments need you now. Show only these.`}
             onPress={() => setFilter('pastSla')}
             style={({ pressed }) => ({
-              paddingHorizontal: space.xl,
-              paddingTop: space.sm,
-              paddingBottom: space.xl,
+              height: layout.queueHeader,
+              justifyContent: 'center',
+              paddingHorizontal: layout.rowX,
               backgroundColor: pressed ? color.surfacePressed : 'transparent',
             })}
           >
@@ -117,8 +106,8 @@ export default function Queue() {
             </Text>
           </Pressable>
         ) : (
-          <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm, paddingBottom: space.xl, gap: space.sm }}>
-            <Text size="large" weight="semibold">
+          <View style={{ height: layout.queueHeader, justifyContent: 'center', paddingHorizontal: layout.rowX, gap: space.sm }}>
+            <Text size="title" weight="bold">
               Nothing is past its SLA.
             </Text>
             <Text size="small" tone="muted" numeric>
@@ -137,7 +126,7 @@ export default function Queue() {
       </View>
 
       {loading ? (
-        <QueueSkeleton />
+        <LeadListSkeleton rows={7} />
       ) : explained ? (
         <ErrorState title={explained.title} detail={explained.detail} onRetry={refreshAll} />
       ) : (
@@ -170,7 +159,11 @@ export default function Queue() {
         />
       )}
 
-      {/* Thumb reach. At most two controls; nothing else earns this space. */}
+      {/* Thumb reach. Still at most two *controls* — sign-out joins them as a
+          plain link, not a third button: it is rare, and giving it a border
+          here would rank it with the filters this screen is actually driven
+          by. It moved off the header because on the surface a salesperson
+          works in all day, nothing should out-rank the mark and the count. */}
       <View
         style={{
           flexDirection: 'row',
@@ -197,6 +190,16 @@ export default function Queue() {
               onChange={(next) => setScope(next as Scope)}
             />
             <Control label="Unacknowledged" active={false} onPress={() => setFilter('unacknowledged')} grow />
+            <Pressable
+              onPress={() => void signOut()}
+              hitSlop={hitSlop}
+              accessibilityRole="button"
+              accessibilityLabel={user?.name ? `Sign out ${user.name}` : 'Sign out'}
+            >
+              <Text size="micro" tone="faint" numberOfLines={1}>
+                Sign out
+              </Text>
+            </Pressable>
           </>
         )}
       </View>
@@ -243,35 +246,6 @@ function SinceDivider({ label }: { label: string }) {
   );
 }
 
-function QueueSkeleton() {
-  return (
-    <View>
-      {[0, 1, 2, 3, 4, 5].map((index) => (
-        <View
-          key={index}
-          style={{
-            height: index < 2 ? rowHeight.urgent : rowHeight.standard,
-            paddingHorizontal: space.xl,
-            paddingVertical: space.lg,
-            borderBottomWidth: 1,
-            borderBottomColor: color.hairline,
-            justifyContent: 'center',
-            gap: space.md,
-          }}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Skeleton width={index < 2 ? 190 : 150} height={index < 2 ? 18 : 15} />
-            <Skeleton width={index < 2 ? 54 : 38} height={index < 2 ? 18 : 13} />
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Skeleton width={130} height={12} />
-            <Skeleton width={64} height={12} />
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-}
 
 function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
   if (filter === 'pastSla') {

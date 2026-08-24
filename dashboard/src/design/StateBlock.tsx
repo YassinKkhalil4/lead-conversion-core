@@ -1,20 +1,40 @@
 import { Pressable, View } from 'react-native';
+import { Button } from './Button';
 import { Text } from './Text';
-import { color, hitSlop, radius, space } from './tokens';
+import { color, hitSlop, layout, radius, space } from './tokens';
 
 /**
  * Left-aligned, no illustration, no encouragement. States what will appear here
  * and why it is not here yet.
+ *
+ * Where the reader can do something about it, the control belongs here. Naming
+ * an action the reader has to go elsewhere to take — "add salespeople under
+ * Salespeople" — is a worse empty state than one that names none.
  */
-export function EmptyState({ title, detail }: { title: string; detail: string }) {
+export function EmptyState({
+  title,
+  detail,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  detail: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
   return (
-    <View style={{ paddingHorizontal: space.xl, paddingVertical: space.xxxl, gap: space.sm }}>
+    <View style={{ paddingHorizontal: layout.rowX, paddingVertical: layout.emptyY, gap: space.sm, maxWidth: 560 }}>
       <Text size="body" weight="semibold">
         {title}
       </Text>
       <Text size="small" tone="muted">
         {detail}
       </Text>
+      {actionLabel && onAction ? (
+        <View style={{ flexDirection: 'row', paddingTop: space.md }}>
+          <Button label={actionLabel} onPress={onAction} />
+        </View>
+      ) : null}
     </View>
   );
 }

@@ -38,8 +38,23 @@ export const color = {
   inkPlaceholder: '#6D7B76',
   inkInverse: '#FFFFFF',
 
+  /**
+   * Separators: row rules, panel edges. Decorative, so WCAG 1.4.11's 3:1 does
+   * not apply — these are not control boundaries and carry no meaning a reader
+   * needs to perceive.
+   */
   hairline: '#E3E7E5',
-  hairlineStrong: '#C9D3CE',
+  /**
+   * Control boundaries: inputs, outline buttons, segmented controls, table
+   * header rules. These *are* covered by 1.4.11, and this value clears 3:1 on
+   * every ground a control can land on — 3.96 on surface, 3.81 on paper, 3.54
+   * on sunken, 3.31 on pressed.
+   *
+   * Measure against `surfacePressed`, not `paper`. The brand's contrast table
+   * only measures against white and the surface tint, which is how the previous
+   * value shipped at 1.28:1 against the ground it actually sits on when held.
+   */
+  hairlineStrong: '#75837E',
 
   /** Modal and drawer backdrop, derived from the brand ink. */
   scrim: 'rgba(12, 31, 26, 0.4)',
@@ -84,6 +99,79 @@ export const space = {
   xxl: 20,
   xxxl: 28,
   huge: 40,
+} as const;
+
+/**
+ * Composition, not raw spacing.
+ *
+ * `space` is the ramp; this is the rule for which step applies at which level.
+ * A screen reaches for `layout.panel` rather than deciding between `space.lg`
+ * and `space.xl` by feel, which is what made the spacing ad hoc — the values
+ * were fine, there was just nothing saying when to use them.
+ */
+export const layout = {
+  /** Outer padding of a desk page. */
+  pageDesk: space.xxxl,
+  /** Outer padding of a phone surface. */
+  pagePhone: space.xl,
+  /** Between top-level sections of a page. */
+  sectionGap: space.xxl,
+  /** Inside a bordered panel. */
+  panel: space.xl,
+  /** A table or list row: horizontal, then vertical. */
+  rowX: space.xl,
+  rowY: space.lg,
+  /** A table header, tighter than its rows so it reads as a header. */
+  headerY: space.md,
+  /** Between elements sitting on one line. */
+  inline: space.md,
+  /** Between stacked lines inside one row or cell. */
+  stack: space.xs,
+  /** Vertical breathing room in an empty or placeholder block. */
+  emptyY: space.xxxl,
+  /**
+   * Minimum height of a table row.
+   *
+   * Fixed so a table scans as a grid: a cell that stacks two lines no longer
+   * makes its whole row taller than its neighbours.
+   */
+  tableRow: 52,
+  /** Width of the queue row's urgency edge marker. */
+  edgeMarker: 4,
+  /**
+   * The queue header, fixed across all three of its states.
+   *
+   * It showed a 56pt count, a two-line clear message or a skeleton, each at its
+   * own natural height, so the list started in a different place depending on
+   * whether anything was late — and moved under the reader as data arrived.
+   */
+  queueHeader: 104,
+} as const;
+
+/**
+ * Table column widths, named for what a column holds rather than by number.
+ *
+ * The screens previously chose from fifteen unrelated values between 90 and
+ * 250, one column at a time. A new column should pick a name.
+ */
+export const colWidth = {
+  /** A figure: score, count, duration. */
+  num: 96,
+  /** A short word or state: role, status, temperature. */
+  short: 120,
+  /**
+   * A date, a timestamp, a phone number.
+   *
+   * 180 rather than 160 because figures are set in the mono face, which is
+   * meaningfully wider — "24 Aug 2026, 11:33" wrapped to two lines at 160.
+   */
+  medium: 180,
+  /** A person or project name, usually over two lines. */
+  name: 200,
+  /** An email address or a location. */
+  long: 220,
+  /** A sentence fragment, or a cell holding controls. */
+  wide: 260,
 } as const;
 
 export const radius = {
@@ -178,8 +266,13 @@ export const displayTracking: Partial<Record<keyof typeof fontSize, number>> = {
  * makes every lead look equally important.
  */
 export const rowHeight = {
-  urgent: 96,
-  standard: 72,
+  /**
+   * An urgent row carries two lines, not three: the clock and the state it
+   * describes are one element on the right rather than two at opposite
+   * corners. That is what bought the 16 points back.
+   */
+  urgent: 80,
+  standard: 64,
 } as const;
 
 export const hitSlop = { top: 10, bottom: 10, left: 10, right: 10 } as const;

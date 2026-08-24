@@ -1,8 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { Skeleton } from '@/design/Skeleton';
 import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, space, tracking } from '@/design/tokens';
+import { color, layout, radius, tracking } from '@/design/tokens';
 
 export interface Column<T> {
   key: string;
@@ -32,6 +33,9 @@ export function DataTable<T>({
   onRowPress,
   emptyTitle,
   emptyDetail,
+  loading = false,
+  emptyActionLabel,
+  onEmptyAction,
   initialSort,
 }: {
   rows: T[];
@@ -45,6 +49,18 @@ export function DataTable<T>({
   onRowPress?: (row: T) => void;
   emptyTitle: string;
   emptyDetail: string;
+  /**
+   * True while the first page is in flight.
+   *
+   * Without this a table renders its empty state during the initial fetch, so a
+   * new account is told its data does not exist for as long as the request
+   * takes. Callers pass the query's `isLoading`, not `isFetching`: a background
+   * refetch has rows on screen already and must not replace them.
+   */
+  loading?: boolean;
+  /** Offered inside the empty state, where the reader can act from here. */
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
   initialSort?: { key: string; direction: Direction };
 }) {
   const [sort, setSort] = useState<{ key: string; direction: Direction } | null>(initialSort ?? null);
@@ -68,50 +84,57 @@ export function DataTable<T>({
 
   const totalWidth = columns.reduce((sum, column) => sum + column.width, 0);
 
+  if (loading) {
+    return (
+      <Frame>
+        <HeaderRow columns={columns} sort={null} onSort={undefined} />
+        {[0, 1, 2, 3, 4].map((index) => (
+          <View
+            key={index}
+            style={{
+              flexDirection: 'row',
+              borderBottomWidth: index === 4 ? 0 : 1,
+              borderBottomColor: color.hairline,
+            }}
+          >
+            {columns.map((column) => (
+              <View
+                key={column.key}
+                style={{
+                  width: column.width,
+                  paddingHorizontal: layout.rowX,
+                  paddingVertical: layout.rowY,
+                  alignItems: column.numeric ? 'flex-end' : 'flex-start',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* Sized to the cell it stands in, so the grid does not shift
+                    when the real values arrive. */}
+                <Skeleton width={Math.round((column.width - layout.rowX * 2) * (column.numeric ? 0.5 : 0.8))} height={13} />
+              </View>
+            ))}
+          </View>
+        ))}
+      </Frame>
+    );
+  }
+
   if (rows.length === 0) {
     return (
-      <View style={{ borderWidth: 1, borderColor: color.hairline, borderRadius: 4, backgroundColor: color.surface }}>
-        <EmptyState title={emptyTitle} detail={emptyDetail} />
-      </View>
+      <Frame>
+        <EmptyState
+          title={emptyTitle}
+          detail={emptyDetail}
+          actionLabel={emptyActionLabel}
+          onAction={onEmptyAction}
+        />
+      </Frame>
     );
   }
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator style={{ flexGrow: 0 }}>
-      <View style={{ minWidth: totalWidth, borderWidth: 1, borderColor: color.hairline, backgroundColor: color.surface }}>
-        <View style={{ flexDirection: 'row', backgroundColor: color.surfaceSunken }}>
-          {columns.map((column) => {
-            const sortable = Boolean(column.sortValue);
-            const active = sort?.key === column.key;
-            return (
-              <Pressable
-                key={column.key}
-                accessibilityRole={sortable ? 'button' : undefined}
-                disabled={!sortable}
-                onPress={() =>
-                  setSort((current) =>
-                    current?.key === column.key
-                      ? { key: column.key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-                      : { key: column.key, direction: column.numeric ? 'desc' : 'asc' },
-                  )
-                }
-                style={{
-                  width: column.width,
-                  paddingHorizontal: space.lg,
-                  paddingVertical: space.lg,
-                  borderBottomWidth: 1,
-                  borderBottomColor: color.hairlineStrong,
-                  alignItems: column.numeric ? 'flex-end' : 'flex-start',
-                }}
-              >
-                <Text size="micro" weight="bold" tone={active ? 'default' : 'muted'} style={{ letterSpacing: tracking.label }}>
-                  {column.header.toUpperCase()}
-                  {active ? (sort?.direction === 'asc' ? ' ↑' : ' ↓') : ''}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+    <Frame minWidth={totalWidth}>
+      <HeaderRow columns={columns} sort={sort} onSort={setSort} />
 
         {sorted.map((row, index) => {
           const cells = columns.map((column) => (
@@ -119,8 +142,9 @@ export function DataTable<T>({
               key={column.key}
               style={{
                 width: column.width,
-                paddingHorizontal: space.lg,
-                paddingVertical: space.lg,
+                paddingHorizontal: layout.rowX,
+                paddingVertical: layout.rowY,
+                minHeight: layout.tableRow,
                 alignItems: column.numeric ? 'flex-end' : 'flex-start',
                 justifyContent: 'center',
               }}
@@ -162,7 +186,81 @@ export function DataTable<T>({
             </Pressable>
           );
         })}
+    </Frame>
+  );
+}
+
+/**
+ * The table's outer shell. Loading, empty and populated all render inside it,
+ * so a table cannot change shape as it resolves — only its contents change.
+ */
+function Frame({ children, minWidth }: { children: ReactNode; minWidth?: number }) {
+  return (
+    // `flexGrow` on the content container lets the frame fill the measure when
+    // there is room, while `minWidth` still forces a scroll when there is not.
+    // Column widths stay fixed either way.
+    <ScrollView horizontal showsHorizontalScrollIndicator style={{ flexGrow: 0 }} contentContainerStyle={{ flexGrow: 1 }}>
+      <View
+        style={{
+          flex: 1,
+          minWidth,
+          borderWidth: 1,
+          borderColor: color.hairline,
+          borderRadius: radius.sm,
+          overflow: 'hidden',
+          backgroundColor: color.surface,
+        }}
+      >
+        {children}
       </View>
     </ScrollView>
+  );
+}
+
+function HeaderRow<T>({
+  columns,
+  sort,
+  onSort,
+}: {
+  columns: Column<T>[];
+  sort: { key: string; direction: Direction } | null;
+  onSort?: (update: (current: { key: string; direction: Direction } | null) => { key: string; direction: Direction }) => void;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', backgroundColor: color.surfaceSunken }}>
+      {columns.map((column) => {
+        const sortable = Boolean(column.sortValue) && Boolean(onSort);
+        const active = sort?.key === column.key;
+        return (
+          <Pressable
+            key={column.key}
+            accessibilityRole={sortable ? 'button' : undefined}
+            disabled={!sortable}
+            onPress={() =>
+              onSort?.((current) =>
+                current?.key === column.key
+                  ? { key: column.key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+                  : { key: column.key, direction: column.numeric ? 'desc' : 'asc' },
+              )
+            }
+            style={{
+              width: column.width,
+              paddingHorizontal: layout.rowX,
+              // Tighter than a row, so the header reads as one rather than as
+              // a first row that happens to be shouting.
+              paddingVertical: layout.headerY,
+              borderBottomWidth: 1,
+              borderBottomColor: color.hairlineStrong,
+              alignItems: column.numeric ? 'flex-end' : 'flex-start',
+            }}
+          >
+            <Text size="micro" weight="bold" tone={active ? 'default' : 'muted'} style={{ letterSpacing: tracking.label }}>
+              {column.header.toUpperCase()}
+              {active ? (sort?.direction === 'asc' ? ' ↑' : ' ↓') : ''}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
