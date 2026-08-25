@@ -52,10 +52,17 @@ export const color = {
    * Accent is not a general-purpose colour here.
    *
    * Lead temperature and lateness have to stay the most visually distinct
-   * things on a screen. Accent spent on navigation, buttons, stat figures and
-   * chart fills is accent the eye stops reading as meaning, so it survives in
-   * three places only: the logo, the focus ring, and the hot temperature chip
-   * — which is the signal itself. Everything else is ink.
+   * things on a screen, so accent is kept off anything in or beside a lead
+   * row. It appears in six places and nowhere else:
+   *
+   *   the logo · the focus ring · the hot temperature chip, which is the
+   *   signal itself · the active navigation item, rail and drawer · the
+   *   bottom tab indicator · the stat figures on the manager overview
+   *
+   * The last three are chrome or a lone number with no temperature beside
+   * them, so a green there reads as brand rather than as data. Buttons,
+   * segmented controls, checkboxes, chart fills, matched-criteria chips, stat
+   * deltas and the pressed row state are all ink for the opposite reason.
    */
   accent: '#007A47',
   accentDk: '#00603A',

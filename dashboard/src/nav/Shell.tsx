@@ -95,10 +95,18 @@ function SideRail({ role }: { role: Role }) {
               paddingHorizontal: space.md,
               paddingVertical: space.lg,
               borderRadius: radius.md,
-              backgroundColor: active ? color.tint : pressed ? color.line2 : 'transparent',
+              backgroundColor: active ? color.accentBg : pressed ? color.tint : 'transparent',
             })}
           >
-            <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
+            {/* Accent set by style rather than a `tone`, so the palette does
+                not expose a general accent text colour for screens to reach
+                for. 4.83:1 on the pill it sits on. */}
+            <Text
+              size="body"
+              weight={active ? 'semibold' : 'regular'}
+              tone={active ? 'default' : 'muted'}
+              style={active ? { color: color.accent } : undefined}
+            >
               {item.label}
             </Text>
           </Pressable>
@@ -178,10 +186,15 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
                     paddingHorizontal: space.md,
                     paddingVertical: space.lg,
                     borderRadius: radius.md,
-                    backgroundColor: active ? color.tint : pressed ? color.line2 : 'transparent',
+                    backgroundColor: active ? color.accentBg : pressed ? color.tint : 'transparent',
                   })}
                 >
-                  <Text size="body" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>
+                  <Text
+                    size="body"
+                    weight={active ? 'semibold' : 'regular'}
+                    tone={active ? 'default' : 'muted'}
+                    style={active ? { color: color.accent } : undefined}
+                  >
                     {item.label}
                   </Text>
                 </Pressable>
@@ -230,7 +243,7 @@ function BottomTabs({ role }: { role: Role }) {
               justifyContent: 'center',
               backgroundColor: pressed ? color.line2 : 'transparent',
               borderTopWidth: 2,
-              borderTopColor: active ? color.ink : 'transparent',
+              borderTopColor: active ? color.accent : 'transparent',
             })}
           >
             <Text size="small" weight={active ? 'semibold' : 'regular'} tone={active ? 'default' : 'muted'}>

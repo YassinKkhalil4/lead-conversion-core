@@ -229,7 +229,7 @@ export function StatTile({
         size={primary ? 'display' : 'headline'}
         weight="semibold"
         numeric
-        style={{ color: late ? color.warn : color.ink }}
+        style={{ color: late ? color.warn : color.accent }}
       >
         {value === null ? '—' : format(value)}
       </Text>
