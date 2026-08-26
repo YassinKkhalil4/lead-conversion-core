@@ -8,6 +8,7 @@ import { healthRoutes } from './routes/health.js';
 import { internalRoutes } from './routes/internal.js';
 import { leadIngressRoutes } from './routes/lead-ingress.js';
 import { metaWebhookRoutes } from './routes/meta-webhooks.js';
+import { waitlistRoutes } from './routes/waitlist.js';
 
 function requiresRawWebhookBody(method: string, url: string): boolean {
   if (method !== 'POST') return false;
@@ -20,6 +21,15 @@ export async function buildApp() {
     loggerInstance: logger,
     bodyLimit: 1_000_000,
     requestIdHeader: 'x-request-id',
+    // Caddy is the only thing that can reach the API's loopback bind, so the
+    // trusted set is exactly loopback. Without this `request.ip` is Caddy's
+    // address for every public request and every IP-keyed limit collapses into
+    // a single global counter.
+    //
+    // This resolves the client only when every hop in front is also loopback.
+    // A proxy chain that leaves the box and comes back resolves to the
+    // returning hop instead — see docs and the waitlist tests.
+    trustProxy: '127.0.0.1',
   });
 
   app.addHook('preParsing', (request, _reply, payload, done) => {
@@ -52,6 +62,7 @@ export async function buildApp() {
   await app.register(internalRoutes);
   await app.register(leadIngressRoutes);
   await app.register(metaWebhookRoutes);
+  await app.register(waitlistRoutes);
   if (env.DASHBOARD_API_ENABLED) {
     await app.register(dashboardRoutes);
   }

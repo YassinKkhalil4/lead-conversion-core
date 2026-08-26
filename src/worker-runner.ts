@@ -12,6 +12,7 @@ import { SlaService } from './services/sla-service.js';
 import { CalendarOutboxDispatcher } from './worker/calendar-outbox-dispatcher.js';
 import { MessagingOutboxDispatcher } from './worker/messaging-outbox-dispatcher.js';
 import { NotificationOutboxDispatcher, isNotificationCommandType } from './worker/notification-outbox-dispatcher.js';
+import { WaitlistOutboxDispatcher, isWaitlistCommandType } from './worker/waitlist-outbox-dispatcher.js';
 import { RuntimeWorker } from './worker/runtime-worker.js';
 import { buildRuntimeInboxWiring } from './worker/runtime-worker-wiring.js';
 
@@ -23,6 +24,7 @@ const calendarDispatcher = env.GOOGLE_CALENDAR_ENABLED
   ? new CalendarOutboxDispatcher({ calendar: GoogleCalendarAdapter.fromEnv() })
   : undefined;
 const notificationDispatcher = new NotificationOutboxDispatcher();
+const waitlistDispatcher = new WaitlistOutboxDispatcher();
 const {
   metaInboxProcessor,
   leadIngressInboxProcessor,
@@ -47,6 +49,12 @@ const dispatchRuntimeOutbox = (command: ClaimedOutboxCommand) => {
   if (isNotificationCommandType(command.commandType)) {
     return notificationDispatcher.dispatch(command);
   }
+  if (isWaitlistCommandType(command.commandType)) {
+    return waitlistDispatcher.dispatch(command);
+  }
+  // Anything unrecognised still falls through to messaging. Every new command
+  // family needs its own branch above, or it is handed to the WhatsApp sender
+  // and fails there instead of where it was written.
   return messagingDispatcher
     ? messagingDispatcher.dispatch(command)
     : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'messaging_dispatcher_disabled' });
