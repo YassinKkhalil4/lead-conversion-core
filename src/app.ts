@@ -21,15 +21,25 @@ export async function buildApp() {
     loggerInstance: logger,
     bodyLimit: 1_000_000,
     requestIdHeader: 'x-request-id',
-    // Caddy is the only thing that can reach the API's loopback bind, so the
-    // trusted set is exactly loopback. Without this `request.ip` is Caddy's
-    // address for every public request and every IP-keyed limit collapses into
-    // a single global counter.
+    // Who is allowed to set X-Forwarded-For. Without this, `request.ip` is the
+    // proxy's own address for every public request and every IP-keyed limit
+    // collapses into a single shared counter.
     //
-    // This resolves the client only when every hop in front is also loopback.
-    // A proxy chain that leaves the box and comes back resolves to the
-    // returning hop instead — see docs and the waitlist tests.
-    trustProxy: '127.0.0.1',
+    // Loopback alone was not enough. The API runs in a container behind Caddy
+    // on the host, so requests arrive from the Docker bridge gateway, not from
+    // 127.0.0.1. That address was untrusted, so it became `request.ip` and the
+    // forwarded header was ignored — in production the waitlist rate-limit key
+    // was `waitlist:ip:172.21.0.1` for every visitor.
+    //
+    // The whole 172.16.0.0/12 private range is trusted rather than the one
+    // observed gateway, because recreating the container can move the bridge
+    // to a different address in that range and silently reintroduce the bug.
+    // Nothing outside the host can reach the container's published port.
+    //
+    // Still resolves the client only while every hop in front is inside the
+    // trusted set. A chain that leaves the box and comes back resolves to the
+    // returning hop instead — see the waitlist wiring tests.
+    trustProxy: ['127.0.0.1', '172.16.0.0/12'],
   });
 
   app.addHook('preParsing', (request, _reply, payload, done) => {
