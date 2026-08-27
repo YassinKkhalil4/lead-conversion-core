@@ -494,3 +494,172 @@ a { color: inherit; }
 @media (max-width: 479px) {
   .wl-submit { flex: 1 1 100%; text-align: center; }
 }
+
+/* ==========================================================================
+   Added: long-form legal documents (privacy, terms, DPA)
+   ========================================================================== */
+
+.doc-page { padding: clamp(2.5rem, 6vw, 4rem) 0 clamp(3.5rem, 8vw, 6rem); }
+
+/* Pre-counsel notice. Deliberately loud — it is meant to be removed. */
+.doc-banner {
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  background: var(--accent-bg);
+  border-radius: 0 var(--r) var(--r) 0;
+  padding: 1.1rem 1.35rem;
+  margin-bottom: clamp(2rem, 5vw, 3rem);
+}
+.doc-banner p {
+  font-size: .9375rem; line-height: 1.6; color: var(--ink-2);
+  max-width: 72ch;
+}
+.doc-banner p + p { margin-top: .7rem; }
+.doc-banner strong { color: var(--ink); }
+.doc-banner ul { margin: .7rem 0 0; padding: 0; list-style: none; display: grid; gap: .45rem; }
+.doc-banner li {
+  font-size: .9375rem; line-height: 1.55; color: var(--ink-2);
+  padding-left: 1.1rem; position: relative;
+}
+.doc-banner li::before {
+  content: ""; position: absolute; left: 0; top: .62em;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+}
+
+.doc-head { margin-bottom: clamp(2rem, 4vw, 2.75rem); }
+.doc-head h1 {
+  font-size: clamp(1.9rem, 1.4rem + 2.2vw, 2.9rem);
+  font-weight: 600; letter-spacing: -0.032em; line-height: 1.12;
+  margin: .75rem 0 0; text-wrap: balance;
+}
+.doc-standfirst {
+  margin-top: 1.1rem; max-width: 68ch;
+  font-size: clamp(1.0625rem, 1rem + .3vw, 1.1875rem);
+  line-height: 1.55; color: var(--ink-2); text-wrap: pretty;
+}
+.doc-meta {
+  display: flex; flex-wrap: wrap; gap: .4rem 1.5rem;
+  margin-top: 1.75rem; padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: .75rem;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* ---------- table of contents ---------- */
+
+.doc-toc {
+  margin-bottom: clamp(2.25rem, 5vw, 3rem);
+  padding: 1.35rem 1.5rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--tint);
+}
+.doc-toc h2 {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 500;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 .9rem;
+}
+.doc-toc ol { margin: 0; padding: 0; list-style: none; counter-reset: toc; display: grid; gap: .5rem; }
+@media (min-width: 700px) { .doc-toc ol { grid-template-columns: 1fr 1fr; gap: .5rem 2rem; } }
+.doc-toc li { counter-increment: toc; font-size: .9375rem; line-height: 1.45; }
+.doc-toc li::before {
+  content: counter(toc) ".";
+  font-family: var(--mono); font-size: .8125rem; color: var(--ink-3);
+  margin-right: .5rem;
+}
+.doc-toc a { color: var(--ink-2); text-decoration-color: var(--line); text-underline-offset: 2px; }
+.doc-toc a:hover { color: var(--accent); }
+
+/* ---------- document body ---------- */
+
+.doc { max-width: 68ch; }
+.doc > section { padding-top: clamp(2.25rem, 5vw, 3rem); }
+.doc > section:first-child { padding-top: 0; }
+
+.doc h2 {
+  font-size: clamp(1.25rem, 1.1rem + .8vw, 1.55rem);
+  font-weight: 600; letter-spacing: -0.022em; line-height: 1.2;
+  margin: 0 0 .35rem; scroll-margin-top: 5rem;
+}
+.doc h2 .doc-n {
+  font-family: var(--mono); font-size: .8125rem; font-weight: 500;
+  color: var(--accent); margin-right: .55rem;
+  letter-spacing: 0;
+}
+.doc h3 {
+  font-size: 1rem; font-weight: 600; letter-spacing: -0.01em;
+  margin: 1.75rem 0 .25rem; scroll-margin-top: 5rem;
+}
+.doc p, .doc li { font-size: 1rem; line-height: 1.65; color: var(--ink-2); }
+.doc p { margin: .9rem 0 0; text-wrap: pretty; }
+.doc h2 + p, .doc h3 + p { margin-top: .75rem; }
+.doc strong { color: var(--ink); font-weight: 600; }
+.doc a { color: var(--accent); text-underline-offset: 2px; }
+.doc code {
+  font-family: var(--mono); font-size: .875rem;
+  color: var(--ink); background: var(--tint);
+  border: 1px solid var(--line); border-radius: 3px;
+  padding: .1em .35em;
+  overflow-wrap: anywhere;
+}
+
+.doc ul, .doc ol { margin: .9rem 0 0; padding: 0; list-style: none; display: grid; gap: .5rem; }
+.doc ul > li { padding-left: 1.15rem; position: relative; }
+.doc ul > li::before {
+  content: ""; position: absolute; left: 0; top: .68em;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3);
+}
+.doc ol { counter-reset: doclist; }
+.doc ol > li { padding-left: 1.6rem; position: relative; counter-increment: doclist; }
+.doc ol > li::before {
+  content: counter(doclist) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--mono); font-size: .8125rem; color: var(--ink-3);
+}
+
+/* Definition-style rows, for retention periods and sub-processors. */
+.doc-rows {
+  margin: 1.25rem 0 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.doc-rows > div {
+  padding: .9rem 1.1rem;
+  border-top: 1px solid var(--line-2);
+}
+.doc-rows > div:first-child { border-top: 0; }
+.doc-rows dt {
+  font-size: .9375rem; font-weight: 600; color: var(--ink);
+}
+.doc-rows dd { margin: .3rem 0 0; font-size: .9375rem; line-height: 1.55; color: var(--ink-2); }
+@media (min-width: 640px) {
+  .doc-rows > div { display: grid; grid-template-columns: 15rem 1fr; gap: 1.25rem; align-items: baseline; }
+  .doc-rows dd { margin-top: 0; }
+}
+
+/* An unresolved point that must not ship unnoticed. */
+.doc-open {
+  margin: 1.25rem 0 0;
+  border: 1px dashed var(--accent);
+  border-radius: var(--r);
+  background: var(--accent-bg);
+  padding: 1rem 1.2rem;
+}
+.doc-open p { margin: 0; font-size: .9375rem; color: var(--ink-2); }
+.doc-open p + p { margin-top: .6rem; }
+.doc-open .doc-open-tag {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: .5rem;
+}
+
+/* ---------- footer legal links ---------- */
+
+.footer-legal {
+  display: flex; flex-wrap: wrap; gap: .35rem 1.25rem;
+  margin-top: .85rem;
+  font-size: .875rem;
+}
+.footer-legal a { color: var(--ink-3); text-decoration-color: var(--line); text-underline-offset: 2px; }
+.footer-legal a:hover { color: var(--accent); }
