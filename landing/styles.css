@@ -161,7 +161,14 @@ a { color: inherit; }
 .hero { padding: clamp(3.5rem, 9vw, 7.5rem) 0 clamp(3.5rem, 7vw, 6rem); }
 .hero h1 { max-width: 19ch; }
 .hero .lead { max-width: 60ch; }
-.hero-cta { margin-top: 2.25rem; }
+.hero-cta {
+  margin-top: 2.25rem;
+  display: flex; flex-wrap: wrap; gap: .75rem;
+}
+@media (max-width: 419px) {
+  .hero-cta { display: grid; }
+  .hero-cta .btn { text-align: center; }
+}
 
 .facts {
   display: grid; gap: 1px;
