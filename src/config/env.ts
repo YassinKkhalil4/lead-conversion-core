@@ -43,6 +43,12 @@ const baseSchema = z.object({
   INBOUND_LEAD_CAPTURE_WINDOW_MS: z.coerce.number().int().positive().default(3_600_000),
   DASHBOARD_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   DASHBOARD_LOGIN_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
+  WAITLIST_SIGNUP_ENABLED: booleanString.default('false'),
+  WAITLIST_SIGNUP_IP_LIMIT: z.coerce.number().int().positive().default(5),
+  WAITLIST_SIGNUP_IP_WINDOW_MS: z.coerce.number().int().positive().default(3_600_000),
+  WAITLIST_SIGNUP_EMAIL_LIMIT: z.coerce.number().int().positive().default(3),
+  WAITLIST_SIGNUP_EMAIL_WINDOW_MS: z.coerce.number().int().positive().default(86_400_000),
+  WAITLIST_SIGNUP_MESSAGE_MAX_LENGTH: z.coerce.number().int().positive().max(10_000).default(2_000),
   SEED_CONFIG_PATH: z.string().default('./config/seed-real-estate.json'),
 });
 
