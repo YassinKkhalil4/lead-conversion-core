@@ -43,7 +43,7 @@ const EVENT_LABELS: Record<string, string> = {
   'dashboard.lead_closed': 'Lead closed',
   'dashboard.followups_stopped': 'Follow-ups stopped',
   'dashboard.human_takeover_enabled': 'Human took over',
-  'dashboard.human_takeover_disabled': 'Handed back to the bot',
+  'dashboard.human_takeover_disabled': 'Handed back to the engine',
 };
 
 export function eventLabel(eventType: string): string {
