@@ -170,6 +170,15 @@ a { color: inherit; }
   .hero-cta .btn { text-align: center; }
 }
 
+/* Sits under the buttons, so nobody hesitates over what messaging the
+   number actually commits them to. */
+.hero-note {
+  margin-top: .9rem;
+  max-width: 54ch;
+  font-size: .875rem; line-height: 1.55;
+  color: var(--ink-3);
+}
+
 .facts {
   display: grid; gap: 1px;
   grid-template-columns: 1fr;
