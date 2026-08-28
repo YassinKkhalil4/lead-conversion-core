@@ -154,7 +154,7 @@ export default function CallPrepScreen() {
           }}
         >
           <Button
-            label={lead.humanTakeover ? 'Hand back to the bot' : 'Take over the conversation'}
+            label={lead.humanTakeover ? 'Hand back to the engine' : 'Take over the conversation'}
             variant="text"
             busy={takeover.isPending}
             onPress={() => void run(() => takeover.mutateAsync(!lead.humanTakeover))}
