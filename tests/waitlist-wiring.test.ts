@@ -64,8 +64,13 @@ describe('waitlist route gating', () => {
 
 /**
  * The waitlist path is proxied kadensio.com -> API. These lock in which address
- * `trustProxy: '127.0.0.1'` actually resolves, because the answer depends on
- * whether every hop in front of the API is loopback.
+ * `trustProxy: ['127.0.0.1', '172.16.0.0/12']` actually resolves, because the
+ * answer depends on whether every hop in front of the API is inside that set.
+ *
+ * The Docker range is in the trusted set because the API runs in a container:
+ * requests arrive from the bridge gateway, not from loopback. Trusting only
+ * loopback made the gateway `request.ip` for every visitor, which is the
+ * production bug these cases now cover.
  */
 describe('client IP resolution behind Caddy', () => {
   async function resolveIp(input: {
@@ -113,7 +118,8 @@ describe('client IP resolution behind Caddy', () => {
     // kadensio.com proxies out to https://app.kadensio.com over the public
     // internet, the returning hop is a public address, is therefore untrusted,
     // and becomes request.ip. Every visitor would then share one rate limit
-    // bucket. The Caddy block must keep both hops on loopback.
+    // bucket. Unchanged by widening the trusted set, because a public address
+    // is outside it either way.
     const ip = await resolveIp({
       forwardedFor: '203.0.113.9, 198.51.100.5',
       remoteAddress: '127.0.0.1',
@@ -123,13 +129,91 @@ describe('client IP resolution behind Caddy', () => {
   });
 
   it('ignores a forwarded header from an untrusted direct caller', async () => {
-    // Anything that reaches the port from a non-loopback address cannot spoof
-    // its IP by setting the header itself.
+    // Anything reaching the port from outside the trusted set cannot spoof its
+    // IP by setting the header itself.
     const ip = await resolveIp({
       forwardedFor: '203.0.113.9',
       remoteAddress: '198.51.100.200',
     });
     expect(ip).toBe('198.51.100.200');
+  });
+
+  it('resolves the browser address from the Docker bridge gateway', async () => {
+    // The production topology: Caddy on the host proxies into the container,
+    // so the source address is the bridge gateway rather than loopback. Before
+    // the trusted set included the Docker range this returned 172.21.0.1, and
+    // every visitor shared the rate limit bucket keyed on it.
+    const ip = await resolveIp({
+      forwardedFor: '203.0.113.9',
+      remoteAddress: '172.21.0.1',
+    });
+    expect(ip).toBe('203.0.113.9');
+    expect(ip).not.toBe('172.21.0.1');
+  });
+
+  it('still resolves when a container recreate moves the bridge address', async () => {
+    // The reason the whole /12 is trusted rather than the one gateway that
+    // happened to be observed. A recreate can land anywhere in the range.
+    for (const gateway of ['172.17.0.1', '172.18.0.1', '172.31.255.254']) {
+      const ip = await resolveIp({
+        forwardedFor: '203.0.113.9',
+        remoteAddress: gateway,
+      });
+      expect(ip).toBe('203.0.113.9');
+    }
+  });
+
+  it('trusts the edges of 172.16.0.0/12 and nothing outside it', async () => {
+    const inside = await resolveIp({
+      forwardedFor: '203.0.113.9',
+      remoteAddress: '172.16.0.1',
+    });
+    expect(inside).toBe('203.0.113.9');
+
+    // One address below and one above the range stay untrusted, so the mask is
+    // a /12 and not something broader.
+    for (const outside of ['172.15.0.1', '172.32.0.1']) {
+      const ip = await resolveIp({ forwardedFor: '203.0.113.9', remoteAddress: outside });
+      expect(ip).toBe(outside);
+    }
+  });
+
+  it('does not trust the other private ranges', async () => {
+    // Only loopback and the Docker range were added. 10/8 and 192.168/16 are
+    // not part of this deployment and stay outside the trusted set.
+    for (const other of ['10.0.0.5', '192.168.1.5']) {
+      const ip = await resolveIp({ forwardedFor: '203.0.113.9', remoteAddress: other });
+      expect(ip).toBe(other);
+    }
+  });
+
+  it('ignores a forwarded header the client injected before Caddy appended', async () => {
+    // Caddy appends rather than replaces, so a client that sends its own
+    // X-Forwarded-For pushes the value it invented to the left of the real
+    // one. Resolution walks from the right and stops at the first untrusted
+    // address, so the invented value is never reached.
+    const ip = await resolveIp({
+      forwardedFor: '1.2.3.4, 203.0.113.9',
+      remoteAddress: '172.21.0.1',
+    });
+    expect(ip).toBe('203.0.113.9');
+    expect(ip).not.toBe('1.2.3.4');
+  });
+
+  it('falls back to the bridge gateway when no forwarded header arrives', async () => {
+    // Defined behaviour for a request that reaches the container without
+    // going through Caddy. It cannot be attributed to a client, so it is
+    // attributed to the gateway rather than to nothing.
+    const app = await buildAppWithEnv({ WAITLIST_SIGNUP_ENABLED: 'true' });
+    let seen = '';
+    app.get('/__ip_probe', async (request) => {
+      seen = request.ip;
+      return { ok: true };
+    });
+    await app.inject({ method: 'GET', url: '/__ip_probe', remoteAddress: '172.21.0.1' });
+    await app.close();
+    vi.resetModules();
+    expect(seen).toBe('172.21.0.1');
   });
 });
 
