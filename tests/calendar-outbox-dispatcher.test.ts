@@ -7,6 +7,7 @@ import type { CalendarProvider } from '../src/integrations/calendar/types.js';
 function command(overrides: Partial<ClaimedOutboxCommand> = {}): ClaimedOutboxCommand {
   return {
     outboxCommandId: '6f5f5aa4-21e3-4877-b844-ccdc3563e21b',
+    workerId: 'test-worker',
     commandType: 'calendar.create_event',
     destination: 'calendar-primary',
     idempotencyKey: 'calendar.create_event:appointment-1',

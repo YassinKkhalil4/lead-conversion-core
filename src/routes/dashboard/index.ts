@@ -46,7 +46,7 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   await dashboardDirectoryRoutes(app, { directory });
   await dashboardSummaryRoutes(app, { summary });
   await dashboardTemplateRoutes(app);
-  await dashboardStreamRoutes(app, { events: dashboardEventBus });
+  await dashboardStreamRoutes(app, { events: dashboardEventBus, sessions });
 
   app.addHook('onClose', async () => {
     await dashboardEventBus.close();

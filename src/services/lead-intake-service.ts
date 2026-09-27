@@ -1,12 +1,11 @@
-import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { getEnv } from '../config/env.js';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import { ConversationActivationService } from './conversation-activation-service.js';
 import { messageText } from './message-request-service.js';
 
-type Db = typeof pool | PoolClient;
 
 const templatePayloadSchema = z.object({
   kind: z.literal('template'),
@@ -105,9 +104,7 @@ export class LeadIntakeService {
       throw Object.assign(new Error(`whatsapp_template_not_approved:${parsed.firstContact.payload.templateName}`), { statusCode: 400 });
     }
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const clientId = await this.resolveClientId(client, parsed);
       const payloadHash = sha256Hex(stableJson({
         provider: parsed.provider,
@@ -352,7 +349,6 @@ export class LeadIntakeService {
         });
       }
 
-      await client.query('COMMIT');
       return {
         clientId,
         contactId: contactRow.contact_id,
@@ -362,12 +358,7 @@ export class LeadIntakeService {
         idempotencyKey,
         firstContact,
       };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   private async resolveClientId(client: Db, input: z.output<typeof leadIntakeSchema>): Promise<string> {

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Kadensio Scores a Real Estate Lead: Ten Factors</title>
+<meta name="description" content="Every factor, every point, and the reason for each. Kadensio scores WhatsApp property leads with fixed arithmetic, so the same answers give the same score.">
+<link rel="canonical" href="https://kadensio.com/lead-scoring.html">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Kadensio">
+<meta property="og:url" content="https://kadensio.com/lead-scoring.html">
+<meta property="og:title" content="How the lead score works: ten factors, fixed arithmetic">
+<meta property="og:description" content="Every factor, every point, and the reason for each. The same answers always give the same score.">
+<meta property="og:image" content="https://kadensio.com/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kadensio.com/assets/og.png">
+<meta name="theme-color" content="#0C1F1A">
+<link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/kadensio-icon.svg">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "@id": "https://kadensio.com/lead-scoring.html#article",
+ "headline": "How the lead score works",
+ "description": "The ten factors Kadensio uses to score a real estate lead, the points each one carries, and why the score is fixed arithmetic.",
+ "url": "https://kadensio.com/lead-scoring.html",
+ "inLanguage": "en",
+ "datePublished": "2026-09-27",
+ "dateModified": "2026-09-27",
+ "author": {"@type": "Person", "name": "Yassin Khalil", "jobTitle": "Founder, Kadensio"},
+ "publisher": {"@type": "Organization", "@id": "https://kadensio.com/#organization", "name": "Kadensio", "url": "https://kadensio.com/"},
+ "about": {"@id": "https://kadensio.com/#software"}
+}
+</script>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="logo" href="index.html" aria-label="Kadensio, home"><img src="assets/kadensio-lockup.svg" alt="Kadensio" width="256" height="64" decoding="async"></a>
+    <a class="btn btn-ghost header-cta" href="index.html#waitlist">Get early access</a>
+  </div>
+</header>
+
+<main id="main" class="doc-page">
+  <div class="wrap">
+    <div class="doc-head">
+      <p class="eyebrow">Lead scoring</p>
+      <h1>How the lead score works</h1>
+      <p class="doc-standfirst">Every qualified lead gets a score from 0 to 100. It is arithmetic: ten factors, each worth a fixed number of points, each with a written reason. This page shows all of it.</p>
+      <p class="doc-meta">
+        <span>Scoring model real_estate_v1</span>
+        <span>By Yassin Khalil, founder</span>
+      </p>
+    </div>
+
+    <nav class="doc-toc" aria-labelledby="toc-h">
+      <h2 id="toc-h">On this page</h2>
+      <ol>
+        <li><a href="#factors">The ten factors</a></li>
+        <li><a href="#bands">Hot, warm and cold</a></li>
+        <li><a href="#example">A worked example</a></li>
+        <li><a href="#why">Why fixed arithmetic</a></li>
+        <li><a href="#limits">Limits of the score</a></li>
+      </ol>
+    </nav>
+
+    <article class="doc">
+      <section id="factors" aria-labelledby="factors-h">
+        <h2 id="factors-h"><span class="doc-n">01</span>The ten factors</h2>
+        <p>The engine asks nine questions on WhatsApp: permission, location, unit type, budget, payment plan, down payment, timeline, purpose and site visit. Once the answers are in, each factor below adds its points.</p>
+
+        <div class="doc-table-wrap">
+          <table class="doc-table">
+            <thead>
+              <tr><th scope="col">Factor</th><th scope="col">Points</th><th scope="col">How it scores</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Baseline</th><td>10</td><td>Every scored lead starts here.</td></tr>
+              <tr><th scope="row">Budget</th><td>8 to 25</td><td>By the top of the declared budget: 10 million or more, 25. 5 million or more, 20. 3 million or more, 14. Any budget given, 8.</td></tr>
+              <tr><th scope="row">Timeline</th><td>2 to 20</td><td>As soon as possible, 20. Within three months, 16. Within six months, 10. Just exploring, 2.</td></tr>
+              <tr><th scope="row">Site visit</th><td>0 or 20</td><td>Wanting to see the unit is the strongest buying signal in the model.</td></tr>
+              <tr><th scope="row">Payment plan</th><td>6 to 12</td><td>Cash, 12. Flexible, 8. Installments, 6.</td></tr>
+              <tr><th scope="row">Down payment</th><td>0 to 12</td><td>Measured against the bottom of the budget: 20% or more, 12. 10% or more, 8. Any amount given, 4.</td></tr>
+              <tr><th scope="row">Purpose</th><td>0 to 8</td><td>Investment, or investment and residence together, 8. Primary residence, 5.</td></tr>
+              <tr><th scope="row">Unit type</th><td>3 to 6</td><td>Villa, townhouse or commercial, 6. Apartment, 4. Any other type given, 3.</td></tr>
+              <tr><th scope="row">Location</th><td>0 or 5</td><td>A named location, because it lets routing find the salesperson who covers it.</td></tr>
+              <tr><th scope="row">Qualification complete</th><td>0 or 5</td><td>The buyer answered every question.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The maximums add up to 123 and Kadensio caps the score at 100, so a lead can reach the top without a perfect answer on each factor.</p>
+      </section>
+
+      <section id="bands" aria-labelledby="bands-h">
+        <h2 id="bands-h"><span class="doc-n">02</span>Hot, warm and cold</h2>
+        <p>A score of <strong>75 or more is hot</strong>, <strong>45 to 74 is warm</strong>, and anything below 45 is cold. The dashboard sorts each salesperson's queue by score, hottest first, and every score opens to the factors behind it.</p>
+      </section>
+
+      <section id="example" aria-labelledby="example-h">
+        <h2 id="example-h"><span class="doc-n">03</span>A worked example</h2>
+        <p>A buyer looking for an apartment in New Cairo, with a budget of 3 to 5 million, paying in installments with 500,000 down, buying within three months, for their own home, who wants a site visit:</p>
+
+        <div class="doc-table-wrap">
+          <table class="doc-table">
+            <thead>
+              <tr><th scope="col">Factor</th><th scope="col">Answer</th><th scope="col">Points</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Baseline</th><td>Any scored lead</td><td>10</td></tr>
+              <tr><th scope="row">Budget</th><td>Up to 5,000,000</td><td>20</td></tr>
+              <tr><th scope="row">Timeline</th><td>Within three months</td><td>16</td></tr>
+              <tr><th scope="row">Site visit</th><td>Yes</td><td>20</td></tr>
+              <tr><th scope="row">Payment plan</th><td>Installments</td><td>6</td></tr>
+              <tr><th scope="row">Down payment</th><td>500,000 against 3,000,000 (17%)</td><td>8</td></tr>
+              <tr><th scope="row">Purpose</th><td>Primary residence</td><td>5</td></tr>
+              <tr><th scope="row">Unit type</th><td>Apartment</td><td>4</td></tr>
+              <tr><th scope="row">Location</th><td>New Cairo</td><td>5</td></tr>
+              <tr><th scope="row">Qualification complete</th><td>All nine answered</td><td>5</td></tr>
+            </tbody>
+            <tfoot>
+              <tr><th scope="row">Score</th><td>Hot</td><td>99</td></tr>
+            </tfoot>
+          </table>
+        </div>
+        <p>Give the engine the same nine answers next month and it returns 99 again.</p>
+      </section>
+
+      <section id="why" aria-labelledby="why-h">
+        <h2 id="why-h"><span class="doc-n">04</span>Why fixed arithmetic</h2>
+        <p>A sales manager has to be able to check a score. With ten visible factors, you can show the salesperson who got the lead, and the one who didn't, where each point came from.</p>
+        <p>Kadensio stores each score with the model version and a fingerprint of the exact answers behind it. When it scores the same answers again, it recognises the run it already has, and you can trace any score back to what the buyer said.</p>
+      </section>
+
+      <section id="limits" aria-labelledby="limits-h">
+        <h2 id="limits-h"><span class="doc-n">05</span>Limits of the score</h2>
+        <p><strong>Routing picks the salesperson, in a separate step.</strong> It matches the lead's project, unit type, location and language against each salesperson, weighs their current load, and records every candidate it considered. The score sets the lead's place in the queue once it arrives.</p>
+        <p><strong>The weights stay fixed.</strong> They change when we publish a new model version, and existing scores keep the version they came from. No process retrains them on past leads.</p>
+        <p><strong>Missing answers score zero.</strong> The dashboard lists the answers a score went without.</p>
+      </section>
+
+      <section aria-labelledby="next-h">
+        <h2 id="next-h">See it score you</h2>
+        <p>The live number runs the same model. Message it, answer the nine questions, and it scores you with the model above. Or <a href="index.html#waitlist">request early access</a> for your brokerage.</p>
+        <p class="doc-cta"><a class="btn btn-primary btn-lg" href="https://wa.me/201041445227?text=Hi">Message the live number</a></p>
+      </section>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p class="logo logo-footer"><img src="assets/kadensio-lockup.svg" alt="Kadensio" width="256" height="64" decoding="async"></p>
+    <div>
+      <p class="footer-meta">WhatsApp lead qualification for real estate brokerages. <a href="mailto:yassin@kadensio.com">yassin@kadensio.com</a></p>
+      <p class="footer-legal">
+        <a href="lead-scoring.html">How the score works</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Service</a>
+        <a href="dpa.html">Data Processing Addendum</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

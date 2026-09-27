@@ -267,7 +267,7 @@ function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
   return (
     <EmptyState
       title={scope === 'mine' ? 'No leads assigned to you' : 'No leads yet'}
-      detail="Leads arrive from the website form, Facebook lead ads and WhatsApp. Each one appears here once the qualification conversation starts."
+      detail="Leads arrive from WhatsApp, the website form and Facebook lead ads. Each one appears here as soon as its qualification conversation starts."
     />
   );
 }

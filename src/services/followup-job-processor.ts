@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { pool } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson, type ClaimedJob } from '../infrastructure/runtime.js';
 import type { JobProcessingResult } from '../worker/runtime-worker.js';
 
@@ -23,9 +24,7 @@ export class FollowupJobProcessor {
       return { outcome: 'dead_lettered', reason: `invalid_followup_job_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
     }
     const input = parsed.data;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const followup = await client.query<{
         followup_id: string;
         lead_id: string;
@@ -56,11 +55,9 @@ export class FollowupJobProcessor {
       );
       const row = followup.rows[0];
       if (!row) {
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
       if (row.status !== 'scheduled') {
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
       const skipReason = this.skipReason(row);
@@ -82,7 +79,6 @@ export class FollowupJobProcessor {
           causationId: job.scheduledJobId,
           payload: { followupId: row.followup_id, reason: skipReason },
         });
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
 
@@ -148,14 +144,8 @@ export class FollowupJobProcessor {
           idempotencyKey,
         },
       });
-      await client.query('COMMIT');
       return { outcome: 'completed' };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   private skipReason(row: {

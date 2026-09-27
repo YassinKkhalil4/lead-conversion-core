@@ -6,6 +6,7 @@ import type { MessageProvider } from '../src/integrations/messaging/types.js';
 function command(overrides: Partial<ClaimedOutboxCommand> = {}): ClaimedOutboxCommand {
   return {
     outboxCommandId: '6f5f5aa4-21e3-4877-b844-ccdc3563e21b',
+    workerId: 'test-worker',
     commandType: 'whatsapp.send_message',
     destination: '+201000000001',
     idempotencyKey: 'message:lead-1:welcome',

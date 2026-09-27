@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { getEnv } from '../config/env.js';
-import { pool } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import {
   AuditRepository,
   InboxRepository,
@@ -296,9 +296,7 @@ export class MetaStatusProcessor {
       return { outcome: 'dead_lettered', reason: `invalid_meta_status_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
     }
     const status = parsed.data;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const message = await client.query<{ message_id: string; client_id: string; state: string }>(
         `SELECT message_id, client_id, state
          FROM app.messages
@@ -310,7 +308,7 @@ export class MetaStatusProcessor {
       );
       const row = message.rows[0];
       if (!row) {
-        await client.query('ROLLBACK');
+        // Nothing was written yet, so committing here is the same as rolling back.
         return { outcome: 'retryable', error: `message_not_found_for_provider_status:${status.providerMessageId}` };
       }
       const incomingState = mapMessageState(status.providerStatus);
@@ -361,13 +359,7 @@ export class MetaStatusProcessor {
           stateAdvanced,
         },
       });
-      await client.query('COMMIT');
       return { outcome: 'processed' };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 }

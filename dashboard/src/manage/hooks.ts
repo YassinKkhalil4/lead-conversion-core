@@ -18,8 +18,9 @@ export function useProjects() {
   return useQuery({ queryKey: manageKeys.projects, queryFn: () => api.listProjects(true) });
 }
 
-export function useUsers() {
-  return useQuery({ queryKey: manageKeys.users, queryFn: () => api.listUsers() });
+/** `enabled` lets a screen shared with managers skip this admin-only call. */
+export function useUsers(enabled = true) {
+  return useQuery({ queryKey: manageKeys.users, queryFn: () => api.listUsers(), enabled });
 }
 
 export function useSummary() {

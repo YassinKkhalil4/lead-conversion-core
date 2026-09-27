@@ -1,4 +1,5 @@
 import { pool } from '../../db/pool.js';
+import { withTransaction } from '../../db/transaction.js';
 import { AuditRepository } from '../../infrastructure/runtime.js';
 import { badRequest, conflict, type DashboardUser, notFound } from './types.js';
 
@@ -172,9 +173,7 @@ export class DashboardDirectoryService {
       active: boolean;
     },
   ): Promise<SalespersonView> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    const salespersonId = await withTransaction(async (client) => {
       const inserted = await client.query<{ salesperson_id: string }>(
         `INSERT INTO app.salespeople
           (client_id, name, phone_e164, email, active, unit_specialties, locations, languages,
@@ -195,26 +194,21 @@ export class DashboardDirectoryService {
           input.capacityLimit,
         ],
       );
-      const salespersonId = inserted.rows[0]?.salesperson_id;
-      if (!salespersonId) throw conflict('salesperson_phone_already_exists', { phoneE164: input.phoneE164 });
+      const createdId = inserted.rows[0]?.salesperson_id;
+      if (!createdId) throw conflict('salesperson_phone_already_exists', { phoneE164: input.phoneE164 });
       await this.audit.record(client, {
         eventType: 'dashboard.salesperson_created',
         actorType: 'operator',
         actorId: actor.userId,
         aggregateType: 'salesperson',
-        aggregateId: salespersonId,
+        aggregateId: createdId,
         payload: { clientId: actor.clientId, priorityRank: input.priorityRank },
       });
-      await client.query('COMMIT');
-      const view = await this.findSalesperson(actor.clientId, salespersonId);
-      if (!view) throw new Error('salesperson_not_readable_after_create');
-      return view;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+      return createdId;
+    });
+    const view = await this.findSalesperson(actor.clientId, salespersonId);
+    if (!view) throw new Error('salesperson_not_readable_after_create');
+    return view;
   }
 
   async updateSalesperson(
@@ -231,9 +225,7 @@ export class DashboardDirectoryService {
       capacityLimit?: number | undefined;
     },
   ): Promise<SalespersonView> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    await withTransaction(async (client) => {
       const updated = await client.query<{ salesperson_id: string }>(
         `UPDATE app.salespeople
          SET name = COALESCE($3, name),
@@ -269,16 +261,10 @@ export class DashboardDirectoryService {
         aggregateId: salespersonId,
         payload: { clientId: actor.clientId, fields: Object.keys(input) },
       });
-      await client.query('COMMIT');
-      const view = await this.findSalesperson(actor.clientId, salespersonId);
-      if (!view) throw notFound('salesperson_not_found');
-      return view;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
+    const view = await this.findSalesperson(actor.clientId, salespersonId);
+    if (!view) throw notFound('salesperson_not_found');
+    return view;
   }
 
   async listProjects(clientId: string, includeInactive: boolean): Promise<ProjectView[]> {
@@ -304,9 +290,7 @@ export class DashboardDirectoryService {
       mapsUrl: string;
     },
   ): Promise<ProjectView> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const inserted = await client.query<ProjectRow>(
         `INSERT INTO app.projects
           (client_id, project_name, active, starting_price, max_price, unit_types, location, maps_url)
@@ -335,14 +319,8 @@ export class DashboardDirectoryService {
         aggregateId: row.project_id,
         payload: { clientId: actor.clientId, projectName: input.projectName },
       });
-      await client.query('COMMIT');
       return toProject(row);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async updateProject(
@@ -358,9 +336,7 @@ export class DashboardDirectoryService {
       mapsUrl?: string | undefined;
     },
   ): Promise<ProjectView> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const updated = await client.query<ProjectRow>(
         `UPDATE app.projects
          SET project_name = COALESCE($3, project_name),
@@ -399,14 +375,8 @@ export class DashboardDirectoryService {
         aggregateId: projectId,
         payload: { clientId: actor.clientId, fields: Object.keys(input) },
       });
-      await client.query('COMMIT');
       return toProject(row);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   /**
@@ -422,9 +392,7 @@ export class DashboardDirectoryService {
     salespersonIds: string[],
   ): Promise<ProjectView> {
     const unique = [...new Set(salespersonIds)];
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    await withTransaction(async (client) => {
       const project = await client.query<{ project_id: string }>(
         'SELECT project_id FROM app.projects WHERE project_id = $1 AND client_id = $2 FOR UPDATE',
         [projectId, actor.clientId],
@@ -458,13 +426,7 @@ export class DashboardDirectoryService {
         aggregateId: projectId,
         payload: { clientId: actor.clientId, salespersonIds: unique, count: unique.length },
       });
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
 
     const view = await this.findProject(actor.clientId, projectId);
     if (!view) throw notFound('project_not_found');

@@ -1,7 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { PoolClient } from 'pg';
 import { getEnv } from '../../config/env.js';
-import { pool } from '../../db/pool.js';
+import { pool, type Db } from '../../db/pool.js';
+import { withTransaction } from '../../db/transaction.js';
 import { AuditRepository } from '../../infrastructure/runtime.js';
 import { burnDecoyVerification, verifyPassword } from './password.js';
 import {
@@ -13,7 +13,6 @@ import {
   unauthorized,
 } from './types.js';
 
-type Db = typeof pool | PoolClient;
 
 const TOKEN_BYTES = 32;
 
@@ -127,9 +126,7 @@ export class DashboardSessionService {
     const user = toUser(matched);
     const token = randomBytes(TOKEN_BYTES).toString('hex');
     const expiresAt = new Date(Date.now() + this.sessionTtlMs).toISOString();
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const session = await client.query<{ session_id: string; expires_at: Date }>(
         `INSERT INTO app.sessions (user_id, token_hash, expires_at, user_agent, ip_address)
          VALUES ($1, $2, $3::timestamptz, $4, $5)
@@ -150,19 +147,13 @@ export class DashboardSessionService {
         payload: { role: user.role, sessionId, clientId: user.clientId },
       });
       await this.resetAttempts(client, throttleKeys);
-      await client.query('COMMIT');
       return {
         token,
         sessionId,
         expiresAt: (session.rows[0]?.expires_at ?? new Date(expiresAt)).toISOString(),
         user: { ...user, lastLoginAt: new Date().toISOString() },
       };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async resolve(token: string): Promise<DashboardSession | null> {
@@ -220,9 +211,7 @@ export class DashboardSessionService {
   }
 
   async revoke(sessionId: string, actorId: string): Promise<boolean> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const result = await client.query<{ session_id: string }>(
         `UPDATE app.sessions
          SET revoked_at = now()
@@ -241,14 +230,8 @@ export class DashboardSessionService {
           payload: { sessionId },
         });
       }
-      await client.query('COMMIT');
       return revoked;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async revokeAllForUser(userId: string): Promise<number> {

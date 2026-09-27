@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConversationRepository } from '../repositories/conversation-repository.js';
 import { evaluateConversation } from '../domain/engine.js';
+import { isOptOutMessage } from '../domain/opt-out.js';
 import { renderTemplate } from '../domain/render.js';
 import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { rollbackQuietly } from '../db/transaction.js';
 import {
   AuditRepository,
   RuntimeOutboxRepository,
@@ -64,13 +66,6 @@ function toMessagingPayload(decision: ReplyDecision): MessagingPayload {
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-const OPT_OUT_WORDS = ['stop', 'unsubscribe', 'الغاء', 'إلغاء', 'وقف', 'بلوك', 'مش مهتم', 'مش عايز'];
-
-function isOptOut(text: string): boolean {
-  const value = text.toLocaleLowerCase().trim();
-  return OPT_OUT_WORDS.some((word) => value.includes(word.toLocaleLowerCase()));
 }
 
 function optOutDecision(state: ConversationState): ReplyDecision {
@@ -161,6 +156,9 @@ export class EdgeInboundMessageProcessor {
     const input = parsed.data;
     const started = performance.now();
     const client = await pool.connect();
+    // Early exits below roll back work already done (a lead capture, the active
+    // turn row), so this transaction stays explicit rather than withTransaction.
+    let brokenConnection: Error | undefined;
     try {
       await client.query('BEGIN');
       const channel = await client.query<{
@@ -233,7 +231,7 @@ export class EdgeInboundMessageProcessor {
       state.leadName = state.leadName || input.profileName || '';
 
       const config = await this.configs.getByVersion(state.configVersion, client);
-      let decision = isOptOut(input.messageText)
+      let decision = isOptOutMessage(input.messageText)
         ? optOutDecision(state)
         : evaluateConversation({
             state,
@@ -598,14 +596,14 @@ export class EdgeInboundMessageProcessor {
       await client.query('COMMIT');
       return { outcome: 'processed' };
     } catch (error) {
-      await client.query('ROLLBACK');
+      brokenConnection = await rollbackQuietly(client);
       throw error;
     } finally {
-      client.release();
+      client.release(brokenConnection);
     }
   }
 
-  private async resolveAppLead(client: typeof pool | import('pg').PoolClient, leadId: string): Promise<{
+  private async resolveAppLead(client: Db, leadId: string): Promise<{
     leadId: string;
     clientId: string;
     contactId: string;
@@ -620,7 +618,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async upsertAppConversation(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     state: ConversationState,
     target: { leadId: string; clientId: string; contactId: string },
   ): Promise<string> {
@@ -680,7 +678,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistInboundAppMessage(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     input: {
       appConversationId: string;
       target: { leadId: string; clientId: string; contactId: string };
@@ -748,7 +746,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistQualificationEvents(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     leadId: string,
     decision: ReplyDecision,
     appConversationId: string,
@@ -857,7 +855,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistOptOut(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     state: ConversationState,
     phoneNormalized: string,
   ): Promise<void> {
@@ -899,7 +897,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistControlSnapshot(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     state: ConversationState,
     sourceEventId: string,
   ): Promise<void> {

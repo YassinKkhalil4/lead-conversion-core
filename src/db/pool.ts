@@ -4,6 +4,9 @@ import { logger } from '../config/logger.js';
 
 const { Pool } = pg;
 
+/** Anything that can run a query: the pool itself, or a client inside a transaction. */
+export type Db = pg.Pool | pg.PoolClient;
+
 export const pool = new Pool({
   connectionString: getEnv().DATABASE_URL,
   max: 20,

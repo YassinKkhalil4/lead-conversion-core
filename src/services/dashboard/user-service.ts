@@ -1,11 +1,10 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../../db/pool.js';
+import { pool, type Db } from '../../db/pool.js';
+import { withTransaction } from '../../db/transaction.js';
 import { AuditRepository } from '../../infrastructure/runtime.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { normalizeEmail } from './session-service.js';
 import { badRequest, conflict, type DashboardRole, type DashboardUser, notFound, unauthorized } from './types.js';
 
-type Db = typeof pool | PoolClient;
 
 export interface DashboardUserRecord {
   userId: string;
@@ -70,9 +69,7 @@ export class DashboardUserService {
       throw badRequest('salesperson_id_only_valid_for_salesperson_role');
     }
     const passwordHash = await hashPassword(input.password);
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       await this.assertSalespersonInClient(client, input.clientId, salespersonId);
       const result = await client.query<UserRow>(
         `INSERT INTO app.users (client_id, salesperson_id, email, password_hash, role, name)
@@ -91,14 +88,8 @@ export class DashboardUserService {
         aggregateId: row.user_id,
         payload: { clientId: input.clientId, role: input.role, email },
       });
-      await client.query('COMMIT');
       return toRecord(row);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async list(clientId: string): Promise<DashboardUserRecord[]> {
@@ -123,9 +114,7 @@ export class DashboardUserService {
     password?: string;
   }): Promise<DashboardUserRecord> {
     const passwordHash = input.password ? await hashPassword(input.password) : null;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const current = await client.query<UserRow>(
         `SELECT ${RECORD_COLUMNS} FROM app.users WHERE user_id = $1 AND client_id = $2 FOR UPDATE`,
         [input.userId, input.clientId],
@@ -184,14 +173,8 @@ export class DashboardUserService {
           active: row.active,
         },
       });
-      await client.query('COMMIT');
       return toRecord(row);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async changeOwnPassword(input: {
@@ -209,9 +192,7 @@ export class DashboardUserService {
       throw unauthorized('current_password_incorrect');
     }
     const nextHash = await hashPassword(input.newPassword);
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    await withTransaction(async (client) => {
       await client.query('UPDATE app.users SET password_hash = $2, updated_at = now() WHERE user_id = $1', [
         input.user.userId,
         nextHash,
@@ -227,13 +208,7 @@ export class DashboardUserService {
         aggregateId: input.user.userId,
         payload: { clientId: input.user.clientId },
       });
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   private async assertSalespersonInClient(

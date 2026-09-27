@@ -1,8 +1,6 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import type { Db } from '../db/pool.js';
 import { AuditRepository, JobRepository } from '../infrastructure/runtime.js';
 
-type Db = typeof pool | PoolClient;
 
 interface ScheduleFollowupResult {
   followupId: string;

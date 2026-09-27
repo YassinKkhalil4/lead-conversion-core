@@ -1,8 +1,7 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 
-type Db = typeof pool | PoolClient;
 
 interface AppointmentOfferResult {
   appointmentOfferId: string;
@@ -139,9 +138,7 @@ export class AppointmentService {
     correlationId?: string;
     causationId?: string;
   }): Promise<boolean> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const offer = await client.query<{ appointment_offer_id: string; lead_id: string }>(
         `UPDATE app.appointment_offers
          SET status='cancelled',
@@ -154,7 +151,6 @@ export class AppointmentService {
       );
       const row = offer.rows[0];
       if (!row) {
-        await client.query('COMMIT');
         return false;
       }
       await client.query(
@@ -178,14 +174,8 @@ export class AppointmentService {
           reason: input.reason,
         },
       });
-      await client.query('COMMIT');
       return true;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async bookSlot(input: {
@@ -197,9 +187,7 @@ export class AppointmentService {
     causationId?: string;
   }): Promise<AppointmentBookingResult> {
     const idempotencyKey = `appointment.book:${input.appointmentOfferId}:${input.sourceEventId}`;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const bookedBy = input.bookedBy || 'external_user';
       const duplicate = await client.query<{
         appointment_id: string;
@@ -220,7 +208,6 @@ export class AppointmentService {
         ) {
           throw new Error(`appointment_booking_idempotency_collision:${idempotencyKey}`);
         }
-        await client.query('COMMIT');
         return {
           outcome: 'duplicate',
           appointmentId: duplicate.rows[0].appointment_id,
@@ -274,11 +261,9 @@ export class AppointmentService {
       const row = target.rows[0];
       if (!row) throw new Error(`appointment_slot_not_found:${input.appointmentOfferId}:${input.appointmentSlotId}`);
       if (row.offer_status === 'cancelled' || row.slot_status === 'cancelled') {
-        await client.query('COMMIT');
         return { outcome: 'cancelled', appointmentId: '', outboxCommandId: '' };
       }
       if (row.offer_status !== 'offered' || row.slot_status !== 'offered') {
-        await client.query('COMMIT');
         return { outcome: 'already_booked', appointmentId: '', outboxCommandId: '' };
       }
       if (row.expires_at.getTime() <= Date.now()) {
@@ -288,7 +273,6 @@ export class AppointmentService {
            WHERE appointment_offer_id=$1`,
           [row.appointment_offer_id],
         );
-        await client.query('COMMIT');
         return { outcome: 'expired', appointmentId: '', outboxCommandId: '' };
       }
 
@@ -376,13 +360,7 @@ export class AppointmentService {
           outboxCommandId,
         },
       });
-      await client.query('COMMIT');
       return { outcome: 'booked', appointmentId, outboxCommandId };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 }

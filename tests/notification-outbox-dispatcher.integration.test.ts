@@ -133,6 +133,7 @@ describePg('NotificationOutboxDispatcher with real PostgreSQL', () => {
     );
     return {
       outboxCommandId: inserted.rows[0]?.outbox_command_id || '',
+      workerId: 'test-worker',
       commandType,
       destination: 'dashboard',
       idempotencyKey: `notify:${commandType}`,

@@ -1,42 +1,14 @@
 import { z } from 'zod';
 import type { ClaimedOutboxCommand } from '../infrastructure/runtime.js';
 import type { OutboxDispatchResult } from './runtime-worker.js';
+import { messagingPayloadSchema } from '../integrations/messaging/payload-schema.js';
 import type { MessageProvider, SendMessageCommand } from '../integrations/messaging/types.js';
-
-const optionSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-});
-
-const payloadSchema = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('text'),
-    text: z.string().min(1),
-  }),
-  z.object({
-    kind: z.literal('buttons'),
-    text: z.string().min(1),
-    options: z.array(optionSchema).min(1).max(3),
-  }),
-  z.object({
-    kind: z.literal('list'),
-    text: z.string().min(1),
-    buttonText: z.string().min(1),
-    options: z.array(optionSchema).min(1).max(10),
-  }),
-  z.object({
-    kind: z.literal('template'),
-    templateName: z.string().min(1),
-    languageCode: z.string().min(2),
-    components: z.array(z.record(z.unknown())).default([]),
-  }),
-]);
 
 const commandPayloadSchema = z.object({
   provider: z.literal('meta').default('meta'),
   phoneNumberId: z.string().default(''),
   toE164: z.string().min(5),
-  message: payloadSchema,
+  message: messagingPayloadSchema,
 });
 
 export class MessagingOutboxDispatcher {

@@ -1,0 +1,31 @@
+# Kadensio
+
+> Kadensio is WhatsApp lead qualification for real estate brokerages. It answers cold WhatsApp messages on the brokerage's own number through the official Meta WhatsApp Business Platform, asks the brokerage's qualification questions in Arabic or English, scores the answers with fixed arithmetic, routes the lead to the matching salesperson and books viewings in Google Calendar. It is an automated qualification engine with no generative model: it cannot invent a price, a payment plan or a unit.
+
+Kadensio is built for Dubai and the UAE, runs end to end in Egypt, and is taking its first brokerages through early access. It has no published pricing.
+
+## What it does
+
+- Replies to a cold WhatsApp message in seconds, unattended. The fastest measured run from first message to booked appointment is 30 seconds.
+- The buyer chooses Arabic or English first. Both ship; other languages are written and loaded during setup.
+- Asks nine questions by default: permission, location, unit type, budget, payment plan, down payment, timeline, purpose, site visit. Brokerages can reword, reorder, remove or add questions.
+- Scores each lead from 0 to 100 with ten weighted factors. 75 or more is hot, 45 to 74 warm, below 45 cold.
+- Routes the lead to a salesperson by project, unit type, location, language and current load, and records why.
+- Offers real viewing slots and writes the booking to Google Calendar.
+- Reminds the salesperson if a lead is unacknowledged after 15 minutes and alerts the manager at 30.
+- Salespeople work from a web dashboard: a queue sorted by score, the full conversation, reply, and one-tap takeover from the engine.
+- A buyer who says stop is opted out immediately.
+- Also accepts leads from website forms and Facebook lead ads.
+
+## Pages
+
+- [Home](https://kadensio.com/): what Kadensio does, how it works, and early access
+- [How the lead score works](https://kadensio.com/lead-scoring.html): all ten scoring factors, their points, and a worked example
+- [Privacy Policy](https://kadensio.com/privacy.html)
+- [Terms of Service](https://kadensio.com/terms.html)
+- [Data Processing Addendum](https://kadensio.com/dpa.html): data is stored in Frankfurt, Germany; sub-processors are Meta, Google (only when a calendar is connected) and Hostinger
+
+## Contact
+
+- Try the live system on WhatsApp: +20 104 144 5227
+- Founder: Yassin Khalil, yassin@kadensio.com

@@ -1,7 +1,6 @@
 import { getEnv } from './config/env.js';
 import { logger } from './config/logger.js';
 import { closePool } from './db/pool.js';
-import type { ClaimedJob, ClaimedOutboxCommand } from './infrastructure/runtime.js';
 import { GoogleCalendarAdapter } from './integrations/calendar/google-calendar-adapter.js';
 import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adapter.js';
 import { leadIngressInboxEventTypes } from './services/lead-ingress-inbox-processor.js';
@@ -11,8 +10,9 @@ import { ReportingService } from './services/reporting-service.js';
 import { SlaService } from './services/sla-service.js';
 import { CalendarOutboxDispatcher } from './worker/calendar-outbox-dispatcher.js';
 import { MessagingOutboxDispatcher } from './worker/messaging-outbox-dispatcher.js';
-import { NotificationOutboxDispatcher, isNotificationCommandType } from './worker/notification-outbox-dispatcher.js';
-import { WaitlistOutboxDispatcher, isWaitlistCommandType } from './worker/waitlist-outbox-dispatcher.js';
+import { NotificationOutboxDispatcher } from './worker/notification-outbox-dispatcher.js';
+import { WaitlistOutboxDispatcher } from './worker/waitlist-outbox-dispatcher.js';
+import { createJobRouter, createOutboxRouter } from './worker/runtime-routing.js';
 import { RuntimeWorker } from './worker/runtime-worker.js';
 import { buildRuntimeInboxWiring } from './worker/runtime-worker-wiring.js';
 
@@ -34,31 +34,17 @@ const {
 const followupJobProcessor = new FollowupJobProcessor();
 const slaService = new SlaService();
 const reportingService = new ReportingService();
-const processRuntimeJob = (job: ClaimedJob) => {
-  if (job.jobType === 'sla.notify') return slaService.process(job);
-  if (job.jobType === 'followup.send') return followupJobProcessor.process(job);
-  if (job.jobType === 'report.daily') return reportingService.process(job);
-  return Promise.resolve({ outcome: 'dead_lettered' as const, reason: `unsupported_scheduled_job:${job.jobType}` });
-};
-const dispatchRuntimeOutbox = (command: ClaimedOutboxCommand) => {
-  if (command.commandType === 'calendar.create_event') {
-    return calendarDispatcher
-      ? calendarDispatcher.dispatch(command)
-      : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'calendar_dispatcher_disabled' });
-  }
-  if (isNotificationCommandType(command.commandType)) {
-    return notificationDispatcher.dispatch(command);
-  }
-  if (isWaitlistCommandType(command.commandType)) {
-    return waitlistDispatcher.dispatch(command);
-  }
-  // Anything unrecognised still falls through to messaging. Every new command
-  // family needs its own branch above, or it is handed to the WhatsApp sender
-  // and fails there instead of where it was written.
-  return messagingDispatcher
-    ? messagingDispatcher.dispatch(command)
-    : Promise.resolve({ outcome: 'permanently_failed' as const, error: 'messaging_dispatcher_disabled' });
-};
+const processRuntimeJob = createJobRouter({
+  'sla.notify': (job) => slaService.process(job),
+  'followup.send': (job) => followupJobProcessor.process(job),
+  'report.daily': (job) => reportingService.process(job),
+});
+const dispatchRuntimeOutbox = createOutboxRouter({
+  messaging: messagingDispatcher,
+  calendar: calendarDispatcher,
+  notification: notificationDispatcher,
+  waitlist: waitlistDispatcher,
+});
 const runtimeHandlers = {
   dispatchOutbox: dispatchRuntimeOutbox,
   ...(inboxEventTypes.length > 0
@@ -81,9 +67,21 @@ const worker = new RuntimeWorker(runtimeHandlers, {
   idleSleepMs: env.RUNTIME_WORKER_IDLE_SLEEP_MS,
 });
 
+// Longer than any single dispatch (provider calls time out at 8-15 s), shorter
+// than the worker's 30 s stop_grace_period in docker-compose.yml.
+const SHUTDOWN_TIMEOUT_MS = 25_000;
+let shuttingDown = false;
+
 async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
   logger.info({ signal }, 'Stopping runtime worker');
-  worker.stop();
+  const forced = setTimeout(() => {
+    logger.error({ timeoutMs: SHUTDOWN_TIMEOUT_MS }, 'Runtime worker did not drain in time; exiting');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+  forced.unref();
+  await worker.stop();
   await closePool();
   process.exit(0);
 }

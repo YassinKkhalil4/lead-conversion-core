@@ -3,11 +3,12 @@ import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex } from '../infrastructure/runtime.js';
+import { WAITLIST_NOTIFICATION_COMMAND_TYPE } from '../worker/outbox-command-types.js';
 
 /** Identifies where a signup came from, stored on the row. */
 export const WAITLIST_SOURCE = 'kadensio_landing';
 
-export const WAITLIST_NOTIFICATION_COMMAND_TYPE = 'waitlist.signup_notification';
+export { WAITLIST_NOTIFICATION_COMMAND_TYPE };
 
 const MARKETS = ['dubai_uae', 'egypt', 'other'] as const;
 

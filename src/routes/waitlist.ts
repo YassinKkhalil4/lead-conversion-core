@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getEnv } from '../config/env.js';
 import { WaitlistService, waitlistSchema } from '../services/waitlist-service.js';
+import { browserSubmissionHeaders, publicRateLimit } from './public-ingress.js';
 
 /**
  * Reached same-origin as https://kadensio.com/api/waitlist, proxied by Caddy to
@@ -10,33 +11,10 @@ import { WaitlistService, waitlistSchema } from '../services/waitlist-service.js
  */
 export const WAITLIST_ROUTE_PATH = '/public/waitlist';
 
-/**
- * Same whitelist the webhook routes persist, minus the signature header, which
- * has no meaning here. The request body is never logged and never lands in
- * these headers.
- */
-function publicHeaders(request: FastifyRequest): Record<string, unknown> {
-  return {
-    'content-type': request.headers['content-type'] || '',
-    'user-agent': request.headers['user-agent'] || '',
-    'accept-language': request.headers['accept-language'] || '',
-  };
-}
-
-function rateLimitConfig() {
-  const env = getEnv();
-  return {
-    rateLimit: {
-      max: env.PUBLIC_INGRESS_RATE_LIMIT_MAX,
-      timeWindow: env.PUBLIC_INGRESS_RATE_LIMIT_WINDOW_MS,
-    },
-  };
-}
-
 export async function waitlistRoutes(app: FastifyInstance): Promise<void> {
   const service = new WaitlistService();
 
-  app.post(WAITLIST_ROUTE_PATH, { config: rateLimitConfig() }, async (
+  app.post(WAITLIST_ROUTE_PATH, { config: publicRateLimit() }, async (
     request: FastifyRequest,
     reply: FastifyReply,
   ) => {
@@ -63,7 +41,7 @@ export async function waitlistRoutes(app: FastifyInstance): Promise<void> {
     const result = await service.submit({
       submission: parsed.data,
       ipAddress: String(request.ip || request.socket.remoteAddress || 'unknown'),
-      requestHeaders: publicHeaders(request),
+      requestHeaders: browserSubmissionHeaders(request),
       correlationId: String(request.id || ''),
     });
 
