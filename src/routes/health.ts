@@ -10,7 +10,7 @@ import { requireInternalSecret } from './auth.js';
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/health', async () => ({ ok: true }));
 
-  app.get('/ready', async (_request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/ready', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const env = getEnv();
       const expectedMigrations = (await readdir(resolve(process.cwd(), 'migrations')))
@@ -72,8 +72,11 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
         workerHeartbeats,
       };
     } catch (error) {
+      // /ready is public. Driver errors carry hosts, ports and sometimes
+      // usernames, so they go to the log, not the response.
+      request.log.error({ error }, 'Readiness check failed');
       reply.code(503);
-      return { ok: false, database: 'unavailable', error: String(error) };
+      return { ok: false, database: 'unavailable' };
     }
   });
 

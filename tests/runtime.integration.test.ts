@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 function commandExists(command: string): boolean {
   try {
@@ -784,6 +784,62 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect((await db.pool.query('SELECT count(*) FROM runtime.scheduled_jobs')).rows[0]?.count).toBe('1');
     await jobs.cancel('followup:lead-1:slot-1', 'superseded by operator');
     expect(await jobs.claim('scheduler-a')).toHaveLength(0);
+  });
+
+  describe('consumer receipts', () => {
+    const headers = { 'x-internal-secret': 'test_internal_secret_123456' };
+
+    async function claim(app: Awaited<ReturnType<typeof appModule.buildApp>>, idempotencyKey: string) {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/internal/consumer/claim',
+        headers,
+        payload: { consumerName: 'n8n-projection', idempotencyKey, leaseSeconds: 120 },
+      });
+      expect(response.statusCode).toBe(200);
+      return response.json() as Record<string, unknown>;
+    }
+
+    it('judges an active lease by the database clock, not the app clock', async () => {
+      const app = await appModule.buildApp();
+      try {
+        expect(await claim(app, 'lead:clock-skew')).toMatchObject({ acquired: true });
+        // The app host's clock runs an hour ahead of PostgreSQL.
+        const skewedNow = Date.now() + 3_600_000;
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(skewedNow);
+        expect(await claim(app, 'lead:clock-skew')).toMatchObject({ acquired: false, busy: true });
+      } finally {
+        vi.useRealTimers();
+        await app.close();
+      }
+    });
+
+    it('reclaims an expired lease and reports a completed receipt', async () => {
+      const app = await appModule.buildApp();
+      try {
+        expect(await claim(app, 'lead:lifecycle')).toMatchObject({ acquired: true });
+        await db.pool.query(
+          "UPDATE edge_consumer_receipts SET lease_until=now()-interval '1 second' WHERE idempotency_key='lead:lifecycle'",
+        );
+        expect(await claim(app, 'lead:lifecycle')).toMatchObject({ acquired: true, reclaimed: true });
+
+        const completed = await app.inject({
+          method: 'POST',
+          url: '/internal/consumer/complete',
+          headers,
+          payload: { consumerName: 'n8n-projection', idempotencyKey: 'lead:lifecycle', result: { airtableId: 'rec1' } },
+        });
+        expect(completed.json()).toMatchObject({ ok: true, completed: true });
+        expect(await claim(app, 'lead:lifecycle')).toMatchObject({
+          acquired: false,
+          alreadyCompleted: true,
+          result: { airtableId: 'rec1' },
+        });
+      } finally {
+        await app.close();
+      }
+    });
   });
 
   describe('lease fencing', () => {

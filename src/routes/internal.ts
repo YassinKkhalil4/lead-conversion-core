@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pool } from '../db/pool.js';
 import { withTransaction } from '../db/transaction.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
+import { ConsumerReceiptRepository } from '../repositories/consumer-receipt-repository.js';
 import { LeadIntakeService, leadIntakeSchema } from '../services/lead-intake-service.js';
 import { MessageRequestService } from '../services/message-request-service.js';
 import { requireInternalSecret } from './auth.js';
@@ -115,6 +116,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   const configs = new ConfigRepository();
   const messageRequests = new MessageRequestService();
   const leadIntake = new LeadIntakeService();
+  const receipts = new ConsumerReceiptRepository();
 
 
   app.get('/internal/config/active', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -167,43 +169,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       reply.code(400);
       return { ok: false, issues: parsed.error.issues };
     }
-    const body = parsed.data;
-    return withTransaction(async (client) => {
-      const inserted = await client.query(
-        `INSERT INTO edge_consumer_receipts
-          (consumer_name,idempotency_key,status,lease_until)
-         VALUES ($1,$2,'processing',now()+make_interval(secs => $3))
-         ON CONFLICT DO NOTHING
-         RETURNING status,lease_until`,
-        [body.consumerName, body.idempotencyKey, body.leaseSeconds],
-      );
-      if (inserted.rows[0]) {
-        return { ok: true, acquired: true, alreadyCompleted: false, busy: false };
-      }
-      const existing = await client.query(
-        `SELECT status,lease_until,result_json,last_error
-         FROM edge_consumer_receipts
-         WHERE consumer_name=$1 AND idempotency_key=$2
-         FOR UPDATE`,
-        [body.consumerName, body.idempotencyKey],
-      );
-      const row = existing.rows[0];
-      if (!row) throw new Error('consumer_receipt_missing_after_conflict');
-      if (row.status === 'completed') {
-        return { ok: true, acquired: false, alreadyCompleted: true, busy: false, result: row.result_json };
-      }
-      const leaseActive = row.status === 'processing' && new Date(row.lease_until).getTime() > Date.now();
-      if (leaseActive) {
-        return { ok: true, acquired: false, alreadyCompleted: false, busy: true, leaseUntil: row.lease_until };
-      }
-      await client.query(
-        `UPDATE edge_consumer_receipts
-         SET status='processing',lease_until=now()+make_interval(secs => $3),last_error='',updated_at=now()
-         WHERE consumer_name=$1 AND idempotency_key=$2`,
-        [body.consumerName, body.idempotencyKey, body.leaseSeconds],
-      );
-      return { ok: true, acquired: true, alreadyCompleted: false, busy: false, reclaimed: true };
-    });
+    return { ok: true, ...(await receipts.claim(parsed.data)) };
   });
 
   app.post('/internal/consumer/complete', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -213,19 +179,12 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       reply.code(400);
       return { ok: false, issues: parsed.error.issues };
     }
-    const body = parsed.data;
-    const result = await pool.query(
-      `UPDATE edge_consumer_receipts
-       SET status='completed',result_json=$3::jsonb,last_error='',lease_until=now(),updated_at=now()
-       WHERE consumer_name=$1 AND idempotency_key=$2
-       RETURNING status,result_json`,
-      [body.consumerName, body.idempotencyKey, JSON.stringify(body.result)],
-    );
-    if (!result.rows[0]) {
+    const receipt = await receipts.complete(parsed.data);
+    if (!receipt) {
       reply.code(404);
       return { ok: false, error: 'consumer_receipt_not_found' };
     }
-    return { ok: true, completed: true, receipt: result.rows[0] };
+    return { ok: true, completed: true, receipt };
   });
 
   app.post('/internal/consumer/fail', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -235,15 +194,8 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       reply.code(400);
       return { ok: false, issues: parsed.error.issues };
     }
-    const body = parsed.data;
-    const result = await pool.query(
-      `UPDATE edge_consumer_receipts
-       SET status='failed',last_error=$3,lease_until=now(),updated_at=now()
-       WHERE consumer_name=$1 AND idempotency_key=$2
-       RETURNING status,last_error`,
-      [body.consumerName, body.idempotencyKey, body.error],
-    );
-    return { ok: true, failed: Boolean(result.rows[0]), receipt: result.rows[0] || null };
+    const receipt = await receipts.fail(parsed.data);
+    return { ok: true, failed: Boolean(receipt), receipt };
   });
 
   app.post('/internal/conversations/bootstrap', async (request: FastifyRequest, reply: FastifyReply) => {
