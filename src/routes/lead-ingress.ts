@@ -3,26 +3,9 @@ import { InboxRepository, stableJson } from '../infrastructure/runtime.js';
 import { verifyMetaSignature } from '../services/meta-status-webhook-service.js';
 import { requireSharedSecret } from './auth.js';
 import { getEnv } from '../config/env.js';
+import { webhookReceiptHeaders, publicRateLimit } from './public-ingress.js';
 
 type RawBodyRequest = FastifyRequest & { rawBody?: Buffer };
-
-function publicHeaders(request: FastifyRequest): Record<string, unknown> {
-  return {
-    'content-type': request.headers['content-type'] || '',
-    'user-agent': request.headers['user-agent'] || '',
-    'x-hub-signature-256': request.headers['x-hub-signature-256'] ? 'present' : '',
-  };
-}
-
-function rateLimitConfig() {
-  const env = getEnv();
-  return {
-    rateLimit: {
-      max: env.PUBLIC_INGRESS_RATE_LIMIT_MAX,
-      timeWindow: env.PUBLIC_INGRESS_RATE_LIMIT_WINDOW_MS,
-    },
-  };
-}
 
 export async function leadIngressRoutes(app: FastifyInstance): Promise<void> {
   const inbox = new InboxRepository();
@@ -46,7 +29,7 @@ export async function leadIngressRoutes(app: FastifyInstance): Promise<void> {
       provider: input.provider,
       eventType: input.eventType,
       rawBody: input.rawBody || Buffer.from(stableJson(payload)),
-      headers: publicHeaders(input.request),
+      headers: webhookReceiptHeaders(input.request),
       payload,
       signatureValid: input.signatureValid,
       aggregateKey: input.externalEventId || '',
@@ -57,7 +40,7 @@ export async function leadIngressRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, received: 1, inboxEventId: receipt.inboxEventId, duplicate: receipt.duplicate };
   }
 
-  app.post('/webhooks/leads/website', { config: rateLimitConfig() }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/webhooks/leads/website', { config: publicRateLimit() }, async (request: FastifyRequest, reply: FastifyReply) => {
     const externalEventId = String((request.body as Record<string, unknown> | null)?.eventId || '');
     return receiveOnly({
       request,
@@ -69,7 +52,7 @@ export async function leadIngressRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  app.post('/webhooks/leads/facebook', { config: rateLimitConfig() }, async (request: RawBodyRequest, reply: FastifyReply) => {
+  app.post('/webhooks/leads/facebook', { config: publicRateLimit() }, async (request: RawBodyRequest, reply: FastifyReply) => {
     const env = getEnv();
     if (!env.DIRECT_LEAD_INGRESS_ENABLED) {
       reply.code(503);

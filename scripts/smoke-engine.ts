@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { compileConfig, type CompileInput } from '../src/domain/compiler.js';
-import { evaluateConversation } from '../src/domain/engine.js';
+import { APPOINTMENT_SLOT_STAGE, evaluateConversation } from '../src/domain/engine.js';
 import { parseEgpAmount, parseEgpRange } from '../src/domain/normalization.js';
 import type { ConversationState } from '../src/domain/types.js';
 
@@ -44,18 +44,25 @@ const cash = evaluateConversation({
 });
 assert.equal(cash.stageAfter, 'asking_timeline');
 
-const completion = evaluateConversation({
-  state: {
-    ...base,
-    currentStage: 'asking_site_visit',
-    currentQuestionKey: 'q_site_visit',
-    answers: { q_location: 'New Cairo', q_unit_type: 'Villa', q_purpose: 'Primary Residence' },
-  },
-  config,
-  messageOptionId: 'sv_yes',
-});
-assert.equal(completion.action, 'complete');
-assert.equal(completion.stageAfter, 'qualified');
+const siteVisitState: ConversationState = {
+  ...base,
+  currentStage: 'asking_site_visit',
+  currentQuestionKey: 'q_site_visit',
+  answers: { q_location: 'New Cairo', q_unit_type: 'Villa', q_purpose: 'Primary Residence' },
+};
+
+// Accepting a site visit qualifies the lead and parks it on the slot offer.
+const acceptedVisit = evaluateConversation({ state: siteVisitState, config, messageOptionId: 'sv_yes' });
+assert.equal(acceptedVisit.action, 'reply');
+assert.equal(acceptedVisit.replyKey, 'appointment_slot_offer');
+assert.equal(acceptedVisit.stageAfter, APPOINTMENT_SLOT_STAGE);
+assert.equal(acceptedVisit.nextState.status, 'qualified');
+assert.ok(acceptedVisit.outboxEvents.some((event) => event.eventType === 'qualification_completed'));
+
+// Declining it closes the qualification.
+const declinedVisit = evaluateConversation({ state: siteVisitState, config, messageOptionId: 'sv_no' });
+assert.equal(declinedVisit.action, 'complete');
+assert.equal(declinedVisit.stageAfter, 'qualified');
 
 console.log(JSON.stringify({
   ok: true,

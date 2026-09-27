@@ -58,7 +58,11 @@ const retry = evaluateConversation({
 assert.equal(retry.parseSource, 'raw_fallback');
 assert.match(retry.nextState.answers.qualification_notes || '', /unparsed answer/);
 
-assert.equal(retry.messageKind, 'text');
+// The unparsed budget is kept as a note and the lead moves on: the reply is
+// the next question (payment plan) in that question's own shape.
+assert.equal(retry.stageAfter, 'asking_payment_plan');
+assert.equal(retry.messageKind, 'buttons');
+assert.ok((retry.interactiveOptions || []).length > 0);
 assert.equal(typeof retry.text, 'string');
 assert.ok(retry.text.length > 0);
 

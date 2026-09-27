@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { pool } from '../db/pool.js';
+import { messagingPayloadSchema } from '../integrations/messaging/payload-schema.js';
 import { withTransaction } from '../db/transaction.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConsumerReceiptRepository } from '../repositories/consumer-receipt-repository.js';
@@ -71,33 +72,6 @@ const consumerFailSchema = z.object({
   idempotencyKey: z.string().min(1).max(500),
   error: z.string().max(4000).optional().default('projection_failed'),
 });
-const messageOptionSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-});
-const messagePayloadSchema = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('text'),
-    text: z.string().min(1),
-  }),
-  z.object({
-    kind: z.literal('buttons'),
-    text: z.string().min(1),
-    options: z.array(messageOptionSchema).min(1).max(3),
-  }),
-  z.object({
-    kind: z.literal('list'),
-    text: z.string().min(1),
-    buttonText: z.string().min(1),
-    options: z.array(messageOptionSchema).min(1).max(10),
-  }),
-  z.object({
-    kind: z.literal('template'),
-    templateName: z.string().min(1),
-    languageCode: z.string().min(2),
-    components: z.array(z.record(z.unknown())).optional().default([]),
-  }),
-]);
 const whatsappSendSchema = z.object({
   clientId: z.string().uuid(),
   contactId: z.string().uuid().optional(),
@@ -106,7 +80,7 @@ const whatsappSendSchema = z.object({
   requestKey: z.string().min(1),
   phoneNumberId: z.string().optional().default(''),
   toE164: z.string().min(5),
-  payload: messagePayloadSchema,
+  payload: messagingPayloadSchema,
   conversationWindowExpiresAt: z.string().datetime().optional(),
   actorId: z.string().optional().default('internal-api'),
 });

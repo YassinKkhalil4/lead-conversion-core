@@ -166,6 +166,12 @@ Event names: `lead.created`, `lead.updated`, `message.created`,
 keep the connection alive through Caddy; `x-accel-buffering: no` prevents proxy
 buffering.
 
+Each keepalive also re-checks the session. Once it no longer resolves (logout,
+password change, deactivated user or client, expiry) the server sends
+`event: session_expired` and closes the stream; the client's reconnect then gets
+`401`. If the LISTEN connection cannot be opened, the request fails with a JSON
+`500` instead of opening the stream.
+
 ## Known data caveats
 
 These are properties of the existing system that the dashboard works around
