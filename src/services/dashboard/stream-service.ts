@@ -64,7 +64,14 @@ export class DashboardEventBus {
   async subscribe(subscriber: Subscriber): Promise<() => void> {
     this.stopped = false;
     this.subscribers.add(subscriber);
-    await this.ensureListening();
+    try {
+      await this.ensureListening();
+    } catch (error) {
+      // The caller gets an error and no unsubscribe handle, so nothing else
+      // would ever remove this entry.
+      this.subscribers.delete(subscriber);
+      throw error;
+    }
     return () => {
       this.subscribers.delete(subscriber);
     };
