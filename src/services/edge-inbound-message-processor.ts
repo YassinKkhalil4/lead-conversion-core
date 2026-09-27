@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConversationRepository } from '../repositories/conversation-repository.js';
 import { evaluateConversation } from '../domain/engine.js';
+import { isOptOutMessage } from '../domain/opt-out.js';
 import { renderTemplate } from '../domain/render.js';
 import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
 import { pool, type Db } from '../db/pool.js';
@@ -65,13 +66,6 @@ function toMessagingPayload(decision: ReplyDecision): MessagingPayload {
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-const OPT_OUT_WORDS = ['stop', 'unsubscribe', 'الغاء', 'إلغاء', 'وقف', 'بلوك', 'مش مهتم', 'مش عايز'];
-
-function isOptOut(text: string): boolean {
-  const value = text.toLocaleLowerCase().trim();
-  return OPT_OUT_WORDS.some((word) => value.includes(word.toLocaleLowerCase()));
 }
 
 function optOutDecision(state: ConversationState): ReplyDecision {
@@ -237,7 +231,7 @@ export class EdgeInboundMessageProcessor {
       state.leadName = state.leadName || input.profileName || '';
 
       const config = await this.configs.getByVersion(state.configVersion, client);
-      let decision = isOptOut(input.messageText)
+      let decision = isOptOutMessage(input.messageText)
         ? optOutDecision(state)
         : evaluateConversation({
             state,
