@@ -1,6 +1,6 @@
 import { View } from 'react-native';
-import { Text } from '@/design/Text';
-import { color, layout, radius, space, tracking } from '@/design/tokens';
+import { Label, Text } from '@/design/Text';
+import { color, layout, radius, space } from '@/design/tokens';
 import { duration } from '@/time/format';
 
 /**
@@ -159,9 +159,7 @@ function Reading({
 }) {
   return (
     <View style={{ gap: 1 }}>
-      <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
-        {label}
-      </Text>
+      <Label>{label}</Label>
       <Text
         size="body"
         weight="semibold"
@@ -222,9 +220,7 @@ export function StatTile({
         backgroundColor: color.paper,
       }}
     >
-      <Text size="micro" tone="faint" numeric style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
-        {label}
-      </Text>
+      <Label>{label}</Label>
       <Text
         size={primary ? 'display' : 'headline'}
         weight="semibold"

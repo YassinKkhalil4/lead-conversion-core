@@ -9,6 +9,7 @@ import { Lockup } from '@/design/Mark';
 import { LeadListSkeleton, Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
+import { useIsDesk } from '@/desk/Page';
 import { color, hitSlop, layout, radius, space, tracking } from '@/design/tokens';
 import { QueueRow } from '@/leads/QueueRow';
 import { useLeadList, useUnacknowledgedLeads } from '@/leads/hooks';
@@ -27,7 +28,12 @@ export default function Queue() {
   const { user, signOut } = useAuth();
   const { previousLook } = useLastLook();
 
-  const [scope, setScope] = useState<Scope>('mine');
+  // Managers and admins have no assignments of their own, so "mine" would open
+  // on an empty queue for them.
+  const [scope, setScope] = useState<Scope>(user?.role === 'salesperson' ? 'mine' : 'all');
+  // On a wide screen everyone but a salesperson has the side rail, which
+  // already carries the mark and sign-out.
+  const hasRail = useIsDesk() && user?.role !== 'salesperson';
   const [filter, setFilter] = useState<Filter>('none');
 
   const baseFilters = useMemo<LeadFilters>(
@@ -77,9 +83,11 @@ export default function Queue() {
             sign-out used to sit opposite it and won the first glance on the
             screen this person works in all day. It now lives with the other
             controls at the bottom, in reach. */}
-        <View style={{ paddingHorizontal: layout.rowX, paddingBottom: space.sm }}>
-          <Lockup height={22} />
-        </View>
+        {hasRail ? null : (
+          <View style={{ paddingHorizontal: layout.rowX, paddingBottom: space.sm }}>
+            <Lockup height={22} />
+          </View>
+        )}
 
         {loading ? (
           <View style={{ height: layout.queueHeader, paddingHorizontal: layout.rowX, justifyContent: 'center', gap: space.md }}>
@@ -190,16 +198,18 @@ export default function Queue() {
               onChange={(next) => setScope(next as Scope)}
             />
             <Control label="Unacknowledged" active={false} onPress={() => setFilter('unacknowledged')} grow />
-            <Pressable
-              onPress={() => void signOut()}
-              hitSlop={hitSlop}
-              accessibilityRole="button"
-              accessibilityLabel={user?.name ? `Sign out ${user.name}` : 'Sign out'}
-            >
-              <Text size="micro" tone="faint" numberOfLines={1}>
-                Sign out
-              </Text>
-            </Pressable>
+            {hasRail ? null : (
+              <Pressable
+                onPress={() => void signOut()}
+                hitSlop={hitSlop}
+                accessibilityRole="button"
+                accessibilityLabel={user?.name ? `Sign out ${user.name}` : 'Sign out'}
+              >
+                <Text size="micro" tone="faint" numberOfLines={1}>
+                  Sign out
+                </Text>
+              </Pressable>
+            )}
           </>
         )}
       </View>

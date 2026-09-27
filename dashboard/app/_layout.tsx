@@ -33,6 +33,19 @@ const FOCUS_RING_CSS = `
 `;
 
 /**
+ * Geist, from public/fonts, under the build's base URL (/app in production,
+ * / on the dev server). The fallback face is Arial resized to Geist's metrics,
+ * the same numbers the landing page uses, so text does not move on swap.
+ */
+const FONT_BASE = `${(process.env.EXPO_BASE_URL ?? '').replace(/\/$/, '')}/fonts`;
+const FONT_CSS = `
+@font-face { font-family: "Geist"; src: url("${FONT_BASE}/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("${FONT_BASE}/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Fallback"; src: local("Arial"), local("ArialMT"), local("Helvetica"); size-adjust: 104.94%; ascent-override: 95.77%; descent-override: 28.11%; line-gap-override: 0%; }
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+`;
+
+/**
  * The tab icon, inline rather than an asset. Same artwork as
  * `landing/assets/kadensio-icon.svg`.
  *
@@ -70,7 +83,7 @@ export default function RootLayout() {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     const style = document.createElement('style');
     style.dataset.kadensio = 'focus-ring';
-    style.textContent = FOCUS_RING_CSS;
+    style.textContent = FONT_CSS + FOCUS_RING_CSS;
     document.head.appendChild(style);
 
     const icon = document.createElement('link');

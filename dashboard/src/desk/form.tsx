@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { ApiError } from '@/api/client';
 import { Text } from '@/design/Text';
-import { color, fontFamily, fontSize, hitSlop, radius, space, tracking } from '@/design/tokens';
+import { color, fontFamily, fontSize, hitSlop, radius, space } from '@/design/tokens';
 
 /**
  * Field-level errors from the API's `issues` array, keyed by the field they
@@ -39,7 +39,7 @@ export function Field({
 }) {
   return (
     <View style={{ gap: space.sm, flexGrow: 1, flexBasis: width ?? 240 }}>
-      <Text size="micro" weight="semibold" tone="muted" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
+      <Text size="label" weight="medium" tone="muted">
         {label}
       </Text>
       {children}
@@ -107,10 +107,13 @@ export function MoneyField({
   value,
   onChange,
   invalid = false,
+  currency = '',
 }: {
   value: number | null;
   onChange: (value: number | null) => void;
   invalid?: boolean;
+  /** Shown after the field; empty when the brokerage's currency is unknown. */
+  currency?: string;
 }) {
   const [text, setText] = useState(value === null ? '' : groupDigits(String(value)));
 
@@ -140,9 +143,11 @@ export function MoneyField({
           minHeight: 42,
         }}
       />
-      <Text size="small" tone="faint">
-        EGP
-      </Text>
+      {currency ? (
+        <Text size="small" tone="faint">
+          {currency}
+        </Text>
+      ) : null}
     </View>
   );
 }

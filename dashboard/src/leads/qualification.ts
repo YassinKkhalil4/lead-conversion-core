@@ -1,4 +1,5 @@
-import type { QualificationAnswer } from '@/api/types';
+// Relative, not '@/': the root test suite imports this file directly.
+import type { QualificationAnswer } from '../api/types';
 
 export const QUESTION = {
   permission: 'q_permission',
@@ -93,17 +94,41 @@ function parseRange(value: string): { low: number; high: number | null } | null 
 }
 
 /**
+ * Budgets are stored as bare numbers, so the currency comes from the
+ * brokerage's timezone, which is the one piece of locale a client record
+ * carries. An unmapped timezone shows the figure with no currency rather than
+ * a wrong one.
+ */
+const CURRENCY_BY_TIMEZONE: Record<string, string> = {
+  'Africa/Cairo': 'EGP',
+  'Asia/Dubai': 'AED',
+  'Asia/Riyadh': 'SAR',
+  'Asia/Qatar': 'QAR',
+  'Asia/Kuwait': 'KWD',
+  'Asia/Bahrain': 'BHD',
+  'Asia/Muscat': 'OMR',
+};
+
+export function currencyFor(timezone: string | null | undefined): string {
+  return (timezone && CURRENCY_BY_TIMEZONE[timezone]) || '';
+}
+
+function withCurrency(text: string, currency: string): string {
+  return currency ? `${text} ${currency}` : text;
+}
+
+/**
  * Budget answers are stored as raw range strings from the configuration's
  * option list, for example `10000000-50000000`. Nobody reads that on a phone
- * ten seconds before dialling, so it is rendered as `10M – 50M EGP`.
+ * ten seconds before dialling, so it is rendered as `10M – 50M AED`.
  * Free-text budgets that do not parse are passed through untouched.
  */
-export function formatBudget(value: string): string {
+export function formatBudget(value: string, currency = ''): string {
   const parsed = parseRange(value);
   if (!parsed) return value;
-  if (parsed.high === null) return `${formatEgp(parsed.low)} EGP`;
-  if (parsed.low === 0) return `Under ${formatEgp(parsed.high)} EGP`;
-  return `${formatEgp(parsed.low)} – ${formatEgp(parsed.high)} EGP`;
+  if (parsed.high === null) return withCurrency(formatEgp(parsed.low), currency);
+  if (parsed.low === 0) return withCurrency(`Under ${formatEgp(parsed.high)}`, currency);
+  return withCurrency(`${formatEgp(parsed.low)} – ${formatEgp(parsed.high)}`, currency);
 }
 
 /** The one-line form used in a queue row and in the opening line: `10M+`. */
@@ -125,10 +150,10 @@ export interface Fact {
  * The four facts someone needs before dialling. Order is fixed so the position
  * of a value carries meaning even when a label is skimmed past.
  */
-export function fourFacts(answers: AnswerIndex): Fact[] {
+export function fourFacts(answers: AnswerIndex, currency = ''): Fact[] {
   const budget = budgetValue(answers);
   return [
-    { label: 'Budget', value: budget ? formatBudget(budget) : '', numeric: true },
+    { label: 'Budget', value: budget ? formatBudget(budget, currency) : '', numeric: true },
     { label: 'Unit', value: valueOf(answers, QUESTION.unitType), numeric: false },
     { label: 'Location', value: valueOf(answers, QUESTION.location), numeric: false },
     { label: 'Timeline', value: valueOf(answers, QUESTION.timeline), numeric: false },
@@ -205,7 +230,7 @@ export function openingLine(
 ): string {
   if (preferredLanguage === 'Arabic') return openingLineArabic(contactName, answers);
   const name = firstName(contactName);
-  const greeting = name ? `Hi ${name} — following up` : 'Following up';
+  const greeting = name ? `Hi ${name}, following up` : 'Following up';
 
   const unit = valueOf(answers, QUESTION.unitType).toLowerCase();
   const location = valueOf(answers, QUESTION.location);
@@ -213,7 +238,7 @@ export function openingLine(
   const budgetText = budget ? formatBudgetCompact(budget) : '';
 
   const interest = [
-    unit ? `a ${unit}` : '',
+    unit ? `${/^[aeiou]/.test(unit) ? 'an' : 'a'} ${unit}` : '',
     location ? `in ${location}` : '',
     budgetText ? `around ${budgetText}` : '',
   ]

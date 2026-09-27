@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsDesk } from '@/desk/Page';
 import { explain } from '@/api/errors';
 import { Button } from '@/design/Button';
 import { DetailSkeleton } from '@/design/Skeleton';
@@ -30,6 +31,7 @@ export default function CallPrepScreen() {
   const leadId = String(id ?? '');
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isDesk = useIsDesk();
 
   const [closing, setClosing] = useState(false);
   const [actionError, setActionError] = useState<unknown>(null);
@@ -79,7 +81,11 @@ export default function CallPrepScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: color.tint }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: insets.top + space.sm }}
+      <ScrollView
+        style={{ flex: 1 }}
+        // A phone-width column reads better than a full-width one on a desk:
+        // the facts, the opener and the actions stay within one glance.
+        contentContainerStyle={{ paddingTop: insets.top + space.sm, width: '100%', maxWidth: isDesk ? 860 : undefined, alignSelf: 'center' }}
         refreshControl={
           <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={color.ink2} />
         }

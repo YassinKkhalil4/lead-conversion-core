@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text } from '@/design/Text';
+import { Label, Text } from '@/design/Text';
 import { color, hitSlop, radius, space, tracking } from '@/design/tokens';
 import { PIPELINE_STAGES, stageLabel } from '@/leads/labels';
 
@@ -33,9 +33,7 @@ export function StagePicker({
         paddingTop: space.lg,
       }}
     >
-      <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
-        Stage
-      </Text>
+      <Label>Stage</Label>
       <Text size="small" weight="semibold" style={{ flex: 1 }}>
         {stageLabel(stage)}
       </Text>

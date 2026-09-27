@@ -1,8 +1,8 @@
 import { type ReactNode } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text } from '@/design/Text';
-import { color, layout, radius, space, tracking } from '@/design/tokens';
+import { Label, Text } from '@/design/Text';
+import { color, layout, radius, space } from '@/design/tokens';
 
 /** Below this the side navigation collapses into a drawer. */
 export const DESK_BREAKPOINT = 900;
@@ -123,9 +123,7 @@ export function PanelHead({ children }: { children: string }) {
         borderBottomColor: color.line2,
       }}
     >
-      <Text size="micro" tone="faint" numeric style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
-        {children}
-      </Text>
+      <Label>{children}</Label>
     </View>
   );
 }

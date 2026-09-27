@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Linking, Platform, Pressable, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import type { Lead, QualificationAnswer } from '@/api/types';
+import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/design/Button';
 import { Temperature } from '@/design/Temperature';
-import { Text } from '@/design/Text';
-import { color, hitSlop, radius, space, tracking } from '@/design/tokens';
-import { fourFacts, indexAnswers, openingLine } from '@/leads/qualification';
+import { Label, Text } from '@/design/Text';
+import { color, hitSlop, radius, space } from '@/design/tokens';
+import { currencyFor, fourFacts, indexAnswers, openingLine } from '@/leads/qualification';
 import { StagePicker } from './StagePicker';
 import { PAST_SLA_SECONDS } from '@/leads/queue';
 import { queueClock } from '@/time/format';
@@ -38,7 +39,8 @@ export function CallPrep({
   changingStage: boolean;
 }) {
   const index = indexAnswers(answers);
-  const facts = fourFacts(index);
+  const { user } = useAuth();
+  const facts = fourFacts(index, currencyFor(user?.timezone));
   const opening = openingLine(lead.contact.name, index, lead.preferredLanguage);
   const phone = dialable(lead.contact.phoneE164);
   const whatsappNumber = phone.replace('+', '');
@@ -162,9 +164,7 @@ function FactGrid({ facts }: { facts: ReturnType<typeof fourFacts> }) {
             gap: 2,
           }}
         >
-          <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
-            {fact.label}
-          </Text>
+          <Label>{fact.label}</Label>
           {fact.value ? (
             <Text size="large" weight="semibold" numeric={fact.numeric} autoDirection numberOfLines={2}>
               {fact.value}
@@ -198,9 +198,7 @@ function OpeningLine({ text }: { text: string }) {
         gap: space.md,
       }}
     >
-      <Text size="micro" tone="faint" style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
-        Open with
-      </Text>
+      <Label>Open with</Label>
       <Text size="body" autoDirection>
         {text}
       </Text>

@@ -92,14 +92,19 @@ export const color = {
 /** `--r: 4px`, plus the two other radii the landing page uses. */
 export const radius = {
   none: 0,
-  sm: 3,
-  md: 4,
-  lg: 10,
+  /** Tags and chips. */
+  sm: 6,
+  /** Controls and panels, the landing page's 10px control radius. */
+  md: 10,
+  /** Sheets and large surfaces. */
+  lg: 12,
   pill: 999,
 } as const;
 
-const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+// Geist on web, loaded from public/fonts by the root layout. Native keeps the
+// platform face: loading a variable font there needs a per-weight file each.
+const SANS = '"Geist", "Geist Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const MONO = '"Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
 export const fontFamily = Platform.select({ web: SANS, default: undefined });
 export const fontFamilyMono = Platform.select({ web: MONO, ios: 'Menlo', default: 'monospace' });
@@ -149,9 +154,9 @@ export const tracking = {
 } as const;
 
 export const displayTracking: Partial<Record<keyof typeof fontSize, number>> = {
-  title: -0.3,
-  headline: -0.7,
-  display: -1.3,
+  title: -0.35,
+  headline: -0.9,
+  display: -1.8,
 };
 
 /**

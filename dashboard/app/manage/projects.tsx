@@ -6,6 +6,8 @@ import type { Project, Salesperson } from '@/api/types';
 import { Button } from '@/design/Button';
 import { ErrorState, InlineNotice } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
+import { useAuth } from '@/auth/AuthProvider';
+import { currencyFor } from '@/leads/qualification';
 import { colWidth, color, hitSlop, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, MoneyField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
@@ -260,6 +262,7 @@ function ProjectForm({
   onSubmit: (values: ProjectInput) => Promise<void>;
 }) {
   const [values, setValues] = useState<ProjectInput>(initial.values);
+  const currency = currencyFor(useAuth().user?.timezone);
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const isNew = !initial.projectId;
   const serverErrors = fieldErrors(error);
@@ -303,10 +306,10 @@ function ProjectForm({
 
             <FormRow>
               <Field label="Price from" error={errors.startingPrice} width={220}>
-                <MoneyField value={values.startingPrice} onChange={(next) => set('startingPrice', next)} />
+                <MoneyField value={values.startingPrice} onChange={(next) => set('startingPrice', next)} currency={currency} />
               </Field>
               <Field label="Price to" error={errors.maxPrice} width={220}>
-                <MoneyField value={values.maxPrice} onChange={(next) => set('maxPrice', next)} invalid={Boolean(errors.maxPrice)} />
+                <MoneyField value={values.maxPrice} onChange={(next) => set('maxPrice', next)} invalid={Boolean(errors.maxPrice)} currency={currency} />
               </Field>
               <Field label="Status" hint="Inactive projects stop receiving new leads." width={220}>
                 <Toggle value={values.active} onChange={(next) => set('active', next)} labels={['Active', 'Inactive']} />

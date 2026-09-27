@@ -81,3 +81,16 @@ export function Text({
     </RNText>
   );
 }
+
+/**
+ * The small label above a group: panel heads, table headers, field groups.
+ * Sentence case in the sans face; the page's hierarchy comes from size and
+ * tone, not from capitals.
+ */
+export function Label({ children, style, ...rest }: Omit<AppTextProps, 'size' | 'weight' | 'tone'>) {
+  return (
+    <Text size="small" weight="medium" tone="faint" style={style} {...rest}>
+      {children}
+    </Text>
+  );
+}

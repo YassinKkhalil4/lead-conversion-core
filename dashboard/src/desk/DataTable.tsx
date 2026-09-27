@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Skeleton } from '@/design/Skeleton';
 import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, layout, radius, tracking } from '@/design/tokens';
+import { color, layout, radius } from '@/design/tokens';
 
 export interface Column<T> {
   key: string;
@@ -255,8 +255,8 @@ function HeaderRow<T>({
               alignItems: column.numeric ? 'flex-end' : 'flex-start',
             }}
           >
-            <Text size="micro" weight="medium" numeric tone={active ? 'default' : 'faint'} style={{ letterSpacing: tracking.label }}>
-              {column.header.toUpperCase()}
+            <Text size="small" weight="medium" tone={active ? 'default' : 'faint'}>
+              {column.header}
               {active ? (sort?.direction === 'asc' ? ' ↑' : ' ↓') : ''}
             </Text>
           </Pressable>
