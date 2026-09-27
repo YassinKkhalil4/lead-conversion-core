@@ -14,6 +14,7 @@ import { Page, Panel, Section } from '@/desk/Page';
 import { atLeast, countLabel, optionalNumber, ratioLabel } from '@/desk/safe';
 import { useLeadList } from '@/leads/hooks';
 import { useSalespeople, useSummary } from '@/manage/hooks';
+import { SetupChecklist } from '@/manage/SetupChecklist';
 import { PAST_SLA_SECONDS } from '@/leads/queue';
 import { duration, queueClock } from '@/time/format';
 
@@ -94,6 +95,8 @@ export default function ManagerOverview() {
         </View>
       }
     >
+      <SetupChecklist />
+
       {summary.isLoading || !current ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.lg }}>
           {[0, 1, 2, 3].map((index) => (
