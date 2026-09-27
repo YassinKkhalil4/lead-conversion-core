@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Kadensio — WhatsApp lead qualification for real estate brokerages</title>
-<meta name="description" content="An automated qualification engine on your own WhatsApp number. It asks the questions you configured, scores the answers deterministically, routes and books the viewing. Fixed script, nothing invented, on the official Meta WhatsApp Business Platform.">
+<title>WhatsApp Lead Qualification for Real Estate | Kadensio</title>
+<meta name="description" content="Kadensio answers property leads on your WhatsApp number in seconds, asks your questions in Arabic or English, scores the answers and books the viewing.">
 
 <link rel="canonical" href="https://kadensio.com/">
 
@@ -32,6 +32,117 @@
 <link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/kadensio-icon.svg">
 <link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "Organization",
+   "@id": "https://kadensio.com/#organization",
+   "name": "Kadensio",
+   "url": "https://kadensio.com/",
+   "logo": "https://kadensio.com/assets/kadensio-icon.svg",
+   "email": "yassin@kadensio.com",
+   "founder": {
+    "@type": "Person",
+    "name": "Yassin Khalil",
+    "jobTitle": "Founder"
+   },
+   "areaServed": [
+    "AE",
+    "EG"
+   ]
+  },
+  {
+   "@type": "WebSite",
+   "@id": "https://kadensio.com/#website",
+   "url": "https://kadensio.com/",
+   "name": "Kadensio",
+   "publisher": {
+    "@id": "https://kadensio.com/#organization"
+   },
+   "inLanguage": "en"
+  },
+  {
+   "@type": "SoftwareApplication",
+   "@id": "https://kadensio.com/#software",
+   "name": "Kadensio",
+   "applicationCategory": "BusinessApplication",
+   "operatingSystem": "Web",
+   "description": "An automated qualification engine for real estate brokerages. It answers cold WhatsApp messages on the brokerage's own number through the official Meta WhatsApp Business Platform, asks configured qualification questions in Arabic or English, scores the answers with fixed arithmetic, routes the lead to the matching salesperson and books viewings in Google Calendar.",
+   "publisher": {
+    "@id": "https://kadensio.com/#organization"
+   },
+   "availableLanguage": [
+    "en",
+    "ar"
+   ]
+  },
+  {
+   "@type": "FAQPage",
+   "@id": "https://kadensio.com/#faq",
+   "mainEntity": [
+    {
+     "@type": "Question",
+     "name": "Is this a chatbot?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "No. A chatbot writes its own replies. Kadensio sends the replies you approved, in the order you set, and scores the answers with fixed arithmetic. There is no generative model anywhere in it, so it cannot make up a price, a payment plan or a unit."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "What if a buyer's answer doesn't fit the question?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "It asks once more. If the second answer still doesn't fit, it saves the buyer's own words as a note for your salesperson and moves on to the next question. Nothing the buyer writes is thrown away."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Can a salesperson step in?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "At any point. Taking over stops the engine replying to that buyer until someone hands the conversation back."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "What happens when a buyer says stop?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "They are opted out on the spot. The engine stops messaging them and the lead is marked as not interested."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Does it work with the number we already use?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "It runs on the Meta WhatsApp Business Platform, so the number has to be registered there. If the number your buyers know is on the ordinary WhatsApp Business app today, moving it is the first thing we go through together."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Where is our data kept?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "On servers in Frankfurt, Germany, with backups in the same region. Meta handles the messages it delivers, and Google handles calendar events if you connect a calendar. The Data Processing Addendum lists every sub-processor."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Which languages does it speak?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Arabic and English ship, and both are verified against the production API. Any other language your buyers use is written and loaded during setup, the same way a custom question is."
+     }
+    }
+   ]
+  }
+ ]
+}
+</script>
 </head>
 <body>
 
@@ -142,7 +253,7 @@
           <div class="step-body">
             <h3>Nine questions, then a score you can audit</h3>
             <p>Permission, location, unit type, budget, payment plan, down payment, timeline, purpose, site visit. Ten weighted factors make up the score, and each one carries a written reason.</p>
-            <p>The score is arithmetic, not judgement. The same answers always give the same number, so a sales manager can see exactly why a lead ranked where it did, and get the same answer tomorrow.</p>
+            <p>The score is arithmetic, not judgement. The same answers always give the same number, so a sales manager can see exactly why a lead ranked where it did, and get the same answer tomorrow. <a href="lead-scoring.html">See all ten factors and their points</a>.</p>
           </div>
         </li>
 
@@ -394,6 +505,7 @@
     <div>
       <p class="footer-meta">WhatsApp lead qualification for real estate brokerages. <a href="mailto:yassin@kadensio.com">yassin@kadensio.com</a></p>
       <p class="footer-legal">
+        <a href="lead-scoring.html">How the score works</a>
         <a href="privacy.html">Privacy Policy</a>
         <a href="terms.html">Terms of Service</a>
         <a href="dpa.html">Data Processing Addendum</a>

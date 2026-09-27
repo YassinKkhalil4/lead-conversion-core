@@ -636,6 +636,16 @@ a { color: inherit; }
 .doc h2 + p, .doc h3 + p { margin-top: .75rem; }
 .doc strong { color: var(--ink); font-weight: 600; }
 .doc a { color: var(--accent); text-underline-offset: 2px; }
+.doc-table-wrap { margin-top: 1.25rem; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); }
+.doc-table { width: 100%; border-collapse: collapse; font-size: .9375rem; }
+.doc-table th, .doc-table td { padding: .7rem .9rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-2); }
+.doc-table thead th { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); background: var(--tint); }
+.doc-table tbody th { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.doc-table td { color: var(--ink-2); }
+.doc-table td:nth-child(2) { font-family: var(--mono); white-space: nowrap; }
+.doc-table tfoot th, .doc-table tfoot td { font-weight: 600; color: var(--ink); border-bottom: 0; background: var(--accent-bg); }
+.doc-cta { margin-top: 1.5rem; }
+.doc .btn-primary { color: #fff; }
 .doc code {
   font-family: var(--mono); font-size: .875rem;
   color: var(--ink); background: var(--tint);
