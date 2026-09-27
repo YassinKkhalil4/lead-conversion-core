@@ -141,6 +141,7 @@ describePg('lead control inheritance on conversation creation', () => {
     const metaMessageId = `wamid.${randomUUID()}`;
     return new processorModule.EdgeInboundMessageProcessor().process({
       inboxEventId: randomUUID(),
+      workerId: 'test-worker',
       provider: 'meta',
       eventType: 'whatsapp.message_received',
       dedupeKey: `meta:whatsapp_message:${metaMessageId}`,

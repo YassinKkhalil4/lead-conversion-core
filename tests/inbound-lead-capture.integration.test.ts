@@ -155,6 +155,7 @@ describePg('direct WhatsApp inbound lead capture', () => {
     const metaMessageId = input.metaMessageId ?? `wamid.${randomUUID()}`;
     return processor.process({
       inboxEventId: randomUUID(),
+      workerId: 'test-worker',
       provider: 'meta',
       eventType: 'whatsapp.message_received',
       dedupeKey: `meta:whatsapp_message:${metaMessageId}`,

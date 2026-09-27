@@ -786,6 +786,109 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(await jobs.claim('scheduler-a')).toHaveLength(0);
   });
 
+  describe('lease fencing', () => {
+    function leaseOf(claimed: { workerId: string; attemptCount: number } | undefined) {
+      if (!claimed) throw new Error('nothing_claimed');
+      return { workerId: claimed.workerId, attemptCount: claimed.attemptCount };
+    }
+
+    it('ignores inbox outcomes from a worker whose lease was taken over', async () => {
+      const inbox = new runtime.InboxRepository();
+      const eventId = await receiveInbox('evt-fence');
+      const [stale] = await inbox.claim('worker-a');
+      await db.pool.query(
+        "UPDATE runtime.inbox_events SET lock_expires_at=now()-interval '1 second' WHERE inbox_event_id=$1",
+        [eventId],
+      );
+      const [current] = await inbox.claim('worker-b');
+      expect(stale?.workerId).toBe('worker-a');
+
+      expect(await inbox.complete(eventId, leaseOf(stale))).toBe(false);
+      expect(await inbox.retry(eventId, 'late failure', leaseOf(stale))).toBe(false);
+      expect(await inbox.deadLetter(eventId, 'late dead letter', leaseOf(stale))).toBe(false);
+      expect(await inbox.ignore(eventId, 'late ignore', leaseOf(stale))).toBe(false);
+      expect((await db.pool.query(
+        'SELECT status, locked_by, attempt_count FROM runtime.inbox_events WHERE inbox_event_id=$1',
+        [eventId],
+      )).rows[0]).toEqual({ status: 'processing', locked_by: 'worker-b', attempt_count: 2 });
+      expect((await db.pool.query('SELECT count(*) FROM runtime.dead_letters')).rows[0]?.count).toBe('0');
+
+      expect(await inbox.complete(eventId, leaseOf(current))).toBe(true);
+      const attempts = await db.pool.query<{ attempt_no: number; outcome: string | null }>(
+        'SELECT attempt_no, outcome FROM runtime.inbox_event_attempts WHERE inbox_event_id=$1 ORDER BY attempt_no',
+        [eventId],
+      );
+      expect(attempts.rows[1]).toEqual({ attempt_no: 2, outcome: 'processed' });
+      expect(attempts.rows[0]?.outcome).not.toBe('processed');
+    });
+
+    it('keeps an operator replay when the in-flight worker finishes afterwards', async () => {
+      const inbox = new runtime.InboxRepository();
+      const eventId = await receiveInbox('evt-replay-race');
+      const [inFlight] = await inbox.claim('worker-a');
+      await inbox.replay({ inboxEventId: eventId, operatorId: 'operator-1', reason: 'reprocess with corrected mapping' });
+
+      expect(await inbox.complete(eventId, leaseOf(inFlight))).toBe(false);
+      expect((await db.pool.query('SELECT status FROM runtime.inbox_events WHERE inbox_event_id=$1', [eventId])).rows[0]?.status)
+        .toBe('pending');
+      expect(await inbox.claim('worker-b')).toHaveLength(1);
+    });
+
+    it('ignores outbox outcomes from a sender whose lease was taken over', async () => {
+      const outbox = new runtime.RuntimeOutboxRepository();
+      const commandId = await enqueueOutbox();
+      const [stale] = await outbox.claim('sender-a');
+      await db.pool.query(
+        "UPDATE runtime.outbox_commands SET lock_expires_at=now()-interval '1 second' WHERE outbox_command_id=$1",
+        [commandId],
+      );
+      const [current] = await outbox.claim('sender-b');
+
+      expect(await outbox.markDelivered(commandId, 'wamid.stale', leaseOf(stale))).toBe(false);
+      expect(await outbox.markRetryable(commandId, 'late outage', undefined, leaseOf(stale))).toBe(false);
+      expect(await outbox.markPermanentlyFailed(commandId, 'late rejection', leaseOf(stale))).toBe(false);
+      expect(await outbox.markDeliveryUnknown(commandId, 'late ambiguity', leaseOf(stale))).toBe(false);
+      expect((await db.pool.query(
+        'SELECT state, lock_owner, attempt_count FROM runtime.outbox_commands WHERE outbox_command_id=$1',
+        [commandId],
+      )).rows[0]).toEqual({ state: 'processing', lock_owner: 'sender-b', attempt_count: 2 });
+
+      expect(await outbox.markDelivered(commandId, 'wamid.current', leaseOf(current))).toBe(true);
+      expect((await db.pool.query(
+        'SELECT state, provider_message_id FROM runtime.outbox_commands WHERE outbox_command_id=$1',
+        [commandId],
+      )).rows[0]).toEqual({ state: 'delivered', provider_message_id: 'wamid.current' });
+    });
+
+    it('ignores job outcomes from a worker whose lease was taken over', async () => {
+      const jobs = new runtime.JobRepository();
+      const jobId = await jobs.schedule(db.pool, {
+        jobKey: 'report:daily:fence',
+        jobType: 'report.daily',
+        dueAt: new Date(Date.now() - 1000).toISOString(),
+        timezone: 'Africa/Cairo',
+      });
+      const [stale] = await jobs.claim('scheduler-a');
+      await db.pool.query(
+        "UPDATE runtime.scheduled_jobs SET lock_expires_at=now()-interval '1 second' WHERE scheduled_job_id=$1",
+        [jobId],
+      );
+      const [current] = await jobs.claim('scheduler-b');
+
+      expect(await jobs.complete(jobId, leaseOf(stale))).toBe(false);
+      expect(await jobs.retry(jobId, 'late failure', leaseOf(stale))).toBe(false);
+      expect(await jobs.deadLetter(jobId, 'late dead letter', leaseOf(stale))).toBe(false);
+      expect((await db.pool.query(
+        'SELECT status, locked_by FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1',
+        [jobId],
+      )).rows[0]).toEqual({ status: 'processing', locked_by: 'scheduler-b' });
+
+      expect(await jobs.complete(jobId, leaseOf(current))).toBe(true);
+      expect((await db.pool.query('SELECT status FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1', [jobId])).rows[0]?.status)
+        .toBe('completed');
+    });
+  });
+
   it('processes durable inbox, outbox, and job work through the runtime worker', async () => {
     const inbox = new runtime.InboxRepository();
     const outbox = new runtime.RuntimeOutboxRepository();

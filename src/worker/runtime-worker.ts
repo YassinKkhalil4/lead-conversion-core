@@ -10,7 +10,12 @@ import {
   type ClaimedInboxEvent,
   type ClaimedJob,
   type ClaimedOutboxCommand,
+  type WorkerLease,
 } from '../infrastructure/runtime.js';
+
+function leaseOf(claimed: { workerId: string; attemptCount: number }): WorkerLease {
+  return { workerId: claimed.workerId, attemptCount: claimed.attemptCount };
+}
 
 export type InboxProcessingResult =
   | { outcome: 'processed' }
@@ -133,15 +138,21 @@ export class RuntimeWorker {
       providers: this.inboxProviders,
     });
     for (const event of events) {
+      const lease = leaseOf(event);
+      let recorded: boolean;
       try {
         const result = await handler(event);
-        if (result.outcome === 'processed') await this.inbox.complete(event.inboxEventId);
-        if (result.outcome === 'ignored') await this.inbox.ignore(event.inboxEventId, result.reason);
-        if (result.outcome === 'retryable') await this.inbox.retry(event.inboxEventId, result.error);
-        if (result.outcome === 'dead_lettered') await this.inbox.deadLetter(event.inboxEventId, result.reason);
+        recorded = result.outcome === 'processed'
+          ? await this.inbox.complete(event.inboxEventId, lease)
+          : result.outcome === 'ignored'
+            ? await this.inbox.ignore(event.inboxEventId, result.reason, lease)
+            : result.outcome === 'retryable'
+              ? await this.inbox.retry(event.inboxEventId, result.error, lease)
+              : await this.inbox.deadLetter(event.inboxEventId, result.reason, lease);
       } catch (error) {
-        await this.inbox.retry(event.inboxEventId, String(error));
+        recorded = await this.inbox.retry(event.inboxEventId, String(error), lease);
       }
+      if (!recorded) this.leaseLost('inbox', event.inboxEventId, lease);
     }
     return events.length;
   }
@@ -151,17 +162,21 @@ export class RuntimeWorker {
     if (!dispatcher) return 0;
     const commands = await this.outbox.claim(this.workerName, this.batchSize, this.leaseSeconds);
     for (const command of commands) {
+      const lease = leaseOf(command);
+      let recorded: boolean;
       try {
         const result = await dispatcher(command);
-        if (result.outcome === 'delivered') await this.outbox.markDelivered(command.outboxCommandId, result.providerMessageId);
-        if (result.outcome === 'retryable') {
-          await this.outbox.markRetryable(command.outboxCommandId, result.error, result.retryAfterSeconds);
-        }
-        if (result.outcome === 'permanently_failed') await this.outbox.markPermanentlyFailed(command.outboxCommandId, result.error);
-        if (result.outcome === 'delivery_unknown') await this.outbox.markDeliveryUnknown(command.outboxCommandId, result.error);
+        recorded = result.outcome === 'delivered'
+          ? await this.outbox.markDelivered(command.outboxCommandId, result.providerMessageId, lease)
+          : result.outcome === 'retryable'
+            ? await this.outbox.markRetryable(command.outboxCommandId, result.error, result.retryAfterSeconds, lease)
+            : result.outcome === 'permanently_failed'
+              ? await this.outbox.markPermanentlyFailed(command.outboxCommandId, result.error, lease)
+              : await this.outbox.markDeliveryUnknown(command.outboxCommandId, result.error, lease);
       } catch (error) {
-        await this.outbox.markRetryable(command.outboxCommandId, String(error));
+        recorded = await this.outbox.markRetryable(command.outboxCommandId, String(error), undefined, lease);
       }
+      if (!recorded) this.leaseLost('outbox', command.outboxCommandId, lease);
     }
     return commands.length;
   }
@@ -171,15 +186,30 @@ export class RuntimeWorker {
     if (!processor) return 0;
     const jobs = await this.jobs.claim(this.workerName, this.batchSize, this.leaseSeconds);
     for (const job of jobs) {
+      const lease = leaseOf(job);
+      let recorded: boolean;
       try {
         const result = await processor(job);
-        if (result.outcome === 'completed') await this.jobs.complete(job.scheduledJobId);
-        if (result.outcome === 'retryable') await this.jobs.retry(job.scheduledJobId, result.error);
-        if (result.outcome === 'dead_lettered') await this.jobs.deadLetter(job.scheduledJobId, result.reason);
+        recorded = result.outcome === 'completed'
+          ? await this.jobs.complete(job.scheduledJobId, lease)
+          : result.outcome === 'retryable'
+            ? await this.jobs.retry(job.scheduledJobId, result.error, lease)
+            : await this.jobs.deadLetter(job.scheduledJobId, result.reason, lease);
       } catch (error) {
-        await this.jobs.retry(job.scheduledJobId, String(error));
+        recorded = await this.jobs.retry(job.scheduledJobId, String(error), lease);
       }
+      if (!recorded) this.leaseLost('job', job.scheduledJobId, lease);
     }
     return jobs.length;
+  }
+
+  /**
+   * The row was reclaimed, replayed or cancelled while this worker held it, so
+   * its outcome was not recorded. Whoever owns the row now decides it. For an
+   * outbox command this can mean the provider saw the request twice; the
+   * idempotency key sent with it is what makes that safe.
+   */
+  private leaseLost(kind: 'inbox' | 'outbox' | 'job', id: string, lease: WorkerLease): void {
+    logger.warn({ kind, id, attempt: lease.attemptCount, worker: lease.workerId }, 'lease_lost');
   }
 }

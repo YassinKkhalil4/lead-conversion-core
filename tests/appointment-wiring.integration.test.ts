@@ -224,6 +224,7 @@ describePg('appointment slot offer and booking wiring', () => {
     const processor = input.processor ?? buildProcessor();
     return processor.process({
       inboxEventId: randomUUID(),
+      workerId: 'test-worker',
       provider: 'meta',
       eventType: 'whatsapp.message_received',
       dedupeKey: `meta:whatsapp_message:${input.metaMessageId}`,

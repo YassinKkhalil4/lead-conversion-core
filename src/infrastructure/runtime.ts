@@ -34,8 +34,43 @@ export function retryDelaySeconds(attemptCount: number, retryAfterSeconds?: numb
   return Math.min(3600, base + randomInt(0, jitter + 1));
 }
 
+/**
+ * Proof that a worker still holds the row it claimed. Finalizers given a lease
+ * only touch the row while it is still `processing`, owned by that worker, on
+ * that attempt. A worker whose lease expired mid-dispatch — and whose row was
+ * reclaimed, replayed or cancelled in the meantime — gets `false` back instead
+ * of overwriting the newer state.
+ */
+export interface WorkerLease {
+  workerId: string;
+  attemptCount: number;
+}
+
+type LeasedTable = 'inbox' | 'outbox' | 'jobs';
+
+/**
+ * Appended to a finalizer's WHERE clause. The lease occupies the last two
+ * parameters, `$workerParam` and `$workerParam + 1`; both are NULL when the
+ * caller is an operator acting without a lease.
+ */
+function leaseFence(table: LeasedTable, workerParam: number): string {
+  const [status, owner] = table === 'outbox' ? ['state', 'lock_owner'] : ['status', 'locked_by'];
+  const worker = `$${workerParam}`;
+  const attempt = `$${workerParam + 1}`;
+  return `(${worker}::text IS NULL OR (${status}='processing' AND ${owner}=${worker} AND attempt_count=${attempt}::integer))`;
+}
+
+function leaseParams(lease: WorkerLease | undefined): [string | null, number | null] {
+  return lease ? [lease.workerId, lease.attemptCount] : [null, null];
+}
+
+function changed(result: { rows: Array<{ changed: number }> }): boolean {
+  return (result.rows[0]?.changed ?? 0) > 0;
+}
+
 export interface ClaimedInboxEvent {
   inboxEventId: string;
+  workerId: string;
   provider: string;
   eventType: string;
   dedupeKey: string;
@@ -45,6 +80,7 @@ export interface ClaimedInboxEvent {
 
 export interface ClaimedJob {
   scheduledJobId: string;
+  workerId: string;
   jobType: string;
   attemptCount: number;
   payload: Record<string, unknown>;
@@ -176,6 +212,7 @@ export class InboxRepository {
       }
       return result.rows.map((row) => ({
         inboxEventId: row.inbox_event_id,
+        workerId,
         provider: row.provider,
         eventType: row.event_type,
         dedupeKey: row.dedupe_key,
@@ -185,24 +222,26 @@ export class InboxRepository {
     });
   }
 
-  async complete(inboxEventId: string): Promise<void> {
-    await pool.query(
+  async complete(inboxEventId: string, lease?: WorkerLease): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.inbox_events
         SET status='processed', locked_by='', locked_at=NULL, lock_expires_at=NULL, completed_at=now()
-        WHERE inbox_event_id=$1
+        WHERE inbox_event_id=$1 AND ${leaseFence('inbox', 2)}
         RETURNING inbox_event_id, attempt_count
+      ), attempt AS (
+        UPDATE runtime.inbox_event_attempts a
+        SET outcome='processed', finished_at=now()
+        FROM updated
+        WHERE a.inbox_event_id=updated.inbox_event_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.inbox_event_attempts a
-      SET outcome='processed', finished_at=now()
-      FROM updated
-      WHERE a.inbox_event_id=updated.inbox_event_id
-        AND a.attempt_no=updated.attempt_count`,
-      [inboxEventId],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [inboxEventId, ...leaseParams(lease)],
+    ));
   }
 
-  async retry(inboxEventId: string, error: string): Promise<void> {
+  async retry(inboxEventId: string, error: string, lease?: WorkerLease): Promise<boolean> {
     const current = await pool.query<{ attempt_count: number; max_attempts: number }>(
       'SELECT attempt_count, max_attempts FROM runtime.inbox_events WHERE inbox_event_id=$1',
       [inboxEventId],
@@ -210,62 +249,67 @@ export class InboxRepository {
     const row = current.rows[0];
     if (!row) throw new Error(`inbox_event_not_found:${inboxEventId}`);
     if (row.attempt_count >= row.max_attempts) {
-      await this.deadLetter(inboxEventId, error);
-      return;
+      return this.deadLetter(inboxEventId, error, lease);
     }
     const retryDelay = retryDelaySeconds(row.attempt_count);
-    await pool.query(
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.inbox_events
         SET status='retryable', locked_by='', locked_at=NULL, lock_expires_at=NULL,
             available_at=now()+make_interval(secs => $2), last_error=$3
-        WHERE inbox_event_id=$1
+        WHERE inbox_event_id=$1 AND ${leaseFence('inbox', 4)}
         RETURNING inbox_event_id, attempt_count
+      ), attempt AS (
+        UPDATE runtime.inbox_event_attempts a
+        SET outcome='retryable', error_message=$3, finished_at=now()
+        FROM updated
+        WHERE a.inbox_event_id=updated.inbox_event_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.inbox_event_attempts a
-      SET outcome='retryable', error_message=$3, finished_at=now()
-      FROM updated
-      WHERE a.inbox_event_id=updated.inbox_event_id
-        AND a.attempt_no=updated.attempt_count`,
-      [inboxEventId, retryDelay, error.slice(0, 4000)],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [inboxEventId, retryDelay, error.slice(0, 4000), ...leaseParams(lease)],
+    ));
   }
 
-  async deadLetter(inboxEventId: string, reason: string): Promise<void> {
-    await pool.query(
+  async deadLetter(inboxEventId: string, reason: string, lease?: WorkerLease): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.inbox_events
         SET status='dead_lettered', locked_by='', locked_at=NULL, lock_expires_at=NULL, last_error=$2
-        WHERE inbox_event_id=$1
+        WHERE inbox_event_id=$1 AND ${leaseFence('inbox', 3)}
         RETURNING inbox_event_id, payload_json, attempt_count
       ), dead_letter AS (
         INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
         SELECT 'runtime.inbox_events', inbox_event_id, $2, payload_json FROM updated
+      ), attempt AS (
+        UPDATE runtime.inbox_event_attempts a
+        SET outcome='dead_lettered', error_message=$2, finished_at=now()
+        FROM updated
+        WHERE a.inbox_event_id=updated.inbox_event_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.inbox_event_attempts a
-      SET outcome='dead_lettered', error_message=$2, finished_at=now()
-      FROM updated
-      WHERE a.inbox_event_id=updated.inbox_event_id
-        AND a.attempt_no=updated.attempt_count`,
-      [inboxEventId, reason.slice(0, 4000)],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [inboxEventId, reason.slice(0, 4000), ...leaseParams(lease)],
+    ));
   }
 
-  async ignore(inboxEventId: string, reason: string): Promise<void> {
-    await pool.query(
+  async ignore(inboxEventId: string, reason: string, lease?: WorkerLease): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.inbox_events
         SET status='ignored', ignored_reason=$2, locked_by='', locked_at=NULL, lock_expires_at=NULL, completed_at=now()
-        WHERE inbox_event_id=$1
+        WHERE inbox_event_id=$1 AND ${leaseFence('inbox', 3)}
         RETURNING inbox_event_id, attempt_count
+      ), attempt AS (
+        UPDATE runtime.inbox_event_attempts a
+        SET outcome='ignored', error_message=$2, finished_at=now()
+        FROM updated
+        WHERE a.inbox_event_id=updated.inbox_event_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.inbox_event_attempts a
-      SET outcome='ignored', error_message=$2, finished_at=now()
-      FROM updated
-      WHERE a.inbox_event_id=updated.inbox_event_id
-        AND a.attempt_no=updated.attempt_count`,
-      [inboxEventId, reason.slice(0, 4000)],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [inboxEventId, reason.slice(0, 4000), ...leaseParams(lease)],
+    ));
   }
 
   async replay(input: {
@@ -311,6 +355,7 @@ export class InboxRepository {
 
 export interface ClaimedOutboxCommand {
   outboxCommandId: string;
+  workerId: string;
   commandType: string;
   destination: string;
   idempotencyKey: string;
@@ -408,6 +453,7 @@ export class RuntimeOutboxRepository {
       }
       return result.rows.map((row) => ({
         outboxCommandId: row.outbox_command_id,
+        workerId,
         commandType: row.command_type,
         destination: row.destination,
         idempotencyKey: row.idempotency_key,
@@ -417,13 +463,13 @@ export class RuntimeOutboxRepository {
     });
   }
 
-  async markDelivered(outboxCommandId: string, providerMessageId: string): Promise<void> {
-    await pool.query(
+  async markDelivered(outboxCommandId: string, providerMessageId: string, lease?: WorkerLease): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.outbox_commands
         SET state='delivered', provider_message_id=$2, completed_at=now(),
             lock_owner='', locked_at=NULL, lock_expires_at=NULL
-        WHERE outbox_command_id=$1
+        WHERE outbox_command_id=$1 AND ${leaseFence('outbox', 3)}
         RETURNING outbox_command_id, attempt_count, command_type, payload_json
       ), message_update AS (
         UPDATE app.messages m
@@ -439,46 +485,35 @@ export class RuntimeOutboxRepository {
         FROM updated
         WHERE updated.command_type='calendar.create_event'
           AND a.appointment_id = NULLIF(updated.payload_json->>'appointmentId', '')::uuid
+      ), attempt AS (
+        UPDATE runtime.outbox_command_attempts a
+        SET outcome='delivered', provider_message_id=$2, finished_at=now()
+        FROM updated
+        WHERE a.outbox_command_id=updated.outbox_command_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.outbox_command_attempts a
-      SET outcome='delivered', provider_message_id=$2, finished_at=now()
-      FROM updated
-      WHERE a.outbox_command_id=updated.outbox_command_id
-        AND a.attempt_no=updated.attempt_count`,
-      [outboxCommandId, providerMessageId],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [outboxCommandId, providerMessageId, ...leaseParams(lease)],
+    ));
   }
 
-  async markRetryable(outboxCommandId: string, error: string, retryAfterSeconds?: number): Promise<void> {
-    const current = await pool.query<{ attempt_count: number; max_attempts: number; payload_json: Record<string, unknown> }>(
-      'SELECT attempt_count, max_attempts, payload_json FROM runtime.outbox_commands WHERE outbox_command_id=$1',
+  async markRetryable(
+    outboxCommandId: string,
+    error: string,
+    retryAfterSeconds?: number,
+    lease?: WorkerLease,
+  ): Promise<boolean> {
+    const current = await pool.query<{ attempt_count: number; max_attempts: number }>(
+      'SELECT attempt_count, max_attempts FROM runtime.outbox_commands WHERE outbox_command_id=$1',
       [outboxCommandId],
     );
     const row = current.rows[0];
     if (!row) throw new Error(`outbox_command_not_found:${outboxCommandId}`);
     const message = error.slice(0, 4000);
     if (row.attempt_count >= row.max_attempts) {
-      await pool.query(
-        `WITH updated AS (
-          UPDATE runtime.outbox_commands
-          SET state='dead_lettered', last_error=$2, completed_at=now(),
-              lock_owner='', locked_at=NULL, lock_expires_at=NULL
-          WHERE outbox_command_id=$1
-          RETURNING outbox_command_id, payload_json, attempt_count
-        ), dead_letter AS (
-          INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
-          SELECT 'runtime.outbox_commands', outbox_command_id, $2, payload_json FROM updated
-        )
-        UPDATE runtime.outbox_command_attempts a
-        SET outcome='dead_lettered', error_message=$2, finished_at=now()
-        FROM updated
-        WHERE a.outbox_command_id=updated.outbox_command_id
-          AND a.attempt_no=updated.attempt_count`,
-        [outboxCommandId, message],
-      );
-      return;
+      return this.terminate(outboxCommandId, 'dead_lettered', message, lease);
     }
-    await pool.query(
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.outbox_commands
         SET state='retryable',
@@ -487,54 +522,76 @@ export class RuntimeOutboxRepository {
             retry_hint_after=CASE WHEN $4::integer IS NULL THEN retry_hint_after ELSE now()+make_interval(secs => $4) END,
             last_error=$3,
             lock_owner='', locked_at=NULL, lock_expires_at=NULL
-        WHERE outbox_command_id=$1
+        WHERE outbox_command_id=$1 AND ${leaseFence('outbox', 5)}
         RETURNING outbox_command_id, attempt_count
+      ), attempt AS (
+        UPDATE runtime.outbox_command_attempts a
+        SET outcome='retryable', error_message=$3, finished_at=now()
+        FROM updated
+        WHERE a.outbox_command_id=updated.outbox_command_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.outbox_command_attempts a
-      SET outcome='retryable', error_message=$3, finished_at=now()
-      FROM updated
-      WHERE a.outbox_command_id=updated.outbox_command_id
-        AND a.attempt_no=updated.attempt_count`,
-      [outboxCommandId, retryDelaySeconds(row.attempt_count, retryAfterSeconds), message, retryAfterSeconds ?? null],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [
+        outboxCommandId,
+        retryDelaySeconds(row.attempt_count, retryAfterSeconds),
+        message,
+        retryAfterSeconds ?? null,
+        ...leaseParams(lease),
+      ],
+    ));
   }
 
-  async markPermanentlyFailed(outboxCommandId: string, error: string): Promise<void> {
-    await pool.query(
-      `WITH updated AS (
-        UPDATE runtime.outbox_commands
-        SET state='permanently_failed', last_error=$2, completed_at=now(),
-            lock_owner='', locked_at=NULL, lock_expires_at=NULL
-        WHERE outbox_command_id=$1
-        RETURNING outbox_command_id, payload_json, attempt_count
-      ), dead_letter AS (
-        INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
-        SELECT 'runtime.outbox_commands', outbox_command_id, $2, payload_json FROM updated
-      )
-      UPDATE runtime.outbox_command_attempts a
-      SET outcome='permanently_failed', error_message=$2, finished_at=now()
-      FROM updated
-      WHERE a.outbox_command_id=updated.outbox_command_id
-        AND a.attempt_no=updated.attempt_count`,
-      [outboxCommandId, error.slice(0, 4000)],
-    );
+  async markPermanentlyFailed(outboxCommandId: string, error: string, lease?: WorkerLease): Promise<boolean> {
+    return this.terminate(outboxCommandId, 'permanently_failed', error.slice(0, 4000), lease);
   }
 
-  async markDeliveryUnknown(outboxCommandId: string, error: string): Promise<void> {
-    await pool.query(
+  async markDeliveryUnknown(outboxCommandId: string, error: string, lease?: WorkerLease): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.outbox_commands
         SET state='delivery_unknown', last_error=$2, lock_owner='', locked_at=NULL, lock_expires_at=NULL
-        WHERE outbox_command_id=$1
+        WHERE outbox_command_id=$1 AND ${leaseFence('outbox', 3)}
         RETURNING outbox_command_id, attempt_count
+      ), attempt AS (
+        UPDATE runtime.outbox_command_attempts a
+        SET outcome='delivery_unknown', ambiguous=true, error_message=$2, finished_at=now()
+        FROM updated
+        WHERE a.outbox_command_id=updated.outbox_command_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.outbox_command_attempts a
-      SET outcome='delivery_unknown', ambiguous=true, error_message=$2, finished_at=now()
-      FROM updated
-      WHERE a.outbox_command_id=updated.outbox_command_id
-        AND a.attempt_no=updated.attempt_count`,
-      [outboxCommandId, error.slice(0, 4000)],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [outboxCommandId, error.slice(0, 4000), ...leaseParams(lease)],
+    ));
+  }
+
+  /** Ends a command for good and copies it to the dead-letter table. */
+  private async terminate(
+    outboxCommandId: string,
+    state: 'dead_lettered' | 'permanently_failed',
+    message: string,
+    lease: WorkerLease | undefined,
+  ): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
+      `WITH updated AS (
+        UPDATE runtime.outbox_commands
+        SET state=$2, last_error=$3, completed_at=now(),
+            lock_owner='', locked_at=NULL, lock_expires_at=NULL
+        WHERE outbox_command_id=$1 AND ${leaseFence('outbox', 4)}
+        RETURNING outbox_command_id, payload_json, attempt_count
+      ), dead_letter AS (
+        INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
+        SELECT 'runtime.outbox_commands', outbox_command_id, $3, payload_json FROM updated
+      ), attempt AS (
+        UPDATE runtime.outbox_command_attempts a
+        SET outcome=$2, error_message=$3, finished_at=now()
+        FROM updated
+        WHERE a.outbox_command_id=updated.outbox_command_id
+          AND a.attempt_no=updated.attempt_count
+      )
+      SELECT count(*)::int AS changed FROM updated`,
+      [outboxCommandId, state, message, ...leaseParams(lease)],
+    ));
   }
 }
 
@@ -645,6 +702,7 @@ export class JobRepository {
       }
       return result.rows.map((row) => ({
         scheduledJobId: row.scheduled_job_id,
+        workerId,
         jobType: row.job_type,
         attemptCount: row.attempt_count,
         payload: row.payload_json,
@@ -652,90 +710,78 @@ export class JobRepository {
     });
   }
 
-  async complete(scheduledJobId: string): Promise<void> {
-    await pool.query(
+  async complete(scheduledJobId: string, lease?: WorkerLease): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.scheduled_jobs
         SET status='completed', completed_at=now(), locked_by='', locked_at=NULL, lock_expires_at=NULL
-        WHERE scheduled_job_id=$1
+        WHERE scheduled_job_id=$1 AND ${leaseFence('jobs', 2)}
         RETURNING scheduled_job_id, attempt_count
+      ), attempt AS (
+        UPDATE runtime.scheduled_job_attempts a
+        SET outcome='completed', finished_at=now()
+        FROM updated
+        WHERE a.scheduled_job_id=updated.scheduled_job_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.scheduled_job_attempts a
-      SET outcome='completed', finished_at=now()
-      FROM updated
-      WHERE a.scheduled_job_id=updated.scheduled_job_id
-        AND a.attempt_no=updated.attempt_count`,
-      [scheduledJobId],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [scheduledJobId, ...leaseParams(lease)],
+    ));
   }
 
-  async retry(scheduledJobId: string, error: string): Promise<void> {
-    const current = await pool.query<{ attempt_count: number; max_attempts: number; payload_json: Record<string, unknown> }>(
-      'SELECT attempt_count, max_attempts, payload_json FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1',
+  async retry(scheduledJobId: string, error: string, lease?: WorkerLease): Promise<boolean> {
+    const current = await pool.query<{ attempt_count: number; max_attempts: number }>(
+      'SELECT attempt_count, max_attempts FROM runtime.scheduled_jobs WHERE scheduled_job_id=$1',
       [scheduledJobId],
     );
     const row = current.rows[0];
     if (!row) throw new Error(`scheduled_job_not_found:${scheduledJobId}`);
     const message = error.slice(0, 4000);
     if (row.attempt_count >= row.max_attempts) {
-      await pool.query(
-        `WITH updated AS (
-          UPDATE runtime.scheduled_jobs
-          SET status='dead_lettered', last_error=$2, completed_at=now(),
-              locked_by='', locked_at=NULL, lock_expires_at=NULL
-          WHERE scheduled_job_id=$1
-          RETURNING scheduled_job_id, payload_json, attempt_count
-        ), dead_letter AS (
-          INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
-          SELECT 'runtime.scheduled_jobs', scheduled_job_id, $2, payload_json FROM updated
-        )
-        UPDATE runtime.scheduled_job_attempts a
-        SET outcome='dead_lettered', error_message=$2, finished_at=now()
-        FROM updated
-        WHERE a.scheduled_job_id=updated.scheduled_job_id
-          AND a.attempt_no=updated.attempt_count`,
-        [scheduledJobId, message],
-      );
-      return;
+      return this.deadLetter(scheduledJobId, message, lease);
     }
-    await pool.query(
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.scheduled_jobs
         SET status='retryable',
             due_at=now()+make_interval(secs => $2),
             last_error=$3,
             locked_by='', locked_at=NULL, lock_expires_at=NULL
-        WHERE scheduled_job_id=$1
+        WHERE scheduled_job_id=$1 AND ${leaseFence('jobs', 4)}
         RETURNING scheduled_job_id, attempt_count
+      ), attempt AS (
+        UPDATE runtime.scheduled_job_attempts a
+        SET outcome='retryable', error_message=$3, finished_at=now()
+        FROM updated
+        WHERE a.scheduled_job_id=updated.scheduled_job_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.scheduled_job_attempts a
-      SET outcome='retryable', error_message=$3, finished_at=now()
-      FROM updated
-      WHERE a.scheduled_job_id=updated.scheduled_job_id
-        AND a.attempt_no=updated.attempt_count`,
-      [scheduledJobId, retryDelaySeconds(row.attempt_count), message],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [scheduledJobId, retryDelaySeconds(row.attempt_count), message, ...leaseParams(lease)],
+    ));
   }
 
-  async deadLetter(scheduledJobId: string, reason: string): Promise<void> {
-    await pool.query(
+  async deadLetter(scheduledJobId: string, reason: string, lease?: WorkerLease): Promise<boolean> {
+    return changed(await pool.query<{ changed: number }>(
       `WITH updated AS (
         UPDATE runtime.scheduled_jobs
         SET status='dead_lettered', last_error=$2, completed_at=now(),
             locked_by='', locked_at=NULL, lock_expires_at=NULL
-        WHERE scheduled_job_id=$1
+        WHERE scheduled_job_id=$1 AND ${leaseFence('jobs', 3)}
         RETURNING scheduled_job_id, payload_json, attempt_count
       ), dead_letter AS (
         INSERT INTO runtime.dead_letters (source_table, source_id, reason, payload_json)
         SELECT 'runtime.scheduled_jobs', scheduled_job_id, $2, payload_json FROM updated
+      ), attempt AS (
+        UPDATE runtime.scheduled_job_attempts a
+        SET outcome='dead_lettered', error_message=$2, finished_at=now()
+        FROM updated
+        WHERE a.scheduled_job_id=updated.scheduled_job_id
+          AND a.attempt_no=updated.attempt_count
       )
-      UPDATE runtime.scheduled_job_attempts a
-      SET outcome='dead_lettered', error_message=$2, finished_at=now()
-      FROM updated
-      WHERE a.scheduled_job_id=updated.scheduled_job_id
-        AND a.attempt_no=updated.attempt_count`,
-      [scheduledJobId, reason.slice(0, 4000)],
-    );
+      SELECT count(*)::int AS changed FROM updated`,
+      [scheduledJobId, reason.slice(0, 4000), ...leaseParams(lease)],
+    ));
   }
 }
 

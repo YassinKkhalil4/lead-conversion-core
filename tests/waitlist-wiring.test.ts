@@ -272,6 +272,7 @@ describe('waitlist outbox command routing', () => {
     const dispatcher = new MessagingOutboxDispatcher({ meta: meta as never });
     const result = await dispatcher.dispatch({
       outboxCommandId: '00000000-0000-4000-8000-000000000001',
+      workerId: 'test-worker',
       commandType: 'waitlist.signup_notification',
       destination: 'operator',
       idempotencyKey: 'waitlist:test:1',
@@ -288,6 +289,7 @@ describe('waitlist outbox command routing', () => {
     const { WaitlistOutboxDispatcher } = await import('../src/worker/waitlist-outbox-dispatcher.js');
     const result = await new WaitlistOutboxDispatcher().dispatch({
       outboxCommandId: '00000000-0000-4000-8000-000000000003',
+      workerId: 'test-worker',
       commandType: 'waitlist.signup_notification',
       destination: 'operator',
       idempotencyKey: 'waitlist:test:2',
@@ -306,6 +308,7 @@ describe('waitlist outbox command routing', () => {
     const { WaitlistOutboxDispatcher } = await import('../src/worker/waitlist-outbox-dispatcher.js');
     const result = await new WaitlistOutboxDispatcher().dispatch({
       outboxCommandId: '00000000-0000-4000-8000-000000000005',
+      workerId: 'test-worker',
       commandType: 'waitlist.signup_notification',
       destination: 'operator',
       idempotencyKey: 'waitlist:test:3',
