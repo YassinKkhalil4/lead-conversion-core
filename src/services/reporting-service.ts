@@ -1,9 +1,8 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, JobRepository, RuntimeOutboxRepository, type ClaimedJob } from '../infrastructure/runtime.js';
 import type { JobProcessingResult } from '../worker/runtime-worker.js';
 
-type Db = typeof pool | PoolClient;
 
 interface DailyReportScheduleResult {
   dailyReportId: string;
@@ -261,9 +260,7 @@ export class ReportingService {
   }
 
   async process(job: ClaimedJob): Promise<JobProcessingResult> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const report = await client.query<{
         daily_report_id: string;
         client_id: string;
@@ -289,12 +286,10 @@ export class ReportingService {
       );
       const row = report.rows[0];
       if (!row || row.status !== 'scheduled') {
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
       if (!row.recipient_phone_e164) {
         await this.cancelMissingDestination(client, row, job.scheduledJobId);
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
 
@@ -351,14 +346,8 @@ export class ReportingService {
         actorId: 'reporting-service',
         causationId: job.scheduledJobId,
       });
-      await client.query('COMMIT');
       return { outcome: 'completed' };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   private async generateSummary(client: Db, input: {

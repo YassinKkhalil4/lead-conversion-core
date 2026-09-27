@@ -1,5 +1,4 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import type { Db } from '../db/pool.js';
 import { APPOINTMENT_SLOT_STAGE } from '../domain/engine.js';
 import { formatSlotLabel, generateAppointmentSlots } from '../domain/appointment-slots.js';
 import { renderTemplate } from '../domain/render.js';
@@ -8,7 +7,6 @@ import type { MessagingPayload } from '../integrations/messaging/types.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import { AppointmentService } from './appointment-service.js';
 
-type Db = typeof pool | PoolClient;
 
 const SLOT_DURATION_MINUTES = 60;
 const OFFER_DAYS = 3;

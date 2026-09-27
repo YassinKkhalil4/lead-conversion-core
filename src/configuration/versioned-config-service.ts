@@ -1,11 +1,10 @@
 import { readFile } from 'node:fs/promises';
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { compileConfig, type CompileInput } from '../domain/compiler.js';
 import type { CompiledConfig } from '../domain/types.js';
 import { sha256Hex, stableJson } from '../infrastructure/runtime.js';
 
-type Db = typeof pool | PoolClient;
 
 export interface ConfigValidationResult {
   ok: boolean;
@@ -136,9 +135,7 @@ export class VersionedConfigService {
     clientRecordId?: string | null;
     activatedBy: string;
   }): Promise<ActiveConfigResult> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    const activatedScope = await withTransaction(async (client) => {
       const version = await client.query<{
         configuration_version_id: string;
         client_record_id: string;
@@ -165,16 +162,12 @@ export class VersionedConfigService {
           activated_at=now()`,
         [scope, recordId, row.configuration_version_id, input.activatedBy],
       );
-      await client.query('COMMIT');
-      const active = await this.getActiveMetadata(scope);
-      if (!active) throw new Error('active_configuration_not_found_after_activation');
-      return active;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+      return scope;
+    });
+    // Read through the pool after commit, as a fresh caller would see it.
+    const active = await this.getActiveMetadata(activatedScope);
+    if (!active) throw new Error('active_configuration_not_found_after_activation');
+    return active;
   }
 
   async publish(input: PublishConfigInput): Promise<PublishConfigResult> {
@@ -195,9 +188,7 @@ export class VersionedConfigService {
     const scope = scopeKey(config.clientRecordId);
     const previous = await this.getActive(scope);
     const diff = diffCompiledConfigs(previous, config);
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const inserted = await client.query<{ configuration_version_id: string }>(
         `INSERT INTO configuration.versions
           (client_record_id, version_key, status, config_json, checksum_sha256,
@@ -236,19 +227,13 @@ export class VersionedConfigService {
           activated_at=now()`,
         [scope, config.clientRecordId || '', versionId, input.publishedBy],
       );
-      await client.query('COMMIT');
       return {
         configurationVersionId: versionId,
         versionKey: config.version,
         checksum: validation.checksum,
         activeScopeKey: scope,
       };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async diff(sourcePath: string, clientRecordId?: string | null): Promise<ConfigDiff> {

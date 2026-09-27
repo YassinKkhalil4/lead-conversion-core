@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, sha256Hex, stableJson, type ClaimedInboxEvent } from '../infrastructure/runtime.js';
 import type { InboxProcessingResult } from '../worker/runtime-worker.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
@@ -53,9 +54,7 @@ export class SalespersonCommandProcessor {
       return { outcome: 'dead_lettered', reason: `invalid_salesperson_command_payload:${parsed.error.issues[0]?.message || 'unknown'}` };
     }
     const input = parsed.data;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const duplicate = await client.query<{ salesperson_command_id: string; status: string; outcome_reason: string }>(
         `SELECT salesperson_command_id, status, outcome_reason
          FROM app.salesperson_commands
@@ -64,7 +63,6 @@ export class SalespersonCommandProcessor {
         [this.idempotencyKey(event, input)],
       );
       if (duplicate.rows[0]) {
-        await client.query('COMMIT');
         return { outcome: 'processed' };
       }
 
@@ -180,14 +178,8 @@ export class SalespersonCommandProcessor {
         },
       });
 
-      await client.query('COMMIT');
       return { outcome: 'processed' };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   private idempotencyKey(event: ClaimedInboxEvent, input: CommandPayload): string {
@@ -196,7 +188,7 @@ export class SalespersonCommandProcessor {
       : `${event.provider}:salesperson_command:${sha256Hex(stableJson(input))}`;
   }
 
-  private async resolveClientId(client: typeof pool | import('pg').PoolClient, input: CommandPayload): Promise<string> {
+  private async resolveClientId(client: Db, input: CommandPayload): Promise<string> {
     if (input.clientId) return input.clientId;
     if (!input.clientRecordId) return '';
     const result = await client.query<{ client_id: string }>(
@@ -210,7 +202,7 @@ export class SalespersonCommandProcessor {
   }
 
   private async findAssignment(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     input: { clientId: string; salespersonId: string; leadId: string; assignmentId: string },
   ): Promise<{
     lead_assignment_id: string;
@@ -240,7 +232,7 @@ export class SalespersonCommandProcessor {
   }
 
   private async applyCommand(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     input: {
       assignment: { lead_assignment_id: string; lead_id: string; client_id: string; salesperson_id: string };
       intent: CommandIntent;

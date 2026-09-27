@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../../db/pool.js';
+import { withTransaction } from '../../db/transaction.js';
 import { AuditRepository } from '../../infrastructure/runtime.js';
 import { FollowupSchedulerService } from '../followup-scheduler-service.js';
 import { MessageRequestService } from '../message-request-service.js';
@@ -69,9 +70,7 @@ export class DashboardLeadActionService {
     acknowledgedAt: string;
     slaJobsCancelled: number;
   }> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const lead = await this.lockLead(client, scope, leadId);
       const assignment = await client.query<{
         lead_assignment_id: string;
@@ -92,7 +91,6 @@ export class DashboardLeadActionService {
         throw forbidden('assignment_belongs_to_another_salesperson');
       }
       if (row.acknowledged_at) {
-        await client.query('COMMIT');
         return {
           leadAssignmentId: row.lead_assignment_id,
           acknowledgedAt: row.acknowledged_at.toISOString(),
@@ -132,27 +130,19 @@ export class DashboardLeadActionService {
         },
         after: { acknowledgedAt: acknowledgedAt.toISOString() },
       });
-      await client.query('COMMIT');
       return {
         leadAssignmentId: row.lead_assignment_id,
         acknowledgedAt: acknowledgedAt.toISOString(),
         slaJobsCancelled,
       };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async takeover(user: DashboardUser, scope: DashboardScope, leadId: string, enabled: boolean): Promise<{
     humanTakeover: boolean;
     appliedBeforeConversationExists: boolean;
   }> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const lead = await this.lockLead(client, scope, leadId);
       const key = await this.conversationKey(client, lead);
 
@@ -209,14 +199,8 @@ export class DashboardLeadActionService {
         aggregateId: lead.lead_id,
         payload: { clientId: lead.client_id, humanTakeover: enabled },
       });
-      await client.query('COMMIT');
       return { humanTakeover: enabled, appliedBeforeConversationExists: !key.existed };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async close(user: DashboardUser, scope: DashboardScope, leadId: string, reason: string): Promise<{
@@ -225,9 +209,7 @@ export class DashboardLeadActionService {
     followupsCancelled: number;
     slaJobsCancelled: number;
   }> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const lead = await this.lockLead(client, scope, leadId);
       await client.query(
         `UPDATE app.leads
@@ -256,23 +238,15 @@ export class DashboardLeadActionService {
         before: { status: lead.status, closedStatus: lead.closed_status },
         after: { status: 'closed', closedStatus: reason },
       });
-      await client.query('COMMIT');
       return { status: 'closed', closedStatus: reason, followupsCancelled, slaJobsCancelled };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async stopFollowUp(user: DashboardUser, scope: DashboardScope, leadId: string, reason: string): Promise<{
     stopFollowUp: boolean;
     followupsCancelled: number;
   }> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const lead = await this.lockLead(client, scope, leadId);
       await client.query(
         `UPDATE app.leads
@@ -313,14 +287,8 @@ export class DashboardLeadActionService {
         payload: { clientId: lead.client_id, reason, followupsCancelled },
         after: { stopFollowUp: true, stopReason: reason },
       });
-      await client.query('COMMIT');
       return { stopFollowUp: true, followupsCancelled };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   /**
@@ -335,12 +303,9 @@ export class DashboardLeadActionService {
     previousPipelineStage: string;
     changed: boolean;
   }> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const lead = await this.lockLead(client, scope, leadId);
       if (lead.pipeline_stage === stage) {
-        await client.query('COMMIT');
         return { pipelineStage: stage, previousPipelineStage: stage, changed: false };
       }
 
@@ -364,14 +329,8 @@ export class DashboardLeadActionService {
         before: { pipelineStage: lead.pipeline_stage },
         after: { pipelineStage },
       });
-      await client.query('COMMIT');
       return { pipelineStage, previousPipelineStage: lead.pipeline_stage, changed: true };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   /**

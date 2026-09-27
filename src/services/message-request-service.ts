@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { approvedTemplateNames } from '../config/approved-templates.js';
 import { getEnv } from '../config/env.js';
 import { pool } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
 
@@ -80,9 +81,7 @@ export class MessageRequestService {
     const parsed = requestSchema.parse(input);
     this.validatePolicy(parsed);
     const idempotencyKey = messageIdempotencyKey(parsed);
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const message = await client.query<{ message_id: string; inserted: boolean }>(
         `INSERT INTO app.messages
           (conversation_id, lead_id, client_id, contact_id, direction, channel,
@@ -144,14 +143,8 @@ export class MessageRequestService {
           },
         });
       }
-      await client.query('COMMIT');
       return { messageId, outboxCommandId, idempotencyKey };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   private validatePolicy(parsed: z.output<typeof requestSchema>): void {

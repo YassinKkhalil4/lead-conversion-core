@@ -1,9 +1,8 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { AuditRepository, JobRepository, RuntimeOutboxRepository, type ClaimedJob } from '../infrastructure/runtime.js';
 import type { JobProcessingResult } from '../worker/runtime-worker.js';
 
-type Db = typeof pool | PoolClient;
 type SlaType = 'assignment_ack_reminder' | 'assignment_ack_escalation' | 'stale_qualified_escalation';
 
 const ASSIGNMENT_ACK_REMINDER_DELAY_SECONDS = 15 * 60;
@@ -174,9 +173,7 @@ export class SlaService {
   }
 
   async process(job: ClaimedJob): Promise<JobProcessingResult> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const sla = await client.query<{
         sla_job_id: string;
         lead_id: string;
@@ -219,7 +216,6 @@ export class SlaService {
       );
       const row = sla.rows[0];
       if (!row || row.status !== 'scheduled') {
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
       const skip = this.executionSkipReason(row);
@@ -234,7 +230,6 @@ export class SlaService {
           causationId: job.scheduledJobId,
           payload: { slaJobId: row.sla_job_id, reason: skip },
         });
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
       const command = this.commandFor(row);
@@ -249,7 +244,6 @@ export class SlaService {
           causationId: job.scheduledJobId,
           payload: { slaJobId: row.sla_job_id, reason: 'notification_destination_missing' },
         });
-        await client.query('COMMIT');
         return { outcome: 'completed' };
       }
       const outboxCommandId = await this.outbox.enqueue(client, {
@@ -280,14 +274,8 @@ export class SlaService {
           outboxCommandId,
         },
       });
-      await client.query('COMMIT');
       return { outcome: 'completed' };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   private async scheduleJob(client: Db, input: {

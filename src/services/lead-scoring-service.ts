@@ -1,9 +1,7 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import type { Db } from '../db/pool.js';
 import { AuditRepository } from '../infrastructure/runtime.js';
 import { scoreRealEstateLead } from '../domain/lead-scoring.js';
 
-type Db = typeof pool | PoolClient;
 
 interface ScoreLeadResult {
   scoreRunId: string;

@@ -1,8 +1,7 @@
 import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
 import type { CompiledConfig } from '../domain/types.js';
 
-type Db = typeof pool | PoolClient;
 
 export interface ConfigSnapshot {
   config: CompiledConfig;

@@ -5,7 +5,8 @@ import { ConversationRepository } from '../repositories/conversation-repository.
 import { evaluateConversation } from '../domain/engine.js';
 import { renderTemplate } from '../domain/render.js';
 import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { rollbackQuietly } from '../db/transaction.js';
 import {
   AuditRepository,
   RuntimeOutboxRepository,
@@ -161,6 +162,9 @@ export class EdgeInboundMessageProcessor {
     const input = parsed.data;
     const started = performance.now();
     const client = await pool.connect();
+    // Early exits below roll back work already done (a lead capture, the active
+    // turn row), so this transaction stays explicit rather than withTransaction.
+    let brokenConnection: Error | undefined;
     try {
       await client.query('BEGIN');
       const channel = await client.query<{
@@ -598,14 +602,14 @@ export class EdgeInboundMessageProcessor {
       await client.query('COMMIT');
       return { outcome: 'processed' };
     } catch (error) {
-      await client.query('ROLLBACK');
+      brokenConnection = await rollbackQuietly(client);
       throw error;
     } finally {
-      client.release();
+      client.release(brokenConnection);
     }
   }
 
-  private async resolveAppLead(client: typeof pool | import('pg').PoolClient, leadId: string): Promise<{
+  private async resolveAppLead(client: Db, leadId: string): Promise<{
     leadId: string;
     clientId: string;
     contactId: string;
@@ -620,7 +624,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async upsertAppConversation(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     state: ConversationState,
     target: { leadId: string; clientId: string; contactId: string },
   ): Promise<string> {
@@ -680,7 +684,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistInboundAppMessage(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     input: {
       appConversationId: string;
       target: { leadId: string; clientId: string; contactId: string };
@@ -748,7 +752,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistQualificationEvents(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     leadId: string,
     decision: ReplyDecision,
     appConversationId: string,
@@ -857,7 +861,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistOptOut(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     state: ConversationState,
     phoneNormalized: string,
   ): Promise<void> {
@@ -899,7 +903,7 @@ export class EdgeInboundMessageProcessor {
   }
 
   private async persistControlSnapshot(
-    client: typeof pool | import('pg').PoolClient,
+    client: Db,
     state: ConversationState,
     sourceEventId: string,
   ): Promise<void> {

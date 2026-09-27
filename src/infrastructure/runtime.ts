@@ -1,8 +1,7 @@
 import { createHash, randomInt, randomUUID } from 'node:crypto';
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import { pool, type Db } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 
-type Db = typeof pool | PoolClient;
 
 export function sha256Hex(value: Buffer | string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -62,14 +61,12 @@ export class InboxRepository {
     signatureValid: boolean;
     aggregateKey?: string;
   }): Promise<{ inboxEventId: string; duplicate: boolean; dedupeKey: string }> {
-    const client = await pool.connect();
     const payloadText = stableJson(input.payload);
     const payloadHash = sha256Hex(payloadText);
     const dedupeKey = input.externalEventId
       ? `${input.provider}:${input.eventType}:${input.externalEventId}`
       : deterministicEventId({ provider: input.provider, eventType: input.eventType, payload: input.payload });
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const receipt = await client.query<{ webhook_receipt_id: string }>(
         `INSERT INTO runtime.webhook_receipts
           (provider, dedupe_key, raw_body, raw_body_sha256, payload_hash, signature_valid, headers_json)
@@ -124,14 +121,8 @@ export class InboxRepository {
         eventId = row?.inbox_event_id;
       }
       if (!eventId) throw new Error('inbox_event_not_found_after_receive');
-      await client.query('COMMIT');
       return { inboxEventId: eventId, duplicate, dedupeKey };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async claim(
@@ -140,9 +131,7 @@ export class InboxRepository {
     leaseSeconds = 60,
     filter: { eventTypes?: string[]; providers?: string[] } = {},
   ): Promise<ClaimedInboxEvent[]> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const eventTypes = filter.eventTypes?.filter(Boolean) || [];
       const providers = filter.providers?.filter(Boolean) || [];
       const result = await client.query<{
@@ -185,7 +174,6 @@ export class InboxRepository {
           [row.inbox_event_id, row.attempt_count, workerId],
         );
       }
-      await client.query('COMMIT');
       return result.rows.map((row) => ({
         inboxEventId: row.inbox_event_id,
         provider: row.provider,
@@ -194,12 +182,7 @@ export class InboxRepository {
         attemptCount: row.attempt_count,
         payload: row.payload_json,
       }));
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async complete(inboxEventId: string): Promise<void> {
@@ -291,10 +274,8 @@ export class InboxRepository {
     reason: string;
     correlationId?: string;
   }): Promise<void> {
-    const client = await pool.connect();
     const message = input.reason.slice(0, 4000);
-    try {
-      await client.query('BEGIN');
+    await withTransaction(async (client) => {
       const updated = await client.query<{ inbox_event_id: string; status: string }>(
         `UPDATE runtime.inbox_events
          SET status='pending',
@@ -324,13 +305,7 @@ export class InboxRepository {
           JSON.stringify({ status: 'pending' }),
         ],
       );
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 }
 
@@ -394,9 +369,7 @@ export class RuntimeOutboxRepository {
   }
 
   async claim(workerId: string, limit = 1, leaseSeconds = 60): Promise<ClaimedOutboxCommand[]> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const result = await client.query<{
         outbox_command_id: string;
         command_type: string;
@@ -433,7 +406,6 @@ export class RuntimeOutboxRepository {
           [row.outbox_command_id, row.attempt_count, workerId],
         );
       }
-      await client.query('COMMIT');
       return result.rows.map((row) => ({
         outboxCommandId: row.outbox_command_id,
         commandType: row.command_type,
@@ -442,12 +414,7 @@ export class RuntimeOutboxRepository {
         attemptCount: row.attempt_count,
         payload: row.payload_json,
       }));
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async markDelivered(outboxCommandId: string, providerMessageId: string): Promise<void> {
@@ -638,9 +605,7 @@ export class JobRepository {
   }
 
   async claim(workerId: string, limit = 1, leaseSeconds = 60): Promise<ClaimedJob[]> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const result = await client.query<{
         scheduled_job_id: string;
         job_type: string;
@@ -678,19 +643,13 @@ export class JobRepository {
           [row.scheduled_job_id, row.attempt_count, workerId],
         );
       }
-      await client.query('COMMIT');
       return result.rows.map((row) => ({
         scheduledJobId: row.scheduled_job_id,
         jobType: row.job_type,
         attemptCount: row.attempt_count,
         payload: row.payload_json,
       }));
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async complete(scheduledJobId: string): Promise<void> {

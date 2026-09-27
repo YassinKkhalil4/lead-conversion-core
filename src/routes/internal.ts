@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { pool } from '../db/pool.js';
+import { withTransaction } from '../db/transaction.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { LeadIntakeService, leadIntakeSchema } from '../services/lead-intake-service.js';
 import { MessageRequestService } from '../services/message-request-service.js';
@@ -167,9 +168,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const body = parsed.data;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const inserted = await client.query(
         `INSERT INTO edge_consumer_receipts
           (consumer_name,idempotency_key,status,lease_until)
@@ -179,7 +178,6 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
         [body.consumerName, body.idempotencyKey, body.leaseSeconds],
       );
       if (inserted.rows[0]) {
-        await client.query('COMMIT');
         return { ok: true, acquired: true, alreadyCompleted: false, busy: false };
       }
       const existing = await client.query(
@@ -192,12 +190,10 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       const row = existing.rows[0];
       if (!row) throw new Error('consumer_receipt_missing_after_conflict');
       if (row.status === 'completed') {
-        await client.query('COMMIT');
         return { ok: true, acquired: false, alreadyCompleted: true, busy: false, result: row.result_json };
       }
       const leaseActive = row.status === 'processing' && new Date(row.lease_until).getTime() > Date.now();
       if (leaseActive) {
-        await client.query('COMMIT');
         return { ok: true, acquired: false, alreadyCompleted: false, busy: true, leaseUntil: row.lease_until };
       }
       await client.query(
@@ -206,14 +202,8 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
          WHERE consumer_name=$1 AND idempotency_key=$2`,
         [body.consumerName, body.idempotencyKey, body.leaseSeconds],
       );
-      await client.query('COMMIT');
       return { ok: true, acquired: true, alreadyCompleted: false, busy: false, reclaimed: true };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   });
 
   app.post('/internal/consumer/complete', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -330,9 +320,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, issues: parsed.error.issues };
     }
     const body = parsed.data;
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return withTransaction(async (client) => {
       const control = await client.query(
         `INSERT INTO edge_lead_controls (
           client_record_id, phone_normalized, lead_record_id, status, current_stage,
@@ -382,19 +370,13 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
           body.assignedSalespersonPhone ?? '',
         ],
       );
-      await client.query('COMMIT');
       return {
         ok: true,
         control: control.rows[0],
         conversation: conversation.rows[0] || null,
         appliedBeforeConversationExists: !conversation.rows[0],
       };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   });
 
   app.get('/internal/conversations/:clientRecordId/:phoneNormalized', async (request: FastifyRequest, reply: FastifyReply) => {

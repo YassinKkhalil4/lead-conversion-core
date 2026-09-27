@@ -1,11 +1,9 @@
-import type { PoolClient } from 'pg';
-import { pool } from '../db/pool.js';
+import type { Db } from '../db/pool.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import { REAL_ESTATE_ROUTING_VERSION, routeRealEstateLead } from '../domain/lead-routing.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
 import { SlaService } from './sla-service.js';
 
-type Db = typeof pool | PoolClient;
 
 interface RouteLeadResult {
   routingRunId: string;
