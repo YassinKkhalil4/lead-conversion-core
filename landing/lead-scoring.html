@@ -68,7 +68,7 @@
         <li><a href="#bands">Hot, warm and cold</a></li>
         <li><a href="#example">A worked example</a></li>
         <li><a href="#why">Why fixed arithmetic</a></li>
-        <li><a href="#limits">What the score does not do</a></li>
+        <li><a href="#limits">Limits of the score</a></li>
       </ol>
     </nav>
 
@@ -84,24 +84,24 @@
             </thead>
             <tbody>
               <tr><th scope="row">Baseline</th><td>10</td><td>Every scored lead starts here.</td></tr>
-              <tr><th scope="row">Budget</th><td>8&ndash;25</td><td>By the top of the declared budget: 10 million or more, 25. 5 million or more, 20. 3 million or more, 14. Any budget given, 8.</td></tr>
-              <tr><th scope="row">Timeline</th><td>2&ndash;20</td><td>As soon as possible, 20. Within three months, 16. Within six months, 10. Just exploring, 2.</td></tr>
+              <tr><th scope="row">Budget</th><td>8 to 25</td><td>By the top of the declared budget: 10 million or more, 25. 5 million or more, 20. 3 million or more, 14. Any budget given, 8.</td></tr>
+              <tr><th scope="row">Timeline</th><td>2 to 20</td><td>As soon as possible, 20. Within three months, 16. Within six months, 10. Just exploring, 2.</td></tr>
               <tr><th scope="row">Site visit</th><td>0 or 20</td><td>Wanting to see the unit is the strongest buying signal in the model.</td></tr>
-              <tr><th scope="row">Payment plan</th><td>6&ndash;12</td><td>Cash, 12. Flexible, 8. Installments, 6.</td></tr>
-              <tr><th scope="row">Down payment</th><td>0&ndash;12</td><td>Measured against the bottom of the budget: 20% or more, 12. 10% or more, 8. Any amount given, 4.</td></tr>
-              <tr><th scope="row">Purpose</th><td>0&ndash;8</td><td>Investment, or investment and residence together, 8. Primary residence, 5.</td></tr>
-              <tr><th scope="row">Unit type</th><td>3&ndash;6</td><td>Villa, townhouse or commercial, 6. Apartment, 4. Any other type given, 3.</td></tr>
+              <tr><th scope="row">Payment plan</th><td>6 to 12</td><td>Cash, 12. Flexible, 8. Installments, 6.</td></tr>
+              <tr><th scope="row">Down payment</th><td>0 to 12</td><td>Measured against the bottom of the budget: 20% or more, 12. 10% or more, 8. Any amount given, 4.</td></tr>
+              <tr><th scope="row">Purpose</th><td>0 to 8</td><td>Investment, or investment and residence together, 8. Primary residence, 5.</td></tr>
+              <tr><th scope="row">Unit type</th><td>3 to 6</td><td>Villa, townhouse or commercial, 6. Apartment, 4. Any other type given, 3.</td></tr>
               <tr><th scope="row">Location</th><td>0 or 5</td><td>A named location, because it lets routing find the salesperson who covers it.</td></tr>
               <tr><th scope="row">Qualification complete</th><td>0 or 5</td><td>The buyer answered every question.</td></tr>
             </tbody>
           </table>
         </div>
-        <p>The maximums add up to 123 and the score is capped at 100, so a lead can reach the top without a perfect answer on every factor.</p>
+        <p>The maximums add up to 123 and Kadensio caps the score at 100, so a lead can reach the top without a perfect answer on each factor.</p>
       </section>
 
       <section id="bands" aria-labelledby="bands-h">
         <h2 id="bands-h"><span class="doc-n">02</span>Hot, warm and cold</h2>
-        <p>A score of <strong>75 or more is hot</strong>, <strong>45 to 74 is warm</strong>, and anything below 45 is cold. Each salesperson's queue is sorted by score, hottest first, and every score in the dashboard opens to the factors behind it.</p>
+        <p>A score of <strong>75 or more is hot</strong>, <strong>45 to 74 is warm</strong>, and anything below 45 is cold. The dashboard sorts each salesperson's queue by score, hottest first, and every score opens to the factors behind it.</p>
       </section>
 
       <section id="example" aria-labelledby="example-h">
@@ -114,7 +114,7 @@
               <tr><th scope="col">Factor</th><th scope="col">Answer</th><th scope="col">Points</th></tr>
             </thead>
             <tbody>
-              <tr><th scope="row">Baseline</th><td>&mdash;</td><td>10</td></tr>
+              <tr><th scope="row">Baseline</th><td>Any scored lead</td><td>10</td></tr>
               <tr><th scope="row">Budget</th><td>Up to 5,000,000</td><td>20</td></tr>
               <tr><th scope="row">Timeline</th><td>Within three months</td><td>16</td></tr>
               <tr><th scope="row">Site visit</th><td>Yes</td><td>20</td></tr>
@@ -135,20 +135,20 @@
 
       <section id="why" aria-labelledby="why-h">
         <h2 id="why-h"><span class="doc-n">04</span>Why fixed arithmetic</h2>
-        <p>Because a sales manager has to be able to check it. A score that comes out of a model nobody can read is a number to argue with. A score built from ten visible factors is one you can explain to the salesperson who got the lead and the one who did not.</p>
-        <p>Each score is stored with the model version and a fingerprint of the exact answers it came from. Scoring the same answers again is recognised as the same run, and any score can be traced back to what the buyer said.</p>
+        <p>A sales manager has to be able to check a score. With ten visible factors, you can show the salesperson who got the lead, and the one who didn't, where each point came from.</p>
+        <p>Kadensio stores each score with the model version and a fingerprint of the exact answers behind it. When it scores the same answers again, it recognises the run it already has, and you can trace any score back to what the buyer said.</p>
       </section>
 
       <section id="limits" aria-labelledby="limits-h">
-        <h2 id="limits-h"><span class="doc-n">05</span>What the score does not do</h2>
-        <p><strong>It does not pick the salesperson.</strong> Routing is a separate step. It matches the lead's project, unit type, location and language against each salesperson, weighs their current load, and records every candidate it considered. The score decides where the lead sits in the queue once it arrives.</p>
-        <p><strong>It does not learn or drift.</strong> Nothing adjusts the weights from past leads. Changing the model means publishing a new version, and scores already computed keep the version they came from.</p>
-        <p><strong>It does not guess missing answers.</strong> A factor the buyer did not answer scores zero, and the dashboard lists which answers are missing.</p>
+        <h2 id="limits-h"><span class="doc-n">05</span>Limits of the score</h2>
+        <p><strong>Routing picks the salesperson, in a separate step.</strong> It matches the lead's project, unit type, location and language against each salesperson, weighs their current load, and records every candidate it considered. The score sets the lead's place in the queue once it arrives.</p>
+        <p><strong>The weights stay fixed.</strong> They change when we publish a new model version, and existing scores keep the version they came from. No process retrains them on past leads.</p>
+        <p><strong>Missing answers score zero.</strong> The dashboard lists the answers a score went without.</p>
       </section>
 
       <section aria-labelledby="next-h">
         <h2 id="next-h">See it score you</h2>
-        <p>The live number runs the same model. Message it, answer the nine questions, and it scores you exactly as above. Or <a href="index.html#waitlist">request early access</a> for your brokerage.</p>
+        <p>The live number runs the same model. Message it, answer the nine questions, and it scores you with the model above. Or <a href="index.html#waitlist">request early access</a> for your brokerage.</p>
         <p class="doc-cta"><a class="btn btn-primary btn-lg" href="https://wa.me/201041445227?text=Hi">Message the live number</a></p>
       </section>
     </article>
