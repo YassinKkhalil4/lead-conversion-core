@@ -785,6 +785,27 @@ export class JobRepository {
   }
 }
 
+export class WorkerHeartbeatRepository {
+  async beat(input: {
+    workerName: string;
+    workerKind: string;
+    startedAt: string;
+    metadata: Record<string, unknown>;
+  }): Promise<void> {
+    await pool.query(
+      `INSERT INTO runtime.worker_heartbeats
+        (worker_name, worker_kind, process_id, started_at, heartbeat_at, metadata_json)
+       VALUES ($1, $2, $3, $4::timestamptz, now(), $5::jsonb)
+       ON CONFLICT (worker_name) DO UPDATE SET
+        worker_kind=EXCLUDED.worker_kind,
+        process_id=EXCLUDED.process_id,
+        heartbeat_at=EXCLUDED.heartbeat_at,
+        metadata_json=EXCLUDED.metadata_json`,
+      [input.workerName, input.workerKind, process.pid, input.startedAt, JSON.stringify(input.metadata)],
+    );
+  }
+}
+
 export class AuditRepository {
   async record(client: Db, input: {
     eventType: string;

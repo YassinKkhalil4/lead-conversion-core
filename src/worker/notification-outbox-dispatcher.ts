@@ -1,18 +1,10 @@
 import { z } from 'zod';
 import { pool } from '../db/pool.js';
 import type { ClaimedOutboxCommand } from '../infrastructure/runtime.js';
+import { isNotificationCommandType, type NotificationCommandType } from './outbox-command-types.js';
 import type { OutboxDispatchResult } from './runtime-worker.js';
 
-const notificationCommandTypes = [
-  'salesperson.lead_assignment_notification',
-  'salesperson.sla_assignment_reminder',
-  'salesperson.appointment_booked_notification',
-  'operator.sla_escalation',
-  'operator.daily_report',
-  'operator.routing_attention_required',
-] as const;
-
-type NotificationCommandType = typeof notificationCommandTypes[number];
+export { isNotificationCommandType };
 
 const optionalUuid = z.preprocess(
   (value) => value === '' ? undefined : value,
@@ -25,10 +17,6 @@ const notificationPayloadSchema = z.object({
   assignmentId: optionalUuid,
   salespersonId: optionalUuid,
 }).passthrough();
-
-export function isNotificationCommandType(commandType: string): commandType is NotificationCommandType {
-  return (notificationCommandTypes as readonly string[]).includes(commandType);
-}
 
 function recipientType(commandType: NotificationCommandType): string {
   return commandType.startsWith('salesperson.') ? 'salesperson' : 'operator';
@@ -115,5 +103,3 @@ export class NotificationOutboxDispatcher {
     return { outcome: 'delivered', providerMessageId: notificationId };
   }
 }
-
-export const notificationOutboxCommandTypes = [...notificationCommandTypes];

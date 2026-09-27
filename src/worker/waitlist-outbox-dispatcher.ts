@@ -1,12 +1,8 @@
 import { z } from 'zod';
 import { logger } from '../config/logger.js';
 import type { ClaimedOutboxCommand } from '../infrastructure/runtime.js';
-import { WAITLIST_NOTIFICATION_COMMAND_TYPE } from '../services/waitlist-service.js';
+import { isWaitlistCommandType } from './outbox-command-types.js';
 import type { OutboxDispatchResult } from './runtime-worker.js';
-
-const waitlistCommandTypes = [WAITLIST_NOTIFICATION_COMMAND_TYPE] as const;
-
-type WaitlistCommandType = typeof waitlistCommandTypes[number];
 
 const payloadSchema = z.object({
   waitlistSignupId: z.string().uuid(),
@@ -15,9 +11,7 @@ const payloadSchema = z.object({
   submissionCount: z.number().int().positive().default(1),
 }).passthrough();
 
-export function isWaitlistCommandType(commandType: string): commandType is WaitlistCommandType {
-  return (waitlistCommandTypes as readonly string[]).includes(commandType);
-}
+export { isWaitlistCommandType };
 
 /**
  * Terminates the outbox command by logging it. There is no email transport in
@@ -62,5 +56,3 @@ export class WaitlistOutboxDispatcher {
     return { outcome: 'delivered', providerMessageId: command.outboxCommandId };
   }
 }
-
-export const waitlistOutboxCommandTypes = [...waitlistCommandTypes];
