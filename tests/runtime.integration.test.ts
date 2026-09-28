@@ -3336,7 +3336,10 @@ describePg('durable runtime repositories with real PostgreSQL', () => {
     expect(rolledBack.versionKey).toBe(original.versionKey);
     expect((await repository.getActive('')).version).toBe(original.versionKey);
     expect((await db.pool.query('SELECT count(*) FROM configuration.versions')).rows[0]?.count).toBe('2');
-  });
+    // The rollback runs `npm run config` as a child process, a cold tsx start.
+    // Every other test that spawns npm does it in a hook with an explicit
+    // timeout; under a loaded machine the default 5 s is not enough.
+  }, 30_000);
 
 
 });
