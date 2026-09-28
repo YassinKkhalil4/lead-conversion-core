@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import type { ProjectInput } from '@/api/endpoints';
 import { explain } from '@/api/errors';
@@ -145,7 +145,7 @@ export default function ProjectsScreen() {
       render: (project) =>
         (project.salespersonIds ?? []).length === 0 ? (
           <Text size="small" style={{ color: color.warn }}>
-            None — cannot be routed
+            None, so it cannot be routed
           </Text>
         ) : (
           <Text size="small" numberOfLines={1}>
@@ -272,6 +272,7 @@ function ProjectForm({
   const set = <K extends keyof ProjectInput>(key: K, value: ProjectInput[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
 
+  const scrollRef = useRef<ScrollView>(null);
   const submit = async () => {
     const next: Record<string, string> = {};
     if (!values.projectName.trim()) next.projectName = 'A project name is required.';
@@ -279,7 +280,11 @@ function ProjectForm({
       next.maxPrice = 'The top of the range cannot be below the bottom.';
     }
     setLocalErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      // The first error is near the top of the form; bring it into view.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     await onSubmit({ ...values, projectName: values.projectName.trim() });
   };
 
@@ -290,7 +295,7 @@ function ProjectForm({
           onPress={(event) => event.stopPropagation()}
           style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 720, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
         >
-          <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
+          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">
               {isNew ? 'Add project' : values.projectName}
             </Text>

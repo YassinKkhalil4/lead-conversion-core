@@ -22,7 +22,7 @@ export function explain(error: unknown, context: string): Explained {
   if (error.isOffline) {
     return {
       title: 'No connection to the server',
-      detail: `${context} could not reach the Kadensio server. Check your signal — anything you have already loaded is still readable, and queued actions will be sent when you are back online.`,
+      detail: `${context} could not reach the Kadensio server. Check your signal. Anything you have already loaded is still readable, and queued actions will be sent when you are back online.`,
     };
   }
 
@@ -30,7 +30,7 @@ export function explain(error: unknown, context: string): Explained {
     case 'invalid_credentials':
       return {
         title: 'Email or password is wrong',
-        detail: 'Check both and try again. Accounts are created by an admin, so there is no password reset here yet — ask your admin if you are locked out.',
+        detail: 'Check both and try again. There is no password reset here yet, so ask your admin if you are locked out.',
       };
     case 'login_rate_limited': {
       const seconds = Number(error.details.retryAfterSeconds ?? 0);
@@ -58,7 +58,7 @@ export function explain(error: unknown, context: string): Explained {
     case 'lead_has_no_active_assignment':
       return {
         title: 'Nothing to acknowledge',
-        detail: 'This lead has no open assignment — it may already have been acknowledged or closed. Pull to refresh to see its current state.',
+        detail: 'This lead has no open assignment. It may already have been acknowledged or closed. Pull to refresh to see its current state.',
       };
     case 'assignment_belongs_to_another_salesperson':
       return {
@@ -68,7 +68,7 @@ export function explain(error: unknown, context: string): Explained {
     case 'session_window_closed':
       return {
         title: 'The 24-hour reply window has closed',
-        detail: 'WhatsApp only accepts free-form text within 24 hours of the lead\'s last message. Send an approved template instead — that reopens the window when they reply.',
+        detail: 'WhatsApp only accepts free-form text within 24 hours of the lead\'s last message. Send an approved template instead; it reopens the window when they reply.',
       };
     case 'template_not_approved':
       return {
@@ -78,7 +78,7 @@ export function explain(error: unknown, context: string): Explained {
     case 'validation_failed':
       return {
         title: `${context} was rejected as invalid`,
-        detail: 'The server refused the values sent. This is a bug in the app rather than something you did — please report it.',
+        detail: 'The server refused the values sent. This is a bug in the app, not something you did. Please report it.',
       };
     case 'dev_proxy_unreachable':
       return {
@@ -92,7 +92,7 @@ export function explain(error: unknown, context: string): Explained {
   if (error.status >= 500) {
     return {
       title: `The server failed while ${context.toLowerCase()}`,
-      detail: `It returned ${error.status} (${error.code}). This is a server-side fault, not something you can fix here — retry in a moment, and report it if it persists.`,
+      detail: `It returned ${error.status} (${error.code}). This is a server-side fault, not something you can fix here. Retry in a moment, and report it if it persists.`,
     };
   }
 

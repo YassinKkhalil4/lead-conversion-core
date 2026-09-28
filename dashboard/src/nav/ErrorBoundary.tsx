@@ -51,7 +51,7 @@ export class ScreenErrorBoundary extends Component<Props, State> {
           This screen could not be drawn
         </Text>
         <Text size="small" tone="muted">
-          The rest of the app is still working — use the navigation to move somewhere else, or try
+          The rest of the app is still working. Use the navigation to move somewhere else, or try
           this screen again. If it keeps happening, clearing the saved data below usually fixes it,
           because the most common cause is information saved on this device from an older version.
         </Text>

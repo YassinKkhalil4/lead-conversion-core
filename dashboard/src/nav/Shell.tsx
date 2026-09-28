@@ -114,7 +114,13 @@ function SideRail({ role }: { role: Role }) {
       })}
 
       <View style={{ flex: 1 }} />
-      <Pressable onPress={() => void signOut()} hitSlop={hitSlop} style={{ paddingHorizontal: space.md }}>
+      <Pressable
+        onPress={() => void signOut()}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel={user?.name ? `Sign out ${user.name}` : 'Sign out'}
+        style={{ paddingHorizontal: space.md }}
+      >
         <Text size="micro" tone="faint" numberOfLines={1}>
           {user?.name ?? ''} · sign out
         </Text>
@@ -201,7 +207,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
               );
             })}
             <View style={{ flex: 1 }} />
-            <Pressable onPress={() => void signOut()} style={{ paddingHorizontal: space.md, paddingVertical: space.lg }}>
+            <Pressable accessibilityRole="button" onPress={() => void signOut()} style={{ paddingHorizontal: space.md, paddingVertical: space.lg }}>
               <Text size="small" tone="faint">
                 Sign out
               </Text>

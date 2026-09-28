@@ -97,7 +97,7 @@ export default function Queue() {
         ) : urgent > 0 ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${urgent} assignments need you now. Show only these.`}
+            accessibilityLabel={`${urgent} ${urgent === 1 ? 'assignment needs' : 'assignments need'} you now. Show only these.`}
             onPress={() => setFilter('pastSla')}
             style={({ pressed }) => ({
               height: layout.queueHeader,

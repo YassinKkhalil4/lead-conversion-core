@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { ApiError } from '@/api/client';
 import { Text } from '@/design/Text';
@@ -24,6 +24,20 @@ export function fieldErrors(error: unknown): Record<string, string> {
   return mapped;
 }
 
+/**
+ * A field inside a FormRow shares the row with its neighbours, so it takes a
+ * flex basis there. Outside a row the same basis would become a minimum
+ * height, which is what left tall gaps under every tag input.
+ */
+const InRow = createContext(false);
+
+/** The visible label, handed to the input inside so it has an accessible name. */
+const FieldLabel = createContext<string | undefined>(undefined);
+
+function useFieldLabel(): string | undefined {
+  return useContext(FieldLabel);
+}
+
 export function Field({
   label,
   hint,
@@ -37,12 +51,13 @@ export function Field({
   children: ReactNode;
   width?: number | `${number}%`;
 }) {
+  const inRow = useContext(InRow);
   return (
-    <View style={{ gap: space.sm, flexGrow: 1, flexBasis: width ?? 240 }}>
+    <View style={[{ gap: space.sm }, inRow ? { flexGrow: 1, flexBasis: width ?? 240 } : null]}>
       <Text size="label" weight="medium" tone="muted">
         {label}
       </Text>
-      {children}
+      <FieldLabel.Provider value={label}>{children}</FieldLabel.Provider>
       {hint && !error ? (
         <Text size="micro" tone="faint">
           {hint}
@@ -72,8 +87,10 @@ export function TextField({
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
   autoCapitalize?: 'none' | 'sentences' | 'words';
 }) {
+  const fieldLabel = useFieldLabel();
   return (
     <TextInput
+        accessibilityLabel={fieldLabel}
       value={value}
       onChangeText={onChange}
       placeholder={placeholder ?? ''}
@@ -115,11 +132,13 @@ export function MoneyField({
   /** Shown after the field; empty when the brokerage's currency is unknown. */
   currency?: string;
 }) {
+  const fieldLabel = useFieldLabel();
   const [text, setText] = useState(value === null ? '' : groupDigits(String(value)));
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
       <TextInput
+        accessibilityLabel={fieldLabel}
         value={text}
         onChangeText={(next) => {
           const digits = next.replace(/[^\d]/g, '');
@@ -161,8 +180,10 @@ export function NumberField({
   onChange: (value: number) => void;
   invalid?: boolean;
 }) {
+  const fieldLabel = useFieldLabel();
   return (
     <TextInput
+        accessibilityLabel={fieldLabel}
       value={String(value)}
       onChangeText={(next) => {
         const digits = next.replace(/[^\d]/g, '');
@@ -202,6 +223,7 @@ export function TagInput({
   placeholder?: string;
   suggestions?: string[];
 }) {
+  const fieldLabel = useFieldLabel();
   const [draft, setDraft] = useState('');
 
   const add = (raw: string) => {
@@ -260,6 +282,7 @@ export function TagInput({
           </View>
         ))}
         <TextInput
+        accessibilityLabel={fieldLabel}
           value={draft}
           onChangeText={(next) => (next.endsWith(',') ? add(next.slice(0, -1)) : setDraft(next))}
           onSubmitEditing={() => add(draft)}
@@ -345,5 +368,9 @@ export function Toggle({
 
 /** A desk form lays fields out in rows that wrap, not one per line. */
 export function FormRow({ children }: { children: ReactNode }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xl }}>{children}</View>;
+  return (
+    <InRow.Provider value>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xl }}>{children}</View>
+    </InRow.Provider>
+  );
 }

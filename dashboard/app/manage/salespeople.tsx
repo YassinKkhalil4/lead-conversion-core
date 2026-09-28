@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import type { SalespersonInput } from '@/api/endpoints';
 import { explain } from '@/api/errors';
@@ -6,6 +6,8 @@ import type { Salesperson } from '@/api/types';
 import { Button } from '@/design/Button';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
+import { useAuth } from '@/auth/AuthProvider';
+import { examplePhoneFor } from '@/leads/qualification';
 import { colWidth, color, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, NumberField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
@@ -256,14 +258,20 @@ function SalespersonForm({
   const set = <K extends keyof SalespersonInput>(key: K, value: SalespersonInput[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
 
+  const scrollRef = useRef<ScrollView>(null);
+  const examplePhone = examplePhoneFor(useAuth().user?.timezone);
   const submit = async () => {
     const next: Record<string, string> = {};
     if (!values.name.trim()) next.name = 'A name is required.';
     if (isNew && !/^\+\d{7,}$/.test(values.phoneE164.trim())) {
-      next.phoneE164 = 'Enter the number in international form, for example +201001234567.';
+      next.phoneE164 = `Enter the number in international form, for example ${examplePhone}.`;
     }
     setLocalErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      // The first error is near the top of the form; bring it into view.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     await onSubmit({ ...values, name: values.name.trim(), phoneE164: values.phoneE164.trim() });
   };
 
@@ -281,7 +289,7 @@ function SalespersonForm({
             maxHeight: '90%',
           }}
         >
-          <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
+          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">
               {isNew ? 'Add salesperson' : values.name}
             </Text>
@@ -300,7 +308,7 @@ function SalespersonForm({
                   onChange={(next) => set('phoneE164', next)}
                   invalid={Boolean(errors.phoneE164)}
                   keyboardType="phone-pad"
-                  placeholder="+201001234567"
+                  placeholder={examplePhone}
                 />
               </Field>
               <Field label="Email" error={errors.email}>

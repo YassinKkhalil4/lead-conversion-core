@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { QualificationAnswer } from '../dashboard/src/api/types.js';
-import { currencyFor, formatBudget, indexAnswers, openingLine } from '../dashboard/src/leads/qualification.js';
+import { currencyFor, examplePhoneFor, formatBudget, indexAnswers, openingLine } from '../dashboard/src/leads/qualification.js';
 
 function answer(questionKey: string, normalizedValue: string): QualificationAnswer {
   return {
@@ -24,6 +24,14 @@ describe('budget currency', () => {
     expect(formatBudget('4000000', 'AED')).toBe('4M AED');
     expect(formatBudget('3000000-5000000', 'EGP')).toBe('3M – 5M EGP');
     expect(formatBudget('0-2000000', '')).toBe('Under 2M');
+  });
+});
+
+describe('example phone number', () => {
+  it('uses a local mobile format for the brokerage, with a neutral fallback', () => {
+    expect(examplePhoneFor('Asia/Dubai')).toBe('+971501234567');
+    expect(examplePhoneFor('Africa/Cairo')).toBe('+201001234567');
+    expect(examplePhoneFor('Europe/London')).toBe('+15551234567');
   });
 });
 

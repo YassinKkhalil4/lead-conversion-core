@@ -152,7 +152,7 @@ export function ScoreTab({ scoreRun }: { scoreRun: ScoreRun | null }) {
               {scoreRun.missingAnswers.length === 1 ? '' : 's'}
             </Text>
             <Text size="micro" tone="muted">
-              {scoreRun.missingAnswers.map((key) => questionLabel(key)).join(', ')} — these contributed no points.
+              {scoreRun.missingAnswers.map((key) => questionLabel(key)).join(', ')}. These contributed no points.
             </Text>
           </View>
         </Row>

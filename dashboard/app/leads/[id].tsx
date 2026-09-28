@@ -173,7 +173,7 @@ export default function CallPrepScreen() {
             onPress={() => void run(() => stopFollowUp.mutateAsync('stopped_from_dashboard'))}
           />
           <Button
-            label={lead.status === 'closed' ? `Closed — ${lead.closedStatus}` : 'Close this lead'}
+            label={lead.status === 'closed' ? `Closed: ${lead.closedStatus}` : 'Close this lead'}
             variant="text"
             disabled={lead.status === 'closed'}
             onPress={() => setClosing(true)}

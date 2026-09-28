@@ -113,6 +113,17 @@ export function currencyFor(timezone: string | null | undefined): string {
   return (timezone && CURRENCY_BY_TIMEZONE[timezone]) || '';
 }
 
+const EXAMPLE_PHONE_BY_TIMEZONE: Record<string, string> = {
+  'Africa/Cairo': '+201001234567',
+  'Asia/Dubai': '+971501234567',
+  'Asia/Riyadh': '+966501234567',
+};
+
+/** A plausible local mobile number for placeholders and format hints. */
+export function examplePhoneFor(timezone: string | null | undefined): string {
+  return (timezone && EXAMPLE_PHONE_BY_TIMEZONE[timezone]) || '+15551234567';
+}
+
 function withCurrency(text: string, currency: string): string {
   return currency ? `${text} ${currency}` : text;
 }
@@ -167,7 +178,7 @@ export function fourFacts(answers: AnswerIndex, currency = ''): Fact[] {
 export function skipReason(questionKey: string, answers: AnswerIndex): string {
   if (questionKey === QUESTION.downPayment) {
     const plan = valueOf(answers, QUESTION.paymentPlan).toLowerCase();
-    if (plan === 'cash') return 'skipped — paying cash';
+    if (plan === 'cash') return 'skipped, paying cash';
   }
   if (questionKey !== QUESTION.permission && !valueOf(answers, QUESTION.permission)) {
     return 'not reached';

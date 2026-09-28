@@ -49,7 +49,7 @@ export function Page({
     >
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: space.lg }}>
         <View style={{ flexGrow: 1, flexBasis: 260, gap: layout.stack }}>
-          <Text size="headline" weight="semibold">
+          <Text size="headline" weight="semibold" role="heading" aria-level={1}>
             {title}
           </Text>
           {subtitle ? (
@@ -78,7 +78,7 @@ export function Section({
   return (
     <View style={{ gap: layout.rowY }}>
       <View style={{ gap: layout.stack }}>
-        <Text size="title" weight="semibold">
+        <Text size="title" weight="semibold" role="heading" aria-level={2}>
           {title}
         </Text>
         {note ? (
