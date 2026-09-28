@@ -23,10 +23,12 @@ import {
   useTakeover,
 } from '@/leads/hooks';
 import { classify } from '@/leads/queue';
+import { enter, useReducedMotion } from '@/design/motion';
 
 const CLOSE_REASONS = ['won', 'lost', 'not_interested', 'unreachable', 'duplicate'];
 
 export default function CallPrepScreen() {
+  const reduced = useReducedMotion();
   const { id } = useLocalSearchParams<{ id: string }>();
   const leadId = String(id ?? '');
   const router = useRouter();
@@ -190,7 +192,7 @@ export default function CallPrepScreen() {
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={{
+            style={[{
               backgroundColor: color.paper,
               borderTopLeftRadius: radius.md,
               borderTopRightRadius: radius.md,
@@ -198,7 +200,7 @@ export default function CallPrepScreen() {
               paddingBottom: insets.bottom + space.xl,
               paddingHorizontal: space.xl,
               gap: space.md,
-            }}
+            }, enter('panel', reduced)]}
           >
             <Text size="body" weight="semibold">
               Close this lead as

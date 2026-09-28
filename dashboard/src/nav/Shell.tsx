@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { Text } from '@/design/Text';
 import { color, hitSlop, radius, space } from '@/design/tokens';
 import { useIsDesk } from '@/desk/Page';
 import { navFor } from './routes';
+import { enter, exit, useDismiss, useReducedMotion } from '@/design/motion';
 
 /**
  * The shell adapts to the user, not just the width.
@@ -130,7 +131,10 @@ function SideRail({ role }: { role: Role }) {
 }
 
 function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const closeNow = useCallback(() => setOpen(false), []);
+  const { closing, dismiss } = useDismiss(closeNow, reduced);
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -164,11 +168,11 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
 
       <View style={{ flex: 1 }}>{children}</View>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: color.scrim }}>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={dismiss}>
+        <Pressable onPress={dismiss} style={[{ flex: 1, backgroundColor: color.scrim }, closing ? exit('scrim') : null]}>
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={{
+            style={[{
               width: 264,
               height: '100%',
               backgroundColor: color.paper,
@@ -176,7 +180,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
               paddingBottom: insets.bottom + space.xl,
               paddingHorizontal: space.lg,
               gap: space.xs,
-            }}
+            }, closing ? exit('drawer') : enter('drawer', reduced)]}
           >
             {navFor(role).map((item) => {
               const active = isActive(pathname, item.href);
@@ -185,7 +189,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
                   key={`${item.href}-${item.label}`}
                   accessibilityRole="link"
                   onPress={() => {
-                    setOpen(false);
+                    dismiss();
                     router.push(item.href);
                   }}
                   style={({ pressed }) => ({

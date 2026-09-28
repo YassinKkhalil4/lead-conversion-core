@@ -14,6 +14,7 @@ import { Field, FormRow, MoneyField, TagInput, TextField, Toggle, fieldErrors } 
 import { Page, Section } from '@/desk/Page';
 import { countLabel } from '@/desk/safe';
 import { useProjects, useSalespeople, useSaveProject, useSetProjectSalespeople } from '@/manage/hooks';
+import { enter, useReducedMotion } from '@/design/motion';
 
 const UNIT_SUGGESTIONS = ['Apartment', 'Villa', 'Townhouse', 'Duplex', 'Studio', 'Chalet', 'Commercial'];
 
@@ -261,6 +262,7 @@ function ProjectForm({
   onCancel: () => void;
   onSubmit: (values: ProjectInput) => Promise<void>;
 }) {
+  const reduced = useReducedMotion();
   const [values, setValues] = useState<ProjectInput>(initial.values);
   const currency = currencyFor(useAuth().user?.timezone);
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
@@ -293,7 +295,7 @@ function ProjectForm({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 720, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
+          style={[{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 720, width: '100%', alignSelf: 'center', maxHeight: '90%' }, enter('panel', reduced)]}
         >
           <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">
@@ -361,6 +363,7 @@ function AssignSheet({
   onCancel: () => void;
   onSave: (salespersonIds: string[]) => Promise<void>;
 }) {
+  const reduced = useReducedMotion();
   const [selected, setSelected] = useState<string[]>(project.salespersonIds ?? []);
   const explained = error ? explain(error, 'Saving the assignment') : null;
 
@@ -376,7 +379,7 @@ function AssignSheet({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '85%' }}
+          style={[{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '85%' }, enter('panel', reduced)]}
         >
           <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.lg }}>
             <View style={{ gap: space.xs }}>

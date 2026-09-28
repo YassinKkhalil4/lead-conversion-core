@@ -15,6 +15,7 @@ import { countLabel } from '@/desk/safe';
 import { RequireRole } from '@/nav/RequireRole';
 import { useCreateUser, useSalespeople, useUpdateUser, useUsers } from '@/manage/hooks';
 import { timestamp } from '@/time/format';
+import { enter, useReducedMotion } from '@/design/motion';
 
 const ROLES: Role[] = ['admin', 'manager', 'salesperson'];
 
@@ -216,6 +217,7 @@ function InviteForm({
   onCancel: () => void;
   onSubmit: (values: { email: string; name: string; role: Role; salespersonId: string | null }) => Promise<void>;
 }) {
+  const reduced = useReducedMotion();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('salesperson');
@@ -253,7 +255,7 @@ function InviteForm({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
+          style={[{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '90%' }, enter('panel', reduced)]}
         >
           <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <View style={{ gap: space.xs }}>

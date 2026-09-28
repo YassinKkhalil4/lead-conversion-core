@@ -2,6 +2,7 @@ import { Pressable, View } from 'react-native';
 import { Button } from './Button';
 import { Text } from './Text';
 import { color, hitSlop, layout, radius, space } from './tokens';
+import { enter, useReducedMotion } from './motion';
 
 /**
  * Left-aligned, no illustration, no encouragement. States what will appear here
@@ -54,9 +55,10 @@ export function ErrorState({
   onRetry?: () => void;
   retryLabel?: string;
 }) {
+  const reduced = useReducedMotion();
   return (
     <View
-      style={{
+      style={[{
         marginHorizontal: space.xl,
         marginVertical: space.xl,
         padding: space.lg,
@@ -67,7 +69,7 @@ export function ErrorState({
         borderLeftWidth: 3,
         borderLeftColor: color.warn,
         borderRadius: radius.md,
-      }}
+      }, enter('notice', reduced)]}
     >
       <Text size="small" weight="semibold" style={{ color: color.warn }}>
         {title}
@@ -94,16 +96,17 @@ export function InlineNotice({
   text: string;
   variant?: 'neutral' | 'warning';
 }) {
+  const reduced = useReducedMotion();
   const isWarning = variant === 'warning';
   return (
     <View
-      style={{
+      style={[{
         paddingHorizontal: space.xl,
         paddingVertical: space.md,
         backgroundColor: isWarning ? color.tint : color.tint,
         borderBottomWidth: 1,
         borderBottomColor: isWarning ? color.warn : color.line2,
-      }}
+      }, enter('notice', reduced)]}
     >
       <Text size="small" style={{ color: isWarning ? color.warn : color.ink2 }}>
         {text}

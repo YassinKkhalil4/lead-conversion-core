@@ -15,6 +15,7 @@ import { Page, Section } from '@/desk/Page';
 import { atLeast, countLabel, optionalNumber, ratioLabel } from '@/desk/safe';
 import { useSalespeople, useSaveSalesperson } from '@/manage/hooks';
 import { duration } from '@/time/format';
+import { enter, useReducedMotion } from '@/design/motion';
 
 const UNIT_SUGGESTIONS = ['Apartment', 'Villa', 'Townhouse', 'Duplex', 'Studio', 'Chalet', 'Commercial'];
 const LANGUAGE_SUGGESTIONS = ['Arabic', 'English'];
@@ -248,6 +249,7 @@ function SalespersonForm({
   onCancel: () => void;
   onSubmit: (values: SalespersonInput) => Promise<void>;
 }) {
+  const reduced = useReducedMotion();
   const [values, setValues] = useState<SalespersonInput>(initial.values);
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const isNew = !initial.salespersonId;
@@ -280,14 +282,14 @@ function SalespersonForm({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{
+          style={[{
             backgroundColor: color.paper,
             borderRadius: radius.md,
             maxWidth: 760,
             width: '100%',
             alignSelf: 'center',
             maxHeight: '90%',
-          }}
+          }, enter('panel', reduced)]}
         >
           <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">

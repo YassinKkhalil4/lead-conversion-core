@@ -76,6 +76,8 @@
   --r-tag: 6px;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* { duration: 0.5, bounce: 0.15 } sampled into linear(): settles in 640ms, 0.6% overshoot. */
+  --spring: linear(0, 0.035, 0.119, 0.228, 0.345, 0.46, 0.565, 0.658, 0.737, 0.802, 0.856, 0.897, 0.93, 0.954, 0.972, 0.985, 0.994, 1, 1.003, 1.005, 1.006, 1.006, 1.006, 1.005, 1.005, 1.004, 1.003, 1.003, 1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -190,6 +192,7 @@ a { color: inherit; }
   font-size: .9375rem; font-weight: 500; color: var(--ink-2);
   text-decoration: none; padding: .35rem 0;
 }
+.nav a { transition: color .15s ease, box-shadow .15s ease; }
 .nav a:hover { color: var(--ink); }
 .nav a[aria-current="page"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
 .header-cta { margin-left: .25rem; }
@@ -220,7 +223,7 @@ a { color: inherit; }
   width: 1.9rem; height: 1.9rem; margin-right: -.55rem;
   border-radius: 7px;
   background: color-mix(in srgb, currentColor 16%, transparent);
-  transition: transform .2s var(--ease-out);
+  transition: transform .64s var(--spring);
 }
 .btn-tile .icon { width: 1rem; height: 1rem; }
 @media (hover: hover) and (pointer: fine) {
@@ -633,3 +636,38 @@ a { color: inherit; }
 .doc-table tfoot th, .doc-table tfoot td { font-weight: 600; color: var(--ink); background: var(--accent-wash); }
 .doc-cta { margin-top: 1.5rem; }
 .doc .btn-primary { color: var(--on-accent); text-decoration: none; }
+
+/* ---------- Motion ----------
+   Two moments, both once per visit. The hero timeline plays the lead's
+   thirty seconds in order, which is the claim the headline makes. Sections
+   rise into place as they are reached. Everything is gated on reduced motion
+   (the reset near the top zeroes any remaining durations), and reveals only
+   hide content once the inline script has marked the page with .js. */
+
+@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .timeline li { animation: rise-in 320ms var(--ease-out) both; }
+  .timeline li:nth-child(1) { animation-delay: 250ms; }
+  .timeline li:nth-child(2) { animation-delay: 340ms; }
+  .timeline li:nth-child(3) { animation-delay: 430ms; }
+  .timeline li:nth-child(4) { animation-delay: 520ms; }
+  .timeline li:nth-child(5) { animation-delay: 610ms; }
+  .timeline li:nth-child(6) { animation-delay: 700ms; }
+  .timeline-total { animation: rise-in 320ms var(--ease-out) 820ms both; }
+
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out);
+  }
+  .js [data-reveal].is-in { opacity: 1; transform: none; }
+  .js .bento > [data-reveal]:nth-child(2) { transition-delay: 50ms; }
+  .js .bento > [data-reveal]:nth-child(3) { transition-delay: 100ms; }
+  .js .bento > [data-reveal]:nth-child(4) { transition-delay: 150ms; }
+  .js .bento > [data-reveal]:nth-child(5) { transition-delay: 200ms; }
+  .js .bento > [data-reveal]:nth-child(6) { transition-delay: 250ms; }
+  .js .steps > [data-reveal]:nth-child(2) { transition-delay: 60ms; }
+  .js .steps > [data-reveal]:nth-child(3) { transition-delay: 120ms; }
+  .js .steps > [data-reveal]:nth-child(4) { transition-delay: 180ms; }
+}

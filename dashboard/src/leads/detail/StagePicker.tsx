@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Label, Text } from '@/design/Text';
 import { color, hitSlop, radius, space, tracking } from '@/design/tokens';
 import { PIPELINE_STAGES, stageLabel } from '@/leads/labels';
+import { enter, exit, useDismiss, useReducedMotion } from '@/design/motion';
 
 /**
  * Where the lead sits in the pipeline, and a way to move it.
@@ -21,7 +22,10 @@ export function StagePicker({
   busy: boolean;
   onChange: (stage: string) => void;
 }) {
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const closeNow = useCallback(() => setOpen(false), []);
+  const { closing, dismiss } = useDismiss(closeNow, reduced);
   const insets = useSafeAreaInsets();
 
   return (
@@ -54,20 +58,20 @@ export function StagePicker({
         </Text>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={dismiss}>
         <Pressable
-          onPress={() => setOpen(false)}
-          style={{ flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' }}
+          onPress={dismiss}
+          style={[{ flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' }, closing ? exit('scrim') : null]}
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={{
+            style={[{
               backgroundColor: color.paper,
               borderTopLeftRadius: radius.md,
               borderTopRightRadius: radius.md,
               paddingTop: space.xl,
               paddingBottom: insets.bottom + space.xl,
-            }}
+            }, closing ? exit('sheet') : enter('sheet', reduced)]}
           >
             <Text size="body" weight="semibold" style={{ paddingHorizontal: space.xl, paddingBottom: space.lg }}>
               Move this lead to
@@ -80,7 +84,7 @@ export function StagePicker({
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => {
-                    setOpen(false);
+                    dismiss();
                     if (!selected) onChange(option);
                   }}
                   style={({ pressed }) => ({
