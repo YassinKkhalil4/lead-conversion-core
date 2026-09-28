@@ -31,8 +31,8 @@
 <meta name="theme-color" content="#0C1F1A">
 <link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/kadensio-icon.svg">
+<link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
-<script>document.documentElement.classList.add('js');</script>
 <script type="application/ld+json">
 {
  "@context": "https://schema.org",
@@ -180,12 +180,11 @@
   <!-- 1. HERO -->
   <section class="hero" id="top">
     <div class="wrap">
-      <p class="eyebrow">WhatsApp lead qualification for real estate</p>
       <h1>A buyer messages your number at 2am. <span class="h1-reply">Thirty seconds later, they have booked a viewing.</span></h1>
 
       <div class="hero-grid">
         <div class="hero-copy">
-          <p class="lead">Kadensio answers cold WhatsApp messages on your number, asks your questions in Arabic or English, and books the viewing.</p>
+          <p class="lead">Kadensio qualifies real estate leads on WhatsApp: it answers cold messages on your number and books the viewing.</p>
           <p class="hero-cta">
             <a class="btn btn-primary btn-lg" href="https://wa.me/201041445227?text=Hi">Message the live number <span class="btn-tile" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span></a>
             <a class="btn btn-ghost btn-lg" href="#waitlist">Request early access</a>
@@ -243,17 +242,17 @@
   <!-- 3. THE COST OF A SLOW REPLY -->
   <section class="section" id="cost" aria-labelledby="cost-h">
     <div class="wrap">
-      <div class="section-head" data-reveal>
+      <div class="section-head">
         <h2 id="cost-h">You have already paid for the lead.</h2>
         <p class="lead">The ad spend is gone the moment the message lands. The next five minutes decide whether it becomes a conversation, and the bigger the ticket, the more each missed reply costs you.</p>
       </div>
 
       <div class="cost-grid">
-        <div class="stat stat-hero" data-reveal>
+        <div class="stat stat-hero">
           <p class="stat-fig">42<span class="stat-unit">hours</span></p>
           <p class="stat-desc">Average time to a first response, counting only the companies that responded at all.</p>
         </div>
-        <div class="stat-side" data-reveal>
+        <div class="stat-side">
           <div class="stat">
             <p class="stat-fig">23%</p>
             <p class="stat-desc">Never responded to the lead.</p>
@@ -265,7 +264,7 @@
         </div>
       </div>
 
-      <p class="cost-close" data-reveal>Kadensio replies to every lead in seconds, including the ones that arrive at 2am, at the weekend and on public holidays.</p>
+      <p class="cost-close">Kadensio replies to every lead in seconds, including the ones that arrive at 2am, at the weekend and on public holidays.</p>
 
       <p class="source">Figures: Oldroyd, McElheran and Elkington, <cite>Harvard Business Review</cite>, 2011, auditing 2,241 US companies, and the associated Lead Response Management study. Both come from the same lead researcher, and the second was sponsored by a company selling lead&#8209;response software, so read them as a single body of work. This is US data from 2011. Other markets show the same pattern, but these figures do not measure Dubai, the UAE or Egypt.</p>
     </div>
@@ -274,13 +273,13 @@
   <!-- 4. HOW IT WORKS -->
   <section class="section section-tint" id="how" aria-labelledby="how-h">
     <div class="wrap how-grid">
-      <div class="section-head" data-reveal>
+      <div class="section-head">
         <h2 id="how-h">Four steps, with nobody on shift.</h2>
         <p class="lead">It runs a fixed script on the official Meta WhatsApp Business Platform, so it cannot invent a price, a payment plan or a unit that does not exist.</p>
       </div>
 
       <ol class="steps">
-        <li class="step" data-reveal>
+        <li class="step">
           <p class="step-n" aria-hidden="true">01</p>
           <div class="step-body">
             <h3>They message your number</h3>
@@ -292,14 +291,14 @@
             </ul>
           </div>
         </li>
-        <li class="step" data-reveal>
+        <li class="step">
           <p class="step-n" aria-hidden="true">02</p>
           <div class="step-body">
             <h3>It replies in seconds, in their language</h3>
             <p>The buyer picks Arabic or English before anything else, and Kadensio never guesses from the phone number. Both languages ship, tested against the production API. We write and load any other language during setup.</p>
           </div>
         </li>
-        <li class="step" data-reveal>
+        <li class="step">
           <p class="step-n" aria-hidden="true">03</p>
           <div class="step-body">
             <h3>Nine questions, then a score you can audit</h3>
@@ -307,7 +306,7 @@
             <p>The score is arithmetic. The same answers always give the same number, so a sales manager can check why a lead ranked where it did, today or next month. <a href="lead-scoring.html">See all ten factors and their points</a>.</p>
           </div>
         </li>
-        <li class="step" data-reveal>
+        <li class="step">
           <p class="step-n" aria-hidden="true">04</p>
           <div class="step-body">
             <h3>Sent to the right desk, and booked</h3>
@@ -321,13 +320,13 @@
   <!-- 5. WHAT YOUR TEAM SEES -->
   <section class="section" id="team" aria-labelledby="team-h">
     <div class="wrap">
-      <div class="section-head" data-reveal>
+      <div class="section-head">
         <h2 id="team-h">Your salespeople see the hottest lead first.</h2>
         <p class="lead">Every lead lands in a web dashboard with the whole conversation attached, so the first call starts where the qualification ended.</p>
       </div>
 
       <ul class="bento">
-        <li class="cell cell-score" data-reveal>
+        <li class="cell cell-score">
           <div>
             <h3>Hot leads first</h3>
             <p>Kadensio sorts the queue by score, and each score opens to the ten factors behind it.</p>
@@ -348,23 +347,23 @@
             </ul>
           </div>
         </li>
-        <li class="cell cell-wide" data-reveal>
+        <li class="cell cell-wide">
           <h3>The whole conversation</h3>
           <p>Every answer the buyer gave, in their own words, before anyone picks up the phone. Reply from the same screen.</p>
         </li>
-        <li class="cell cell-wide cell-tint" data-reveal>
+        <li class="cell cell-wide cell-tint">
           <h3>Why they got it</h3>
           <p>Routing records every salesperson it considered and why it chose this one.</p>
         </li>
-        <li class="cell cell-third" data-reveal>
+        <li class="cell cell-third">
           <h3>Take over in one tap</h3>
           <p>A salesperson can take the conversation from the engine at any point, and hand it back when they are done.</p>
         </li>
-        <li class="cell cell-third cell-ink" data-reveal>
+        <li class="cell cell-third cell-ink">
           <h3>Nothing waits unnoticed</h3>
           <p>A reminder at 15 minutes, a manager alert at 30, and one list of every lead still waiting for a reply.</p>
         </li>
-        <li class="cell cell-third" data-reveal>
+        <li class="cell cell-third">
           <h3>A manager's overview</h3>
           <p>Speed to acknowledge, new and qualified leads, and where leads come from, by week or by month.</p>
         </li>
@@ -375,9 +374,9 @@
   <!-- 6. TRY IT NOW -->
   <section class="section section-tint try" id="try" aria-labelledby="try-h">
     <div class="wrap">
-      <h2 id="try-h" data-reveal>Test it from your own phone.</h2>
+      <h2 id="try-h">Test it from your own phone.</h2>
       <p class="lead">The number below is the live production system. Send it anything. It asks for Arabic or English, runs you through the qualification, scores you and offers you a slot.</p>
-      <p class="dare-num" data-reveal>+20 104 144 5227</p>
+      <p class="dare-num">+20 104 144 5227</p>
       <p class="dare-cta"><a class="btn btn-primary btn-lg" href="https://wa.me/201041445227?text=Hi">Message the live number <span class="btn-tile" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span></a></p>
       <p class="dare-note">Pick the language you sell in. It books nothing on your behalf, and nobody will call you.</p>
     </div>
@@ -386,7 +385,7 @@
   <!-- 7. THE CONNECTION -->
   <section class="section" id="official" aria-labelledby="official-h">
     <div class="wrap compare-grid">
-      <div class="section-head" data-reveal>
+      <div class="section-head">
         <h2 id="official-h">Your number is your pipeline. Don't let a bot get it banned.</h2>
         <p class="lead">Most WhatsApp automation is unofficial: a script driving WhatsApp Web, or a scraped session pretending to be a phone. It is cheap, it works for a while, and it breaks WhatsApp's terms. When WhatsApp catches it, WhatsApp bans the number.</p>
         <p class="lead">That number is on every listing, every board and every card you have handed out. Losing it means losing the way buyers reach you.</p>
@@ -394,12 +393,12 @@
 
       <div>
         <ul class="compare">
-          <li class="compare-bad" data-reveal>
+          <li class="compare-bad">
             <p class="compare-tag">Unofficial</p>
             <p class="compare-name">A scraped session</p>
             <p class="compare-desc">It breaks WhatsApp's terms and works until WhatsApp notices. Then you lose the number.</p>
           </li>
-          <li class="compare-good" data-reveal>
+          <li class="compare-good">
             <p class="compare-tag">Kadensio</p>
             <p class="compare-name">Official Meta WhatsApp Business Platform</p>
             <p class="compare-desc">The sanctioned route: a registered business number, approved message templates, delivery receipts, and a connection Meta provides.</p>
@@ -413,14 +412,14 @@
   <!-- 8. CONFIGURATION -->
   <section class="section section-tint" id="questions" aria-labelledby="questions-h">
     <div class="wrap config-grid">
-      <div class="section-head" data-reveal>
+      <div class="section-head">
         <h2 id="questions-h">Your questions, your wording, your languages.</h2>
         <p class="lead">The nine questions are a starting point. Reword them, reorder them, drop the ones you never ask and add the ones you ask on every call.</p>
         <p class="lead">You change the script. The engine scores and routes every answer with the same fixed arithmetic, whatever you ask.</p>
       </div>
 
       <div class="qsets">
-        <div class="qset" data-reveal>
+        <div class="qset">
           <p class="qset-label">Ships with</p>
           <ul class="chips">
             <li class="chip">Permission</li>
@@ -434,7 +433,7 @@
             <li class="chip">Site visit interest</li>
           </ul>
         </div>
-        <div class="qset" data-reveal>
+        <div class="qset">
           <p class="qset-label">Or ask what you ask on the phone</p>
           <ul class="chips">
             <li class="chip chip-strong">Cash or mortgage</li>
@@ -451,7 +450,7 @@
   <!-- 9. FAQ -->
   <section class="section" id="faq" aria-labelledby="faq-h">
     <div class="wrap">
-      <h2 id="faq-h" data-reveal>What brokers ask first.</h2>
+      <h2 id="faq-h">What brokers ask first.</h2>
       <div class="faq">
         <div class="faq-item">
           <h3>Is this a chatbot?</h3>
@@ -489,7 +488,6 @@
   <section class="section access" id="waitlist" aria-labelledby="waitlist-h">
     <div class="wrap access-grid">
       <div>
-        <p class="eyebrow">Early access</p>
         <h2 id="waitlist-h">Kadensio is taking its first brokerages.</h2>
         <p class="lead">Built for Dubai and the UAE, running end to end in Egypt, and open to any brokerage whose buyers reach it on WhatsApp. Tell me about yours and I will reply myself.</p>
 
@@ -502,8 +500,8 @@
         </div>
       </div>
 
-      <div class="bezel bezel-dark" data-reveal>
-        <div class="bezel-core">
+      <div class="form-panel">
+        <div>
           <form class="wl" id="waitlist-form" novalidate>
             <div class="wl-row">
               <div class="wl-field">
@@ -761,25 +759,6 @@
 })();
 </script>
 
-<script>
-(function () {
-  'use strict';
-  var targets = document.querySelectorAll('[data-reveal]');
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce || !('IntersectionObserver' in window)) {
-    for (var i = 0; i < targets.length; i++) targets[i].classList.add('is-in');
-    return;
-  }
-  var observer = new IntersectionObserver(function (entries) {
-    entries.forEach(function (entry) {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.add('is-in');
-      observer.unobserve(entry.target);
-    });
-  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
-  for (var j = 0; j < targets.length; j++) observer.observe(targets[j]);
-})();
-</script>
 
 </body>
 </html>

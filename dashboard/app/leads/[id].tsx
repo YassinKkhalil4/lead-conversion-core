@@ -24,6 +24,7 @@ import {
 } from '@/leads/hooks';
 import { classify } from '@/leads/queue';
 import { enter, useReducedMotion } from '@/design/motion';
+import { Icon } from '@/design/Icon';
 
 const CLOSE_REASONS = ['won', 'lost', 'not_interested', 'unreachable', 'duplicate'];
 
@@ -236,9 +237,12 @@ function BackLink({ onPress }: { onPress: () => void }) {
       accessibilityLabel="Back to the queue"
       style={{ paddingHorizontal: space.xl, paddingVertical: space.md }}
     >
-      <Text size="small" weight="semibold" tone="muted">
-        ← Queue
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        <Icon name="arrowLeft" size={14} color={color.ink2} />
+        <Text size="small" weight="semibold" tone="muted">
+          Queue
+        </Text>
+      </View>
     </Pressable>
   );
 }

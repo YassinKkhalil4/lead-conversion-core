@@ -4,6 +4,7 @@ import { Skeleton } from '@/design/Skeleton';
 import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
 import { color, layout, radius } from '@/design/tokens';
+import { Icon } from '@/design/Icon';
 
 export interface Column<T> {
   key: string;
@@ -255,10 +256,12 @@ function HeaderRow<T>({
               alignItems: column.numeric ? 'flex-end' : 'flex-start',
             }}
           >
-            <Text size="small" weight="medium" tone={active ? 'default' : 'faint'}>
-              {column.header}
-              {active ? (sort?.direction === 'asc' ? ' ↑' : ' ↓') : ''}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text size="small" weight="medium" tone={active ? 'default' : 'faint'}>
+                {column.header}
+              </Text>
+              {active ? <Icon name={sort?.direction === 'asc' ? 'arrowUp' : 'arrowDown'} size={12} color={color.ink} /> : null}
+            </View>
           </Pressable>
         );
       })}

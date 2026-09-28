@@ -3,6 +3,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { ApiError } from '@/api/client';
 import { Text } from '@/design/Text';
 import { color, fontFamily, fontSize, hitSlop, radius, space } from '@/design/tokens';
+import { Icon } from '@/design/Icon';
 
 /**
  * Field-level errors from the API's `issues` array, keyed by the field they
@@ -275,9 +276,7 @@ export function TagInput({
               hitSlop={hitSlop}
               onPress={() => onChange(values.filter((entry) => entry !== value))}
             >
-              <Text size="small" tone="faint">
-                ×
-              </Text>
+              <Icon name="x" size={12} color={color.ink3} />
             </Pressable>
           </View>
         ))}

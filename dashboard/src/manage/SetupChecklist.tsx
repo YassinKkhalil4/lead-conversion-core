@@ -8,6 +8,7 @@ import { Text } from '@/design/Text';
 import { color, layout, radius, space } from '@/design/tokens';
 import { useProjects, useSalespeople, useUsers } from '@/manage/hooks';
 import { setupProgress, type SetupStep } from '@/manage/setup';
+import { Icon } from '@/design/Icon';
 
 const DISMISSED_KEY = 'kadensio.setup.dismissed';
 
@@ -102,9 +103,13 @@ function StepRow({ step, number, onOpen }: { step: SetupStep; number: number; on
           borderColor: color.lineStrong,
         }}
       >
-        <Text size="micro" weight="semibold" style={{ color: step.done ? color.onAccent : color.ink2 }}>
-          {step.done ? '✓' : String(number)}
-        </Text>
+        {step.done ? (
+          <Icon name="check" size={12} color={color.onAccent} />
+        ) : (
+          <Text size="micro" weight="semibold" style={{ color: color.ink2 }}>
+            {String(number)}
+          </Text>
+        )}
       </View>
       <View style={{ flex: 1, gap: space.hair }}>
         <Text

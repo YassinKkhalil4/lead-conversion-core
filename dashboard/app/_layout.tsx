@@ -43,6 +43,8 @@ const FONT_CSS = `
 @font-face { font-family: "Geist Mono"; src: url("${FONT_BASE}/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Geist Fallback"; src: local("Arial"), local("ArialMT"), local("Helvetica"); size-adjust: 104.94%; ascent-override: 95.77%; descent-override: 28.11%; line-gap-override: 0%; }
 body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+::selection { background: ${color.accent}; color: ${color.onAccent}; }
+input, textarea { caret-color: ${color.accent}; }
 `;
 
 /**
