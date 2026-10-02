@@ -23,6 +23,7 @@
 <meta name="theme-color" content="#0C1F1A">
 <link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/kadensio-icon.svg">
+<link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -31,8 +32,16 @@
 
 <header class="site-header">
   <div class="wrap header-inner">
-    <a class="logo" href="index.html" aria-label="Kadensio, home"><img src="assets/kadensio-lockup.svg" alt="Kadensio" width="256" height="64" decoding="async"></a>
-    <a class="btn btn-ghost header-cta" href="index.html#waitlist">Get early access</a>
+    <a class="logo" href="index.html" aria-label="Kadensio, home">
+      <img class="logo-light" src="assets/kadensio-lockup.svg" alt="Kadensio" width="104" height="26" decoding="async">
+      <img class="logo-dark" src="assets/kadensio-lockup-reversed.svg" alt="Kadensio" width="104" height="26" decoding="async">
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html#how">How it works</a>
+      <a href="lead-scoring.html">Scoring</a>
+      <a href="index.html#faq">Questions</a>
+    </nav>
+    <a class="btn btn-ghost header-cta" href="index.html#waitlist">Request early access</a>
   </div>
 </header>
 
@@ -48,7 +57,6 @@
     </div>
 
     <div class="doc-head">
-      <p class="eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
       <p class="doc-standfirst">Kadensio answers property leads on WhatsApp for real estate brokerages. That means handling two very different kinds of personal data, under two different legal roles. This policy explains both, and what you can do about either.</p>
       <p class="doc-meta">
@@ -127,7 +135,7 @@
 
       <section id="no-cookies">
         <h2><span class="doc-n">04</span>Cookies, analytics and tracking</h2>
-        <p>This website sets <strong>no cookies at all</strong>. There is no analytics, no tag manager, no advertising pixel, no session recording, no third-party script of any kind, and no embedded web fonts. Nothing on the page calls out to another company, so nothing about your visit is shared with anyone.</p>
+        <p>This website sets <strong>no cookies at all</strong>. There is no analytics, no tag manager, no advertising pixel, no session recording, and no third-party script of any kind. The typeface is served from this site, not from a font service. Nothing on the page calls out to another company, so nothing about your visit is shared with anyone.</p>
         <p>This is unusual enough to be worth stating plainly: we are not tracking you, and there is no cookie banner because there is nothing to consent to.</p>
         <p>The one network request the site makes to us is the waitlist form, and only when you submit it.</p>
       </section>
@@ -347,7 +355,7 @@
 
 <footer class="site-footer">
   <div class="wrap footer-inner">
-    <p class="logo logo-footer"><img src="assets/kadensio-lockup.svg" alt="Kadensio" width="256" height="64" decoding="async"></p>
+    <p class="logo logo-footer"><img class="logo-light" src="assets/kadensio-lockup.svg" alt="Kadensio" width="88" height="22" decoding="async"><img class="logo-dark" src="assets/kadensio-lockup-reversed.svg" alt="Kadensio" width="88" height="22" decoding="async"></p>
     <div>
       <p class="footer-meta">WhatsApp lead qualification for real estate brokerages. <a href="mailto:yassin@kadensio.com">yassin@kadensio.com</a></p>
       <p class="footer-legal">

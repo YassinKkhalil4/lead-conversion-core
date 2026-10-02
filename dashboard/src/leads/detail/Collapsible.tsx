@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from '@/design/Text';
 import { color, space } from '@/design/tokens';
+import { enter, useReducedMotion } from '@/design/motion';
+import { Icon } from '@/design/Icon';
 
 /**
  * Everything below the fold starts closed. The screen is read in the ten
@@ -20,6 +22,7 @@ export function Collapsible({
   initiallyOpen?: boolean;
 }) {
   const [open, setOpen] = useState(initiallyOpen);
+  const reduced = useReducedMotion();
 
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: color.line2, backgroundColor: color.paper }}>
@@ -46,11 +49,9 @@ export function Collapsible({
             </Text>
           ) : null}
         </View>
-        <Text size="small" tone="faint">
-          {open ? '−' : '+'}
-        </Text>
+        <Icon name={open ? 'minus' : 'plus'} size={14} color={color.ink3} />
       </Pressable>
-      {open ? <View style={{ borderTopWidth: 1, borderTopColor: color.line2 }}>{children}</View> : null}
+      {open ? <View style={[{ borderTopWidth: 1, borderTopColor: color.line2 }, enter('content', reduced)]}>{children}</View> : null}
     </View>
   );
 }

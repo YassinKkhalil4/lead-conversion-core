@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { explain } from '@/api/errors';
@@ -15,6 +15,7 @@ import { countLabel } from '@/desk/safe';
 import { RequireRole } from '@/nav/RequireRole';
 import { useCreateUser, useSalespeople, useUpdateUser, useUsers } from '@/manage/hooks';
 import { timestamp } from '@/time/format';
+import { enter, useReducedMotion } from '@/design/motion';
 
 const ROLES: Role[] = ['admin', 'manager', 'salesperson'];
 
@@ -174,7 +175,7 @@ function UsersInner() {
             keyOf={(row) => row.userId}
             initialSort={{ key: 'name', direction: 'asc' }}
             emptyTitle="No users yet"
-            emptyDetail="Every person who signs in needs an account here. Salespeople need one too — a salesperson record on its own receives WhatsApp notifications but cannot open the dashboard."
+            emptyDetail="Every person who signs in needs an account here. Salespeople need one too: a salesperson record on its own receives WhatsApp notifications but cannot open the dashboard."
             columns={columns}
           />
         </Section>
@@ -216,6 +217,7 @@ function InviteForm({
   onCancel: () => void;
   onSubmit: (values: { email: string; name: string; role: Role; salespersonId: string | null }) => Promise<void>;
 }) {
+  const reduced = useReducedMotion();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('salesperson');
@@ -226,6 +228,7 @@ function InviteForm({
   const errors = { ...serverErrors, ...localErrors };
   const explained = error && Object.keys(serverErrors).length === 0 ? explain(error, 'Creating the user') : null;
 
+  const scrollRef = useRef<ScrollView>(null);
   const submit = async () => {
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = 'A name is required.';
@@ -234,7 +237,11 @@ function InviteForm({
       next.salespersonId = 'A salesperson account must map to a salesperson record.';
     }
     setLocalErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      // The first error is near the top of the form; bring it into view.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     await onSubmit({
       name: name.trim(),
       email: email.trim().toLowerCase(),
@@ -248,9 +255,9 @@ function InviteForm({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
+          style={[{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '90%' }, enter('panel', reduced)]}
         >
-          <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
+          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <View style={{ gap: space.xs }}>
               <Text size="title" weight="bold">
                 Invite user
@@ -383,7 +390,7 @@ function PasswordIssued({
             Account created
           </Text>
           <Text size="small" tone="muted">
-            This password is shown once and is not recoverable. Copy it now and send it to {issued.email} yourself — there is no email delivery.
+            This password is shown once and is not recoverable. Copy it now and send it to {issued.email} yourself. There is no email delivery.
           </Text>
 
           <View style={{ backgroundColor: color.tint, borderRadius: radius.md, padding: space.lg }}>

@@ -44,6 +44,13 @@ const EVENT_LABELS: Record<string, string> = {
   'dashboard.followups_stopped': 'Follow-ups stopped',
   'dashboard.human_takeover_enabled': 'Human took over',
   'dashboard.human_takeover_disabled': 'Handed back to the engine',
+  // Notification types, which share this lookup with audit events.
+  'salesperson.lead_assignment_notification': 'New lead assigned',
+  'salesperson.sla_assignment_reminder': 'SLA reminder',
+  'salesperson.appointment_booked_notification': 'Viewing booked',
+  'operator.sla_escalation': 'SLA escalation',
+  'operator.daily_report': 'Daily report',
+  'operator.routing_attention_required': 'Routing needs attention',
 };
 
 export function eventLabel(eventType: string): string {

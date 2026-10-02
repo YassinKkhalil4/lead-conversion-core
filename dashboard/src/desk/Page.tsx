@@ -1,8 +1,8 @@
 import { type ReactNode } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text } from '@/design/Text';
-import { color, layout, radius, space, tracking } from '@/design/tokens';
+import { Label, Text } from '@/design/Text';
+import { color, layout, radius, space } from '@/design/tokens';
 
 /** Below this the side navigation collapses into a drawer. */
 export const DESK_BREAKPOINT = 900;
@@ -49,7 +49,7 @@ export function Page({
     >
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: space.lg }}>
         <View style={{ flexGrow: 1, flexBasis: 260, gap: layout.stack }}>
-          <Text size="headline" weight="semibold">
+          <Text size="headline" weight="semibold" role="heading" aria-level={1}>
             {title}
           </Text>
           {subtitle ? (
@@ -78,7 +78,7 @@ export function Section({
   return (
     <View style={{ gap: layout.rowY }}>
       <View style={{ gap: layout.stack }}>
-        <Text size="title" weight="semibold">
+        <Text size="title" weight="semibold" role="heading" aria-level={2}>
           {title}
         </Text>
         {note ? (
@@ -123,9 +123,7 @@ export function PanelHead({ children }: { children: string }) {
         borderBottomColor: color.line2,
       }}
     >
-      <Text size="micro" tone="faint" numeric style={{ textTransform: 'uppercase', letterSpacing: tracking.label }}>
-        {children}
-      </Text>
+      <Label>{children}</Label>
     </View>
   );
 }

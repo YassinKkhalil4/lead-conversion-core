@@ -1,8 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, View } from 'react-native';
+import { Animated, Easing, Platform, View } from 'react-native';
+import { skeletonPulse, useReducedMotion } from './motion';
 import { color, layout, radius, rowHeight, space } from './tokens';
 
-/** A shape placeholder, sized to the content that will replace it. */
+/**
+ * A shape placeholder, sized to the content that will replace it. It pulses
+ * opacity, which stays off the main thread: CSS keyframes on web, the native
+ * driver elsewhere. With reduced motion it holds still.
+ */
 export function Skeleton({
   width,
   height = 12,
@@ -12,18 +17,20 @@ export function Skeleton({
   height?: number;
   style?: object;
 }) {
-  const pulse = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
+  const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (reduced || Platform.OS === 'web') return;
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0.45, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     );
     animation.start();
     return () => animation.stop();
-  }, [pulse]);
+  }, [pulse, reduced]);
 
   return (
     <Animated.View
@@ -32,11 +39,10 @@ export function Skeleton({
           width,
           height,
           borderRadius: radius.sm,
-          backgroundColor: pulse.interpolate({
-            inputRange: [0, 1],
-            outputRange: [color.tint, color.line2],
-          }),
+          backgroundColor: color.line2,
+          opacity: Platform.OS === 'web' || reduced ? 1 : pulse,
         },
+        Platform.OS === 'web' && !reduced ? skeletonPulse : null,
         style,
       ]}
     />

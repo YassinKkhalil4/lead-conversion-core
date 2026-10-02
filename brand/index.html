@@ -7,6 +7,9 @@
 <meta name="description" content="The K mark, the palette, the type and the voice — how Kadensio is put together, and the rules for using it.">
 <link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
 <style>
+@font-face { font-family: "Geist"; src: url("../landing/assets/fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("../landing/assets/fonts/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Fallback"; src: local("Arial"), local("ArialMT"), local("Helvetica"); size-adjust: 104.94%; ascent-override: 95.77%; descent-override: 28.11%; line-gap-override: 0%; }
 /* ============================================================
    Kadensio brand guidelines
    The page is built from the same tokens it documents.
@@ -26,8 +29,8 @@
   --brand-ink:   #0C1F1A;
   --brand-green: #00B368;
 
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: "Geist", "Geist Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --wrap: 940px;
   --gut: clamp(1.25rem, 4vw, 2.75rem);
@@ -587,13 +590,14 @@ footer { border-top: 1px solid var(--line); padding: 2.5rem 0 3.5rem; }
 
     <section aria-labelledby="type">
       <p class="eyebrow">Typography</p>
-      <h2 id="type">The system stack, on purpose.</h2>
-      <p class="lede">No webfont. A brokerage opens the page on a mid-range Android over a hotel connection, and a font that arrives late is a page that flashes. The system stack renders instantly and looks native on every device — San Francisco on Apple, Segoe on Windows, Roboto on Android. The monospace face is the second voice, reserved for anything measured: figures, phone numbers, scores, labels, timings.</p>
+      <h2 id="type">Geist and Geist Mono, served from our own domain.</h2>
+      <p class="lede">One typeface family in two voices. Geist carries every word; Geist Mono is reserved for anything measured: figures, phone numbers, scores, labels, timings. Both are variable fonts subset to Latin, about 50&nbsp;KB together, and served from the site itself, so no font service sees a visit.</p>
+      <p class="lede">The old rule was no webfont at all, because a brokerage opens the page on a mid-range Android over a hotel connection and a late font is a page that jumps. The rule now protects the same thing a different way: the fallback is Arial resized to Geist's exact metrics, so the page renders at once and does not move when Geist arrives. Arabic text falls back to the system Arabic face.</p>
 
       <div class="stack">
         <div>
           <div class="typerow">
-            <p class="typerow-label">Display &middot; 600 &middot; &minus;0.032em</p>
+            <p class="typerow-label">Display &middot; 600 &middot; &minus;0.042em</p>
             <p class="t-h1">Every property lead answered in seconds.</p>
           </div>
           <div class="typerow">

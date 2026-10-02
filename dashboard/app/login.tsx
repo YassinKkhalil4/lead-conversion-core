@@ -12,7 +12,7 @@ import { Button } from '@/design/Button';
 import { Lockup } from '@/design/Mark';
 import { ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, fontFamily, fontSize, layout, radius, space, tracking } from '@/design/tokens';
+import { color, fontFamily, fontSize, layout, radius, space } from '@/design/tokens';
 import { useIsDesk } from '@/desk/Page';
 
 const schema = z.object({
@@ -206,7 +206,7 @@ function Field({
 }) {
   return (
     <View style={{ gap: space.sm }}>
-      <Text size="micro" weight="semibold" tone="muted" style={{ letterSpacing: tracking.label, textTransform: 'uppercase' }}>
+      <Text size="label" weight="medium" tone="muted">
         {label}
       </Text>
       <Controller

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsDesk } from '@/desk/Page';
 import { explain } from '@/api/errors';
 import { Button } from '@/design/Button';
 import { DetailSkeleton } from '@/design/Skeleton';
@@ -22,14 +23,18 @@ import {
   useTakeover,
 } from '@/leads/hooks';
 import { classify } from '@/leads/queue';
+import { enter, useReducedMotion } from '@/design/motion';
+import { Icon } from '@/design/Icon';
 
 const CLOSE_REASONS = ['won', 'lost', 'not_interested', 'unreachable', 'duplicate'];
 
 export default function CallPrepScreen() {
+  const reduced = useReducedMotion();
   const { id } = useLocalSearchParams<{ id: string }>();
   const leadId = String(id ?? '');
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isDesk = useIsDesk();
 
   const [closing, setClosing] = useState(false);
   const [actionError, setActionError] = useState<unknown>(null);
@@ -79,7 +84,11 @@ export default function CallPrepScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: color.tint }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: insets.top + space.sm }}
+      <ScrollView
+        style={{ flex: 1 }}
+        // A phone-width column reads better than a full-width one on a desk:
+        // the facts, the opener and the actions stay within one glance.
+        contentContainerStyle={{ paddingTop: insets.top + space.sm, width: '100%', maxWidth: isDesk ? 860 : undefined, alignSelf: 'center' }}
         refreshControl={
           <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={color.ink2} />
         }
@@ -167,7 +176,7 @@ export default function CallPrepScreen() {
             onPress={() => void run(() => stopFollowUp.mutateAsync('stopped_from_dashboard'))}
           />
           <Button
-            label={lead.status === 'closed' ? `Closed — ${lead.closedStatus}` : 'Close this lead'}
+            label={lead.status === 'closed' ? `Closed: ${lead.closedStatus}` : 'Close this lead'}
             variant="text"
             disabled={lead.status === 'closed'}
             onPress={() => setClosing(true)}
@@ -184,7 +193,7 @@ export default function CallPrepScreen() {
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={{
+            style={[{
               backgroundColor: color.paper,
               borderTopLeftRadius: radius.md,
               borderTopRightRadius: radius.md,
@@ -192,7 +201,7 @@ export default function CallPrepScreen() {
               paddingBottom: insets.bottom + space.xl,
               paddingHorizontal: space.xl,
               gap: space.md,
-            }}
+            }, enter('panel', reduced)]}
           >
             <Text size="body" weight="semibold">
               Close this lead as
@@ -228,9 +237,12 @@ function BackLink({ onPress }: { onPress: () => void }) {
       accessibilityLabel="Back to the queue"
       style={{ paddingHorizontal: space.xl, paddingVertical: space.md }}
     >
-      <Text size="small" weight="semibold" tone="muted">
-        ← Queue
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        <Icon name="arrowLeft" size={14} color={color.ink2} />
+        <Text size="small" weight="semibold" tone="muted">
+          Queue
+        </Text>
+      </View>
     </Pressable>
   );
 }

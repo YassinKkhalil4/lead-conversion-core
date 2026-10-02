@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, View, type ViewStyle } from 'react-native';
 import { Text } from './Text';
 import { color, fontSize, radius, space } from './tokens';
+import { pressTransition } from './motion';
 
 /**
  * The landing page's `.btn`.
@@ -67,7 +68,10 @@ export function Button({
           alignItems: plain ? 'flex-start' : 'center',
           justifyContent: 'center',
           opacity: inactive ? 0.45 : 1,
+          // Heard the press: a 3% scale-down while held, eased back on release.
+          transform: [{ scale: pressed && !inactive ? 0.97 : 1 }],
         },
+        pressTransition(),
         style,
       ]}
     >

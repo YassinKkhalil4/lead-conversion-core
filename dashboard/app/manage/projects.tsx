@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import type { ProjectInput } from '@/api/endpoints';
 import { explain } from '@/api/errors';
@@ -6,12 +6,15 @@ import type { Project, Salesperson } from '@/api/types';
 import { Button } from '@/design/Button';
 import { ErrorState, InlineNotice } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
+import { useAuth } from '@/auth/AuthProvider';
+import { currencyFor } from '@/leads/qualification';
 import { colWidth, color, hitSlop, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, MoneyField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
 import { countLabel } from '@/desk/safe';
 import { useProjects, useSalespeople, useSaveProject, useSetProjectSalespeople } from '@/manage/hooks';
+import { enter, useReducedMotion } from '@/design/motion';
 
 const UNIT_SUGGESTIONS = ['Apartment', 'Villa', 'Townhouse', 'Duplex', 'Studio', 'Chalet', 'Commercial'];
 
@@ -143,7 +146,7 @@ export default function ProjectsScreen() {
       render: (project) =>
         (project.salespersonIds ?? []).length === 0 ? (
           <Text size="small" style={{ color: color.warn }}>
-            None — cannot be routed
+            None, so it cannot be routed
           </Text>
         ) : (
           <Text size="small" numberOfLines={1}>
@@ -259,7 +262,9 @@ function ProjectForm({
   onCancel: () => void;
   onSubmit: (values: ProjectInput) => Promise<void>;
 }) {
+  const reduced = useReducedMotion();
   const [values, setValues] = useState<ProjectInput>(initial.values);
+  const currency = currencyFor(useAuth().user?.timezone);
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const isNew = !initial.projectId;
   const serverErrors = fieldErrors(error);
@@ -269,6 +274,7 @@ function ProjectForm({
   const set = <K extends keyof ProjectInput>(key: K, value: ProjectInput[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
 
+  const scrollRef = useRef<ScrollView>(null);
   const submit = async () => {
     const next: Record<string, string> = {};
     if (!values.projectName.trim()) next.projectName = 'A project name is required.';
@@ -276,7 +282,11 @@ function ProjectForm({
       next.maxPrice = 'The top of the range cannot be below the bottom.';
     }
     setLocalErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      // The first error is near the top of the form; bring it into view.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     await onSubmit({ ...values, projectName: values.projectName.trim() });
   };
 
@@ -285,9 +295,9 @@ function ProjectForm({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 720, width: '100%', alignSelf: 'center', maxHeight: '90%' }}
+          style={[{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 720, width: '100%', alignSelf: 'center', maxHeight: '90%' }, enter('panel', reduced)]}
         >
-          <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
+          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">
               {isNew ? 'Add project' : values.projectName}
             </Text>
@@ -303,10 +313,10 @@ function ProjectForm({
 
             <FormRow>
               <Field label="Price from" error={errors.startingPrice} width={220}>
-                <MoneyField value={values.startingPrice} onChange={(next) => set('startingPrice', next)} />
+                <MoneyField value={values.startingPrice} onChange={(next) => set('startingPrice', next)} currency={currency} />
               </Field>
               <Field label="Price to" error={errors.maxPrice} width={220}>
-                <MoneyField value={values.maxPrice} onChange={(next) => set('maxPrice', next)} invalid={Boolean(errors.maxPrice)} />
+                <MoneyField value={values.maxPrice} onChange={(next) => set('maxPrice', next)} invalid={Boolean(errors.maxPrice)} currency={currency} />
               </Field>
               <Field label="Status" hint="Inactive projects stop receiving new leads." width={220}>
                 <Toggle value={values.active} onChange={(next) => set('active', next)} labels={['Active', 'Inactive']} />
@@ -353,6 +363,7 @@ function AssignSheet({
   onCancel: () => void;
   onSave: (salespersonIds: string[]) => Promise<void>;
 }) {
+  const reduced = useReducedMotion();
   const [selected, setSelected] = useState<string[]>(project.salespersonIds ?? []);
   const explained = error ? explain(error, 'Saving the assignment') : null;
 
@@ -368,7 +379,7 @@ function AssignSheet({
       <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: color.scrim, padding: space.xl, justifyContent: 'center' }}>
         <Pressable
           onPress={(event) => event.stopPropagation()}
-          style={{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '85%' }}
+          style={[{ backgroundColor: color.paper, borderRadius: radius.md, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '85%' }, enter('panel', reduced)]}
         >
           <ScrollView contentContainerStyle={{ padding: space.xxl, gap: space.lg }}>
             <View style={{ gap: space.xs }}>
