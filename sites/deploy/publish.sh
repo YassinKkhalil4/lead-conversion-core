@@ -26,8 +26,12 @@ stage() {
 
 golive() {
   for h in real-estate hospitality; do
-    ip=$(dig +short A $h.kadensio.com | head -1); me=$(hostname -I | awk '{print $1}')
-    [ "$ip" = "$me" ] || { echo "DNS for $h.kadensio.com is '$ip', expected $me. Add the A record first."; exit 1; }
+    # Ask public resolvers, not this server's cache: they are what visitors and Let's Encrypt see.
+    me=$(hostname -I | awk '{print $1}')
+    for r in 1.1.1.1 8.8.8.8; do
+      ip=$(dig +short +time=5 +tries=1 A $h.kadensio.com @$r | head -1)
+      [ "$ip" = "$me" ] || { echo "DNS for $h.kadensio.com via $r is '$ip', expected $me. Add the A record first."; exit 1; }
+    done
   done
   mkdir -p "$STATE/$STAMP"; cp /etc/caddy/sites/kadensio.caddy "$STATE/$STAMP/kadensio.caddy"
   echo "$STAMP" > "$STATE/latest"
