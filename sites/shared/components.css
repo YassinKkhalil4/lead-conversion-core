@@ -16,10 +16,11 @@
 
 /* ---------- Header gateways (root site) ---------- */
 
-.header-gateways { display: flex; gap: .5rem; margin-left: .5rem; }
-@media (max-width: 859px) { .header-gateways { display: none; } }
+.header-gateways { display: flex; gap: .5rem; margin-left: auto; }
+@media (min-width: 860px) { .header-gateways { margin-left: .5rem; } }
+@media (max-width: 599px) { .header-gateways { display: none; } }
 
-/* Mobile: the two gateways are pinned to the bottom edge instead. */
+/* Phones: the two gateways are pinned to the bottom edge instead. */
 .gateway-bar {
   position: fixed; inset: auto 0 0 0; z-index: 25;
   display: none; grid-template-columns: 1fr 1fr; gap: .5rem;
@@ -30,7 +31,7 @@
   border-top: 1px solid var(--line);
 }
 .gateway-bar .btn { min-height: 3rem; }
-@media (max-width: 859px) {
+@media (max-width: 599px) {
   .gateway-bar { display: grid; }
   body.has-gateway-bar { padding-bottom: 4.5rem; }
 }
@@ -98,7 +99,7 @@
 /* With no nav (a vertical site whose sections are not written yet) the CTA still
    sits on the right; with a nav, the nav takes the free space instead. */
 .header-inner .header-cta { margin-left: auto; }
-.header-inner .nav + .header-cta { margin-left: .5rem; }
+@media (min-width: 860px) { .header-inner .nav + .header-cta { margin-left: .5rem; } }
 
 /* ---------- Data tables, questions, screenshots, FAQ ---------- */
 
