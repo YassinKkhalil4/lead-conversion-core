@@ -277,7 +277,11 @@ function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
   return (
     <EmptyState
       title={scope === 'mine' ? 'No leads assigned to you' : 'No leads yet'}
-      detail="Leads arrive from WhatsApp, the website form and Facebook lead ads. Each one appears here as soon as its qualification conversation starts."
+      detail={
+        scope === 'mine'
+          ? 'A lead appears here when routing assigns it to you, and the queue sorts it by score.'
+          : 'Message your WhatsApp number from a personal phone to watch the first one arrive. Leads also come from the website form and Facebook lead ads, and each appears here as soon as its qualification conversation starts.'
+      }
     />
   );
 }

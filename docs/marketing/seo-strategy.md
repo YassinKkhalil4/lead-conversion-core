@@ -1,6 +1,6 @@
 # SEO strategy: kadensio.com
 
-Last reviewed 27 September 2026.
+Last reviewed 4 October 2026.
 
 ## Goal
 
@@ -13,9 +13,9 @@ The site is small on purpose: one commercial page, one explainer, three legal pa
 | Intent | Who | Example queries (validate volumes before committing) | Page |
 |---|---|---|---|
 | Looking for a tool | Owner, sales manager | whatsapp lead qualification real estate; real estate whatsapp automation dubai; whatsapp business api real estate | Home |
-| Evaluating risk | Owner, ops | whatsapp business api vs whatsapp web automation; will my whatsapp number get banned automation | Planned: official vs unofficial |
+| Evaluating risk | Owner, ops | whatsapp business api vs whatsapp web automation; will my whatsapp number get banned automation | official-vs-unofficial-whatsapp-automation.html |
 | Understanding the method | Sales manager | real estate lead scoring model; how to score property leads | lead-scoring.html |
-| Diagnosing the problem | Sales manager | real estate lead response time; speed to lead property | Planned: speed to lead |
+| Diagnosing the problem | Sales manager | real estate lead response time; speed to lead property | speed-to-lead-real-estate.html |
 
 No keyword tool data was available when this was written. Every query above is a hypothesis: check it in Google Search Console once the site has impressions, or in Ahrefs or Semrush, before writing a page for it.
 
@@ -36,11 +36,20 @@ On-page
 Content
 - `lead-scoring.html`: all ten scoring factors with their points, the hot, warm and cold bands, a worked example, and what the score does not do. It is first-party and specific, which is what gets a page cited: nobody else can publish this model.
 
+## Done in the 4 October pass
+
+- **Official vs unofficial WhatsApp automation** (`official-vs-unofficial-whatsapp-automation.html`). Every claim about WhatsApp's rules links to WhatsApp or Meta's own page, and the page is dated with the day it was checked. It ends with three questions to ask any vendor and the limits of the official route, including the cost.
+- **Real estate lead response time** (`speed-to-lead-real-estate.html`). States the 2011 Harvard Business Review audit figures with their source, the sponsorship caveat on the five-minute figure, what the research cannot tell you for the UAE and Egypt, and a method for measuring your own brokerage from WhatsApp timestamps. It contains no new statistics.
+- Home page: title, description and share previews rewritten around the outcome, a cost question added to the FAQ (and to its structured data), and contextual links to both articles from the cost and compliance sections.
+- Both articles and the scoring page link to each other. All three are in `sitemap.xml` and `llms.txt` with today's date.
+- The duplicate stylesheet link on the scoring page is gone.
+- `tests/landing-copy.test.ts` guards titles, descriptions, canonicals, sitemap, internal links, FAQ markup parity and the voice rules, so a later edit cannot quietly break them.
+
 ## Next, in order
 
 1. **Verify and measure.** Add the site to Google Search Console and Bing Webmaster Tools (both need no on-page script, which keeps the no-analytics promise in the privacy policy), submit the sitemap, and record a baseline for impressions and clicks per page.
 2. **Official vs unofficial automation.** The compliance section of the home page is the strongest objection-handler on the site and is compressed into three paragraphs. A standalone page on what the WhatsApp Business Platform is, what unofficial automation risks, and how to tell which one a vendor uses would answer a question owners search before they buy. Cite Meta's own documentation for every claim about the platform or its terms.
-3. **Speed to lead for property brokerages.** Expand the cost section into a page that states the research honestly, with its caveats, and shows what a reply in seconds looks like in practice. Only publish new figures that are measured.
+3. ~~**Speed to lead for property brokerages.**~~ Done 4 October. Expand the cost section into a page that states the research honestly, with its caveats, and shows what a reply in seconds looks like in practice. Only publish new figures that are measured.
 4. **Arabic.** Most target buyers and many owners search in Arabic. An Arabic version of the home page with its own URL (`/ar/`), self-referencing canonicals and reciprocal hreflang would open that search space. It needs a native writer, not a translation pass, and the brand rule on neutral international identity still applies to visuals. Do not publish a thin or machine-translated version: a weak locale drags down the site's overall quality.
 5. **Comparisons.** Once the competitive set is researched, "alternatives" pages for the tools brokerages already use. Only with verified, dated facts about each competitor.
 

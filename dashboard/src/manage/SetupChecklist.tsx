@@ -73,7 +73,7 @@ export function SetupChecklist() {
             Get routing ready
           </Text>
           <Text size="small" tone="muted">
-            {`${progress.doneCount} of ${progress.steps.length} done. Until these are in place, a qualified lead has nobody to go to.`}
+            {`${progress.doneCount} of ${progress.steps.length} done. Until these are in place, every qualified lead escalates to your manager.`}
           </Text>
         </View>
         <Button label="Hide" variant="text" onPress={hide} />
