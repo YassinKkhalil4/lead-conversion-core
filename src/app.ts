@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import { getEnv } from './config/env.js';
 import { logger } from './config/logger.js';
 import { dashboardRoutes } from './routes/dashboard/index.js';
+import { handleRequestError } from './routes/error-handler.js';
 import { healthRoutes } from './routes/health.js';
 import { internalRoutes } from './routes/internal.js';
 import { leadIngressRoutes } from './routes/lead-ingress.js';
@@ -77,26 +78,7 @@ export async function buildApp() {
     await app.register(dashboardRoutes);
   }
 
-  app.setErrorHandler((error, request, reply) => {
-    request.log.error({ error }, 'Request failed');
-
-    const normalizedError =
-      error instanceof Error
-        ? error
-        : new Error(String(error));
-
-    const statusCode = Number(
-      (error as { statusCode?: number }).statusCode || 500,
-    );
-
-    reply.code(statusCode).send({
-      ok: false,
-      error:
-        statusCode >= 500
-          ? 'internal_error'
-          : normalizedError.message,
-    });
-  });
+  app.setErrorHandler(handleRequestError);
 
   return app;
 }

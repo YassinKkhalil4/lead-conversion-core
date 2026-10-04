@@ -7,6 +7,13 @@ import { pool } from '../db/pool.js';
 import { workerHeartbeatOperationalState, type WorkerKind } from '../services/worker-heartbeat-readiness.js';
 import { requireInternalSecret } from './auth.js';
 
+interface WorkerHeartbeatRow {
+  worker_name: string;
+  worker_kind: string;
+  heartbeat_at: Date;
+  metadata_json: Record<string, unknown>;
+}
+
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/health', async () => ({ ok: true }));
 
@@ -27,17 +34,17 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
       const applied = new Set(result.rows.map((row) => row.migration_name));
       const missing = expectedMigrations.filter((migration) => !applied.has(migration));
       const latest = result.rows[result.rows.length - 1] || null;
-      const workers = await pool.query<{
-        worker_name: string;
-        worker_kind: string;
-        heartbeat_at: Date;
-        metadata_json: Record<string, unknown>;
-      }>(
+      const workers = await pool.query<WorkerHeartbeatRow>(
         `SELECT DISTINCT ON (worker_kind) worker_name, worker_kind, heartbeat_at, metadata_json
          FROM runtime.worker_heartbeats
          WHERE worker_kind IN ('runtime')
          ORDER BY worker_kind, heartbeat_at DESC`,
-      ).catch(() => ({ rows: [] as Array<{ worker_name: string; worker_kind: string; heartbeat_at: Date; metadata_json: Record<string, unknown> }> }));
+      ).catch((error: unknown) => {
+        // Not ready either way (a required worker with no heartbeat fails the
+        // check), but the cause belongs in the log, not in a silent empty set.
+        request.log.error({ err: error }, 'Worker heartbeat query failed');
+        return { rows: [] as WorkerHeartbeatRow[] };
+      });
       const requiredWorkers = [
         { workerKind: 'runtime' as const, required: env.RUNTIME_WORKER_ENABLED },
       ];

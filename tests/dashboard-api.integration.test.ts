@@ -3,18 +3,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describePostgres } from './helpers/postgres.js';
 
-function commandExists(command: string): boolean {
-  try {
-    execFileSync('sh', ['-lc', `command -v ${command}`], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const hasPostgres = ['initdb', 'pg_ctl', 'createdb'].every(commandExists);
-const describePg = hasPostgres ? describe : describe.skip;
+const describePg = describePostgres(['initdb', 'pg_ctl', 'createdb']);
 
 const PASSWORD = 'dashboard-test-password-1';
 
@@ -745,13 +736,25 @@ describePg('dashboard API with real PostgreSQL', () => {
     });
 
     it('reports the previous period beside the current one without overlapping it', async () => {
-      // One lead yesterday, one last month; neither counts toward today.
+      // One lead yesterday, one in the middle of last month; neither counts
+      // toward today. Offsets are taken from the calendar, not from "now minus
+      // N days": 40 days ago is not last month for the first ~9 days of a month.
+      // On the 1st, yesterday is itself in last month, so the month count
+      // follows the calendar too.
+      const tz = 'Africa/Cairo';
       await db.pool.query(
         `INSERT INTO app.leads (client_id, contact_id, provider, provider_external_id, source, status, created_at)
          VALUES ($1, $2, 'website', 'prev-day', 'website', 'open', now() - interval '1 day'),
-                ($1, $2, 'website', 'prev-month', 'website', 'open', now() - interval '40 days')`,
-        [tenantA.clientId, tenantA.contactId],
+                ($1, $2, 'website', 'prev-month', 'website', 'open',
+                 (date_trunc('month', now() AT TIME ZONE $3) - interval '15 days') AT TIME ZONE $3)`,
+        [tenantA.clientId, tenantA.contactId, tz],
       );
+      const { rows } = await db.pool.query<{ yesterday_in_last_month: boolean }>(
+        `SELECT date_trunc('day', now() AT TIME ZONE $1) - interval '1 day'
+                  < date_trunc('month', now() AT TIME ZONE $1) AS yesterday_in_last_month`,
+        [tz],
+      );
+      const expectedLastMonth = rows[0]?.yesterday_in_last_month ? 2 : 1;
       const token = await login(tenantA.managerEmail);
       const response = await app.inject({
         method: 'GET',
@@ -761,7 +764,7 @@ describePg('dashboard API with real PostgreSQL', () => {
       const body = response.json().summary;
       expect(body.periods.today.newLeads).toBe(2);
       expect(body.previousPeriods.today.newLeads).toBe(1);
-      expect(body.previousPeriods.month.newLeads).toBe(1);
+      expect(body.previousPeriods.month.newLeads).toBe(expectedLastMonth);
     });
 
     it('scopes the previous period to the client like every other query', async () => {

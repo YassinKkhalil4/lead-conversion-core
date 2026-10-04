@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { getEnv } from '../config/env.js';
 import { MetaStatusWebhookService } from '../services/meta-status-webhook-service.js';
+import { safeEqual } from './auth.js';
 import { webhookReceiptHeaders, publicRateLimit } from './public-ingress.js';
 
 type RawBodyRequest = FastifyRequest & { rawBody?: Buffer };
@@ -26,7 +27,11 @@ export async function metaWebhookRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, error: 'meta_webhook_verify_token_missing' };
     }
     const parsed = challengeSchema.safeParse(request.query);
-    if (!parsed.success || parsed.data['hub.mode'] !== 'subscribe' || parsed.data['hub.verify_token'] !== env.META_WEBHOOK_VERIFY_TOKEN) {
+    if (
+      !parsed.success
+      || parsed.data['hub.mode'] !== 'subscribe'
+      || !safeEqual(parsed.data['hub.verify_token'] ?? '', env.META_WEBHOOK_VERIFY_TOKEN)
+    ) {
       reply.code(403);
       return { ok: false, error: 'invalid_meta_webhook_challenge' };
     }

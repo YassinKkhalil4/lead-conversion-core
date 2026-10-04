@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, transition/edge-postgres-core]
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # A missing PostgreSQL must fail the run, not skip 181 integration tests.
+      REQUIRE_PG_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            dashboard/package-lock.json
+      - name: PostgreSQL binaries for the integration tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-client
+          echo "$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)" >> "$GITHUB_PATH"
+      - run: npm ci
+      # Backend tests import the dashboard's pure logic, which needs its tsconfig base.
+      - run: npm ci --prefix dashboard
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+      - run: npm audit --audit-level=moderate
