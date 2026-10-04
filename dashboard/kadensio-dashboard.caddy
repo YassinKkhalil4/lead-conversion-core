@@ -1,0 +1,33 @@
+# Installed in /etc/caddy/sites/kadensio.caddy (app.kadensio.com imports it). Copy kept here so the
+# server config is in version control. See dashboard/DEPLOY.md. Does not apply to core.tryrolefit.com.
+
+# Kadensio's own copy of the dashboard (app.kadensio.com), served from its own folder.
+# core.tryrolefit.com keeps the snippet above and its own folder, unchanged.
+#
+# Caching: the bundle name carries a content hash, so it is immutable. Everything
+# else, the HTML shell included, revalidates. The shell used to be sent with no
+# Cache-Control (the old rule matched /index.html, but pages are requested as /app/
+# and /app/leads), so a browser could keep an old shell that points at a bundle that
+# a later release had removed.
+(kadensio_dashboard) {
+	handle_path /app/* {
+		root * /var/www/kadensio-dashboard/current
+		try_files {path} /index.html
+		file_server
+
+		@hashed path /_expo/static/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@mutable not path /_expo/static/*
+		header @mutable Cache-Control "no-cache"
+	}
+
+	redir /app /app/ 301
+
+	handle {
+		reverse_proxy 127.0.0.1:8084
+	}
+}
+
+app.kadensio.com {
+	import kadensio_dashboard
+}
