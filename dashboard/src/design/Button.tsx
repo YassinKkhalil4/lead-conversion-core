@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, View, type ViewStyle } from 'react-native';
 import { Text } from './Text';
 import { color, fontSize, radius, space } from './tokens';
-import { pressTransition } from './motion';
+import { isHovered, pressTransition } from './motion';
 
 /**
  * The landing page's `.btn`.
@@ -55,7 +55,10 @@ export function Button({
       accessibilityState={{ disabled: inactive, busy }}
       disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={(state) => {
+        const { pressed } = state;
+        const lit = pressed || isHovered(state);
+        return [
         {
           minHeight: plain ? 32 : mini ? 30 : size === 'large' ? 48 : 40,
           flexGrow: grow ? 1 : 0,
@@ -64,7 +67,7 @@ export function Button({
           borderRadius: plain ? 0 : mini ? radius.sm : radius.md,
           borderWidth: plain ? 0 : 1,
           borderColor: skin.border,
-          backgroundColor: pressed ? skin.pressed : skin.bg,
+          backgroundColor: lit && !inactive ? skin.pressed : skin.bg,
           alignItems: plain ? 'flex-start' : 'center',
           justifyContent: 'center',
           opacity: inactive ? 0.45 : 1,
@@ -73,7 +76,8 @@ export function Button({
         },
         pressTransition(),
         style,
-      ]}
+      ];
+      }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
         {busy ? <ActivityIndicator size="small" color={skin.fg} /> : null}

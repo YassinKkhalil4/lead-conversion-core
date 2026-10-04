@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from '@/design/Text';
 import { color, space } from '@/design/tokens';
-import { enter, useReducedMotion } from '@/design/motion';
+import { enter, isHovered, surfaceTransition, useReducedMotion } from '@/design/motion';
 import { Icon } from '@/design/Icon';
 
 /**
@@ -30,13 +30,14 @@ export function Collapsible({
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((current) => !current)}
-        style={({ pressed }) => ({
+        style={(state) => ({
           flexDirection: 'row',
           alignItems: 'center',
           gap: space.lg,
           paddingHorizontal: space.xl,
           paddingVertical: space.lg,
-          backgroundColor: pressed ? color.line2 : 'transparent',
+          backgroundColor: state.pressed ? color.line2 : isHovered(state) ? color.tint : 'transparent',
+          ...surfaceTransition(),
         })}
       >
         <View style={{ flex: 1, gap: 1 }}>

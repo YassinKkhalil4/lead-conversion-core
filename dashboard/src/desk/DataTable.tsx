@@ -5,6 +5,7 @@ import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
 import { color, layout, radius } from '@/design/tokens';
 import { Icon } from '@/design/Icon';
+import { isHovered, surfaceTransition } from '@/design/motion';
 
 export interface Column<T> {
   key: string;
@@ -177,10 +178,11 @@ export function DataTable<T>({
               key={keyOf(row)}
               accessibilityRole="button"
               onPress={() => onRowPress(row)}
-              style={({ pressed }) => ({
+              style={(state) => ({
                 flexDirection: 'row',
-                backgroundColor: pressed ? color.tint : color.paper,
+                backgroundColor: state.pressed || isHovered(state) ? color.tint : color.paper,
                 ...border,
+                ...surfaceTransition(),
               })}
             >
               {cells}

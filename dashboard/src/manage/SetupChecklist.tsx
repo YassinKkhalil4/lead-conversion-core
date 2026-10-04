@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/design/Button';
+import { isHovered, surfaceTransition } from '@/design/motion';
 import { Text } from '@/design/Text';
 import { color, layout, radius, space } from '@/design/tokens';
 import { useProjects, useSalespeople, useUsers } from '@/manage/hooks';
@@ -73,7 +74,7 @@ export function SetupChecklist() {
             Get routing ready
           </Text>
           <Text size="small" tone="muted">
-            {`${progress.doneCount} of ${progress.steps.length} done. Until these are in place, a qualified lead has nobody to go to.`}
+            {`${progress.doneCount} of ${progress.steps.length} done. Until these are in place, every qualified lead escalates to your manager.`}
           </Text>
         </View>
         <Button label="Hide" variant="text" onPress={hide} />
@@ -101,6 +102,7 @@ function StepRow({ step, number, onOpen }: { step: SetupStep; number: number; on
           backgroundColor: step.done ? color.accent : color.paper,
           borderWidth: step.done ? 0 : 1,
           borderColor: color.lineStrong,
+          ...surfaceTransition(),
         }}
       >
         {step.done ? (
@@ -140,7 +142,11 @@ function StepRow({ step, number, onOpen }: { step: SetupStep; number: number; on
       accessibilityRole="link"
       accessibilityLabel={`${step.title}. ${step.action ?? ''}`}
       onPress={() => onOpen(href)}
-      style={({ pressed }) => ({ borderRadius: radius.sm, backgroundColor: pressed ? color.tint : 'transparent' })}
+      style={(state) => ({
+        borderRadius: radius.sm,
+        backgroundColor: state.pressed || isHovered(state) ? color.tint : 'transparent',
+        ...surfaceTransition(),
+      })}
     >
       {content}
     </Pressable>

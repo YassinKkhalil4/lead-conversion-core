@@ -6,6 +6,7 @@ import { explain } from '@/api/errors';
 import type { Lead, LeadFilters } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { Lockup } from '@/design/Mark';
+import { isHovered, surfaceTransition } from '@/design/motion';
 import { LeadListSkeleton, Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
@@ -258,6 +259,7 @@ function SinceDivider({ label }: { label: string }) {
 
 
 function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
+  const router = useRouter();
   if (filter === 'pastSla') {
     return (
       <EmptyState
@@ -277,7 +279,13 @@ function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
   return (
     <EmptyState
       title={scope === 'mine' ? 'No leads assigned to you' : 'No leads yet'}
-      detail="Leads arrive from WhatsApp, the website form and Facebook lead ads. Each one appears here as soon as its qualification conversation starts."
+      detail={
+        scope === 'mine'
+          ? 'A lead appears here when routing assigns it to you, and the queue sorts it by score.'
+          : 'Message your WhatsApp number from a personal phone to watch the first one arrive. Leads also come from the website form and Facebook lead ads, and each appears here as soon as its qualification conversation starts.'
+      }
+      actionLabel={scope === 'mine' ? undefined : 'Check your setup'}
+      onAction={scope === 'mine' ? undefined : () => router.push('/manage')}
     />
   );
 }
@@ -298,7 +306,7 @@ function Control({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={(state) => ({
         minHeight: 44,
         flexGrow: grow ? 1 : 0,
         flexBasis: grow ? 0 : 'auto',
@@ -308,7 +316,8 @@ function Control({
         borderRadius: radius.md,
         borderWidth: 1,
         borderColor: active ? color.ink : color.lineStrong,
-        backgroundColor: active ? color.ink : pressed ? color.tint : color.paper,
+        backgroundColor: active ? color.ink : state.pressed || isHovered(state) ? color.tint : color.paper,
+        ...surfaceTransition(),
       })}
     >
       <Text size="small" weight="semibold" style={{ color: active ? color.onInk : color.ink }}>

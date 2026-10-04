@@ -2,7 +2,7 @@
 
 > Kadensio is WhatsApp lead qualification for real estate brokerages. It answers cold WhatsApp messages on the brokerage's own number through the official Meta WhatsApp Business Platform, asks the brokerage's qualification questions in Arabic or English, scores the answers with fixed arithmetic, routes the lead to the matching salesperson and books viewings in Google Calendar. It is an automated qualification engine with no generative model: it cannot invent a price, a payment plan or a unit.
 
-Kadensio is built for Dubai and the UAE, runs end to end in Egypt, and is taking its first brokerages through early access. It has no published pricing.
+Kadensio is built for Dubai and the UAE, runs end to end in Egypt, and is taking its first brokerages through early access. It has no published pricing. Any subscription fee is agreed in writing, and Meta's messaging fees are passed through at cost with no markup.
 
 ## What it does
 
@@ -21,6 +21,8 @@ Kadensio is built for Dubai and the UAE, runs end to end in Egypt, and is taking
 
 - [Home](https://kadensio.com/): what Kadensio does, how it works, and early access
 - [How the lead score works](https://kadensio.com/lead-scoring.html): all ten scoring factors, their points, and a worked example
+- [Official vs unofficial WhatsApp automation](https://kadensio.com/official-vs-unofficial-whatsapp-automation.html): what WhatsApp's terms say about auto-messaging, what the official Business Platform allows, and three questions to ask a vendor
+- [Real estate lead response time](https://kadensio.com/speed-to-lead-real-estate.html): the Harvard Business Review audit of 2,241 companies, its limits, and how to measure a brokerage's own first-reply time
 - [Privacy Policy](https://kadensio.com/privacy.html)
 - [Terms of Service](https://kadensio.com/terms.html)
 - [Data Processing Addendum](https://kadensio.com/dpa.html): data is stored in Frankfurt, Germany; sub-processors are Meta, Google (only when a calendar is connected) and Hostinger
