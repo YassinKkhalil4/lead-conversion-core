@@ -6,6 +6,7 @@ import { explain } from '@/api/errors';
 import type { Lead, LeadFilters } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { Lockup } from '@/design/Mark';
+import { isHovered, surfaceTransition } from '@/design/motion';
 import { LeadListSkeleton, Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
@@ -305,7 +306,7 @@ function Control({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={(state) => ({
         minHeight: 44,
         flexGrow: grow ? 1 : 0,
         flexBasis: grow ? 0 : 'auto',
@@ -315,7 +316,8 @@ function Control({
         borderRadius: radius.md,
         borderWidth: 1,
         borderColor: active ? color.ink : color.lineStrong,
-        backgroundColor: active ? color.ink : pressed ? color.tint : color.paper,
+        backgroundColor: active ? color.ink : state.pressed || isHovered(state) ? color.tint : color.paper,
+        ...surfaceTransition(),
       })}
     >
       <Text size="small" weight="semibold" style={{ color: active ? color.onInk : color.ink }}>

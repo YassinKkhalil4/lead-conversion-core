@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Pressable, View } from 'react-native';
+import { isHovered, surfaceTransition } from '@/design/motion';
 import { Temperature } from '@/design/Temperature';
 import { Text } from '@/design/Text';
 import { color, layout, rowHeight, tracking } from '@/design/tokens';
@@ -50,12 +51,13 @@ export const QueueRow = memo(function QueueRow({
         .filter(Boolean)
         .join(', ')}
       onPress={() => onPress(lead.leadId)}
-      style={({ pressed }) => ({
+      style={(state) => ({
         minHeight: isUrgent ? rowHeight.urgent : rowHeight.standard,
         flexDirection: 'row',
-        backgroundColor: pressed ? color.line2 : color.paper,
+        backgroundColor: state.pressed ? color.line2 : isHovered(state) ? color.tint : color.paper,
         borderBottomWidth: 1,
         borderBottomColor: color.line2,
+        ...surfaceTransition(),
       })}
     >
       <View style={{ width: isUrgent ? layout.edgeMarker : 0, backgroundColor: edge }} />

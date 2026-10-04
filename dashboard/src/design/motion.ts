@@ -54,6 +54,29 @@ export function pressTransition(): ViewStyle {
   });
 }
 
+/**
+ * Hover and selected-state colour for rows, filters and disclosure headers.
+ * These are touched dozens of times a day, so the change is 120ms, plain
+ * `ease` (a colour change, not an entrance) and nothing on screen moves.
+ * Core navigation takes none of it: it is used hundreds of times a day.
+ */
+export function surfaceTransition(): ViewStyle {
+  return web({
+    transitionProperty: 'background-color, border-color, color',
+    transitionDuration: '120ms',
+    transitionTimingFunction: 'ease',
+  });
+}
+
+/**
+ * React Native Web passes `hovered` to a Pressable's style callback for mouse
+ * pointers only; touch and native never set it, so a tap cannot leave a row
+ * stuck in its hover colour.
+ */
+export function isHovered(state: unknown): boolean {
+  return Boolean((state as { hovered?: boolean }).hovered);
+}
+
 type Entrance = 'panel' | 'sheet' | 'drawer' | 'content' | 'notice';
 
 const ENTRANCES: Record<Entrance, { from: Record<string, unknown>; ms: number; curve: string }> = {
