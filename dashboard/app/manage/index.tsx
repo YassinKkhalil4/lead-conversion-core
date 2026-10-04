@@ -16,7 +16,7 @@ import { useLeadList } from '@/leads/hooks';
 import { useSalespeople, useSummary } from '@/manage/hooks';
 import { SetupChecklist } from '@/manage/SetupChecklist';
 import { PAST_SLA_SECONDS } from '@/leads/queue';
-import { duration, queueClock } from '@/time/format';
+import { duration, queueClock, updatedLabel } from '@/time/format';
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: 'today', label: 'Today' },
@@ -68,7 +68,7 @@ export default function ManagerOverview() {
   return (
     <Page
       title="Overview"
-      subtitle={data ? `${data.timezone} · updated ${queueClock(data.generatedAt)} ago` : undefined}
+      subtitle={data ? `${data.timezone} · ${updatedLabel(data.generatedAt)}` : undefined}
       actions={
         <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: color.lineStrong, borderRadius: radius.md, overflow: 'hidden' }}>
           {PERIODS.map((option) => {

@@ -542,7 +542,11 @@
 (function () {
   'use strict';
 
-  var ENDPOINT = 'https://kadensio.com/api/waitlist';
+  // Relative on purpose. Caddy serves this path on kadensio.com and on
+  // www.kadensio.com, and a cross-origin call from one to the other is blocked
+  // (the API sends no CORS headers). A relative URL is also what keeps a local
+  // or preview copy of the page from posting to production.
+  var ENDPOINT = '/api/waitlist';
 
   var form = document.getElementById('waitlist-form');
   var submit = document.getElementById('wl-submit');
@@ -652,6 +656,14 @@
     var email = value('email');
     if (!email) {
       showFieldError('email', 'Enter your email so I can reply.');
+      form.elements.email.focus();
+      setStatus('', '');
+      return;
+    }
+    // One @, something either side, a dot in the domain. The server checks the
+    // rest; this only saves a round trip on an obvious typo.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showFieldError('email', 'That does not look like an email address. Check it and try again.');
       form.elements.email.focus();
       setStatus('', '');
       return;

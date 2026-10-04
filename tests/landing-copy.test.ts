@@ -145,3 +145,19 @@ describe('site wiring', () => {
     }
   });
 });
+
+describe('early-access form contract', () => {
+  const html = read('index.html');
+
+  it('posts to a relative path so www, previews and local copies all work', () => {
+    // An absolute URL is cross-origin from www.kadensio.com, and the API sends
+    // no CORS headers, so the form failed for anyone arriving via www.
+    expect(html).toMatch(/var ENDPOINT = '\/api\/waitlist';/);
+    expect(html).not.toMatch(/ENDPOINT\s*=\s*['"]https?:/);
+  });
+
+  it('checks the email format in the browser as well as for emptiness', () => {
+    expect(html).toContain('That does not look like an email address');
+  });
+});
+

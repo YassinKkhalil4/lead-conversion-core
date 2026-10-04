@@ -12,7 +12,7 @@ import { colWidth, color, hitSlop, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, MoneyField, TagInput, TextField, Toggle, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
-import { countLabel } from '@/desk/safe';
+import { nounCount } from '@/desk/safe';
 import { useProjects, useSalespeople, useSaveProject, useSetProjectSalespeople } from '@/manage/hooks';
 import { enter, useReducedMotion } from '@/design/motion';
 
@@ -198,7 +198,7 @@ export default function ProjectsScreen() {
           onRetry={() => void projects.refetch()}
         />
       ) : (
-        <Section title={`${countLabel(projects.data?.projects?.length)} projects`}>
+        <Section title={nounCount(projects.data?.projects?.length, 'project')}>
           <DataTable
             rows={projects.data?.projects ?? []}
             loading={projects.isLoading}

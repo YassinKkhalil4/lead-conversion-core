@@ -3,6 +3,7 @@ import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsDesk } from '@/desk/Page';
+import { nounCount } from '@/desk/safe';
 import { explain } from '@/api/errors';
 import { Button } from '@/design/Button';
 import { DetailSkeleton } from '@/design/Skeleton';
@@ -113,7 +114,7 @@ export default function CallPrepScreen() {
         />
 
         {/* Everything below here is reference material and starts closed. */}
-        <Collapsible title="Conversation" note={`${detail.messages.length} messages · ${inboundCount} from them`}>
+        <Collapsible title="Conversation" note={`${nounCount(detail.messages.length, 'message')} · ${inboundCount} from them`}>
           <ConversationTab
             lead={lead}
             messages={detail.messages}
@@ -140,14 +141,14 @@ export default function CallPrepScreen() {
           title="Why you got this lead"
           note={
             detail.latestRoutingRun
-              ? `${detail.latestRoutingRun.candidates.length} candidates considered`
+              ? `${nounCount(detail.latestRoutingRun.candidates.length, 'candidate')} considered`
               : 'not routed'
           }
         >
           <RoutingTab routingRun={detail.latestRoutingRun} />
         </Collapsible>
 
-        <Collapsible title="Activity" note={`${detail.activity.length} events`}>
+        <Collapsible title="Activity" note={nounCount(detail.activity.length, 'event')}>
           <ActivityTab activity={detail.activity} />
         </Collapsible>
 

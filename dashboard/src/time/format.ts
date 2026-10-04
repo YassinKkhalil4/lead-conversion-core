@@ -51,6 +51,15 @@ export function queueClock(iso: string | null | undefined, now: Date = new Date(
   return format(parsed, 'EEE HH:mm');
 }
 
+/**
+ * `updated just now`, `updated 5m ago`, `updated 3 Oct, 04:22`. Built on
+ * `ageAgo`, not `queueClock`: the clock returns `now` and absolute dates, which
+ * read as "updated now ago" and "updated Fri 04:22 ago" inside a sentence.
+ */
+export function updatedLabel(iso: string | null | undefined, now: Date = new Date()): string {
+  return `updated ${ageAgo(iso, now)}`;
+}
+
 /** Same rule as `age`, phrased for prose. */
 export function ageAgo(iso: string | null | undefined, now: Date = new Date()): string {
   const parsed = parse(iso);

@@ -20,6 +20,12 @@ export function countLabel(value: number | null | undefined): string {
   return parsed === null ? '—' : String(parsed);
 }
 
+/** `1 project`, `3 projects`, and `— projects` while the count is unknown. */
+export function nounCount(value: number | null | undefined, singular: string, plural = `${singular}s`): string {
+  const parsed = optionalNumber(value);
+  return `${countLabel(value)} ${parsed === 1 ? singular : plural}`;
+}
+
 /** `3 / 10`, degrading to `3 / —` when the limit is missing. */
 export function ratioLabel(value: number | null | undefined, limit: number | null | undefined): string {
   return `${countLabel(value)} / ${countLabel(limit)}`;

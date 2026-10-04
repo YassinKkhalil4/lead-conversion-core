@@ -11,7 +11,7 @@ import { colWidth, color, radius, space } from '@/design/tokens';
 import { type Column, DataTable } from '@/desk/DataTable';
 import { Field, FormRow, TextField, fieldErrors } from '@/desk/form';
 import { Page, Section } from '@/desk/Page';
-import { countLabel } from '@/desk/safe';
+import { nounCount } from '@/desk/safe';
 import { RequireRole } from '@/nav/RequireRole';
 import { useCreateUser, useSalespeople, useUpdateUser, useUsers } from '@/manage/hooks';
 import { timestamp } from '@/time/format';
@@ -166,7 +166,7 @@ function UsersInner() {
           onRetry={() => void users.refetch()}
         />
       ) : (
-        <Section title={`${countLabel(users.data?.users?.length)} accounts`}>
+        <Section title={nounCount(users.data?.users?.length, 'account')}>
           <DataTable
             rows={users.data?.users ?? []}
             loading={users.isLoading}
