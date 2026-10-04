@@ -188,3 +188,44 @@ the dev server never sees it.
 Native builds are unaffected by all of this: they call
 `https://core.tryrolefit.com` directly and carry a bearer token from the device
 keychain rather than a cookie.
+
+## Kadensio's own deployment (app.kadensio.com)
+
+The sections above describe the original deployment on `core.tryrolefit.com`, which is a separate project and is not touched by anything below. Kadensio's dashboard has its own folder and its own Caddy snippet:
+
+| | |
+|---|---|
+| URL | `https://app.kadensio.com/app/` |
+| Files | `/var/www/kadensio-dashboard/releases/<stamp>`, `current` is a symlink |
+| Caddy | `(kadensio_dashboard)` in `/etc/caddy/sites/kadensio.caddy`, imported by `app.kadensio.com` only |
+| API | the same Fastify server on `127.0.0.1:8084`, same origin, so the HttpOnly cookie keeps working |
+
+`core.tryrolefit.com` keeps `(kadensio_app)` and `/var/www/rolefit-dashboard`. Do not change that block or folder from here.
+
+### Release
+
+Build from committed code with the production script, never `expo export` directly, and never with `EXPO_PUBLIC_ALLOW_PROFILE_OVERRIDE` set (that flag exists only for preview builds and would let a URL switch the vertical).
+
+```bash
+cd dashboard && docker run --rm -v "$PWD":/work -w /work -e CI=1 node:22-bookworm \
+  sh -c 'npm ci && npm run build:web'
+grep -o 'src="[^"]*"' dist/index.html     # must start with /app/_expo/
+R=/var/www/kadensio-dashboard/releases/$(date -u +%Y%m%d-%H%M%S)
+mkdir -p "$R" && cp -r dist/. "$R"/
+chown -R caddy:caddy /var/www/kadensio-dashboard && chmod -R a+rX /var/www/kadensio-dashboard
+ln -sfn "$R" /var/www/kadensio-dashboard/current.tmp && mv -Tf /var/www/kadensio-dashboard/current.tmp /var/www/kadensio-dashboard/current
+```
+
+No Caddy reload is needed for a release switch. To roll back, point `current` at the previous release the same way.
+
+### Caching
+
+The bundle name carries a content hash, so `/app/_expo/static/*` is immutable. Everything else, the HTML shell included, is `no-cache`. The old rule matched the literal path `/index.html`, but the shell is requested as `/app/` and `/app/leads`, so it was sent with no Cache-Control and a browser could keep a shell pointing at a bundle a later release had removed.
+
+### Undoing the Caddy change
+
+A copy of the Caddy file from before the split is in `/var/www/.kadensio-publish-state/dashboard-*/kadensio.caddy`. Restoring it and running `systemctl reload caddy` puts `app.kadensio.com` back on the shared folder.
+
+### Which view a tenant sees
+
+See `dashboard/src/profile/README.md`. Every tenant is real estate until its `clientKey` is added to `CLIENT_VERTICALS`.
