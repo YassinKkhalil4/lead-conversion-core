@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useProfile } from '@/profile/ProfileProvider';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { explain } from '@/api/errors';
@@ -39,6 +40,7 @@ export default function UsersScreen() {
 
 function UsersInner() {
   const { user: currentUser } = useAuth();
+  const { terms, manage } = useProfile();
   const users = useUsers();
   const salespeople = useSalespeople();
   const create = useCreateUser();
@@ -89,7 +91,7 @@ function UsersInner() {
     },
     {
       key: 'salesperson',
-      header: 'Salesperson record',
+      header: `${terms.person} record`,
       width: colWidth.name,
       sortValue: (row) => (row.salespersonId ? (byId.get(row.salespersonId)?.name ?? 'unknown') : null),
       render: (row) => (
@@ -175,7 +177,7 @@ function UsersInner() {
             keyOf={(row) => row.userId}
             initialSort={{ key: 'name', direction: 'asc' }}
             emptyTitle="No users yet"
-            emptyDetail="Every person who signs in needs an account here. Salespeople need one too: a salesperson record on its own receives WhatsApp notifications but cannot open the dashboard."
+            emptyDetail={manage.usersEmptyDetail}
             columns={columns}
           />
         </Section>
@@ -217,6 +219,7 @@ function InviteForm({
   onCancel: () => void;
   onSubmit: (values: { email: string; name: string; role: Role; salespersonId: string | null }) => Promise<void>;
 }) {
+  const { terms, manage } = useProfile();
   const reduced = useReducedMotion();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -276,7 +279,7 @@ function InviteForm({
               </Field>
             </FormRow>
 
-            <Field label="Role" hint="Salespeople see only their own leads. Managers see the whole client. Admins add user management.">
+            <Field label="Role" hint={manage.roleHint}>
               <View style={{ flexDirection: 'row', gap: space.md, flexWrap: 'wrap' }}>
                 {ROLES.map((option) => {
                   const selected = option === role;
@@ -307,13 +310,13 @@ function InviteForm({
 
             {role === 'salesperson' ? (
               <Field
-                label="Salesperson record"
+                label={`${terms.person} record`}
                 hint="Which record this login represents. It decides which leads they see."
                 error={errors.salespersonId}
               >
                 {salespeople.length === 0 ? (
                   <Text size="small" tone="faint">
-                    No salespeople exist yet. Add one under Salespeople first.
+                    No {terms.people.toLowerCase()} exist yet. Add one under {terms.people} first.
                   </Text>
                 ) : (
                   <View style={{ gap: space.sm }}>

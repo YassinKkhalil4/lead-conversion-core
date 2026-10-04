@@ -13,10 +13,14 @@ import { Text } from '@/design/Text';
 import { color, radius, space } from '@/design/tokens';
 import { Page, Section } from '@/desk/Page';
 import { eventLabel } from '@/leads/labels';
+import { useProfile } from '@/profile/ProfileProvider';
+import { words } from '@/profile/words';
+import type { Terms } from '@/profile/types';
 import { manageKeys, useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '@/manage/hooks';
 import { ageAgo, clock, dayHeading } from '@/time/format';
 
 export default function NotificationsScreen() {
+  const profile = useProfile();
   const router = useRouter();
   const { status } = useAuth();
   const queryClient = useQueryClient();
@@ -114,10 +118,10 @@ export default function NotificationsScreen() {
                   />
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text size="small" weight={item.readAt ? 'regular' : 'semibold'}>
-                      {eventLabel(item.notificationType)}
+                      {eventLabel(item.notificationType, profile)}
                     </Text>
                     <Text size="micro" tone="faint">
-                      {describe(item)}
+                      {describe(item, profile.terms)}
                     </Text>
                   </View>
                   {item.priority === 'high' ? (
@@ -140,11 +144,11 @@ export default function NotificationsScreen() {
   );
 }
 
-function describe(item: Notification): string {
+function describe(item: Notification, terms: Terms): string {
   const payload = item.payload ?? {};
   const contact = typeof payload.contactName === 'string' ? payload.contactName : '';
   const reason = typeof payload.reason === 'string' ? payload.reason.replace(/_/g, ' ') : '';
-  const parts = [contact, reason, item.leadId ? 'tap to open the lead' : ''].filter(Boolean);
+  const parts = [contact, reason, item.leadId ? words('tap to open the {lead}', terms) : ''].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : ageAgo(item.createdAt);
 }
 

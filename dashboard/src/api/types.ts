@@ -8,6 +8,8 @@ export interface User {
   name: string;
   role: Role;
   clientKey: string;
+  /** Reserved: not sent by the API today. The tenant profile resolves from `clientKey`. */
+  vertical?: string;
   companyName: string;
   timezone: string;
   lastLoginAt: string | null;

@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import { words } from '@/profile/words';
+import { useProfile } from '@/profile/ProfileProvider';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import type { ProjectInput } from '@/api/endpoints';
 import { explain } from '@/api/errors';
@@ -34,6 +36,8 @@ function money(value: number | null): string {
 }
 
 export default function ProjectsScreen() {
+  const { terms, manage } = useProfile();
+  const w = (s: string) => words(s, terms);
   const projects = useProjects();
   const salespeople = useSalespeople();
   const save = useSaveProject();
@@ -68,7 +72,7 @@ export default function ProjectsScreen() {
   const columns: Column<Project>[] = [
     {
       key: 'name',
-      header: 'Project',
+      header: terms.place,
       width: colWidth.long,
       sortValue: (project) => project.projectName,
       render: (project) => (
@@ -125,7 +129,7 @@ export default function ProjectsScreen() {
     },
     {
       key: 'units',
-      header: 'Unit types',
+      header: terms.categories,
       width: colWidth.name,
       render: (project) =>
         project.unitTypes.length === 0 ? (
@@ -140,7 +144,7 @@ export default function ProjectsScreen() {
     },
     {
       key: 'salespeople',
-      header: 'Salespeople',
+      header: terms.people,
       width: colWidth.long,
       sortValue: (project) => (project.salespersonIds ?? []).length,
       render: (project) =>
@@ -180,34 +184,34 @@ export default function ProjectsScreen() {
 
   return (
     <Page
-      title="Projects"
-      subtitle="A lead is matched to a project, and routing then picks from the salespeople assigned to it."
-      actions={<Button label="Add project" variant="primary" onPress={() => open()} />}
+      title={terms.places}
+      subtitle={manage.placesSubtitle}
+      actions={<Button label={`Add ${terms.place.toLowerCase()}`} variant="primary" onPress={() => open()} />}
     >
       {unassigned > 0 ? (
         <InlineNotice
           variant="warning"
-          text={`${unassigned} active project${unassigned === 1 ? '' : 's'} with nobody assigned. Routing cannot place a lead on those, and every one will escalate to the manager instead.`}
+          text={w(`${unassigned} active {place}${unassigned === 1 ? '' : 's'} with nobody assigned. Routing cannot place a {lead} on those, and every one will escalate to the manager instead.`)}
         />
       ) : null}
 
       {projects.isError ? (
         <ErrorState
-          title="Could not load projects"
-          detail={explain(projects.error, 'Loading projects').detail}
+          title={w(`Could not load {places}`)}
+          detail={explain(projects.error, w('Loading {places}')).detail}
           onRetry={() => void projects.refetch()}
         />
       ) : (
-        <Section title={nounCount(projects.data?.projects?.length, 'project')}>
+        <Section title={nounCount(projects.data?.projects?.length, terms.place.toLowerCase())}>
           <DataTable
             rows={projects.data?.projects ?? []}
             loading={projects.isLoading}
-            emptyActionLabel="Add project"
+            emptyActionLabel={w(`Add {place}`)}
             onEmptyAction={() => open()}
             keyOf={(project) => project.projectId}
             initialSort={{ key: 'name', direction: 'asc' }}
-            emptyTitle="No projects yet"
-            emptyDetail="Add the developments this brokerage sells. Leads are matched to a project by budget and unit type, and routing then chooses among the salespeople assigned to it."
+            emptyTitle={w(`No {places} yet`)}
+            emptyDetail={manage.placesEmptyDetail}
             columns={columns}
           />
         </Section>
@@ -265,6 +269,8 @@ function ProjectForm({
   const reduced = useReducedMotion();
   const [values, setValues] = useState<ProjectInput>(initial.values);
   const currency = currencyFor(useAuth().user?.timezone);
+  const { terms } = useProfile();
+  const w = (s: string) => words(s, terms);
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const isNew = !initial.projectId;
   const serverErrors = fieldErrors(error);
@@ -277,7 +283,7 @@ function ProjectForm({
   const scrollRef = useRef<ScrollView>(null);
   const submit = async () => {
     const next: Record<string, string> = {};
-    if (!values.projectName.trim()) next.projectName = 'A project name is required.';
+    if (!values.projectName.trim()) next.projectName = w('A {place} name is required.');
     if (values.startingPrice !== null && values.maxPrice !== null && values.maxPrice < values.startingPrice) {
       next.maxPrice = 'The top of the range cannot be below the bottom.';
     }
@@ -299,14 +305,14 @@ function ProjectForm({
         >
           <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">
-              {isNew ? 'Add project' : values.projectName}
+              {isNew ? w('Add {place}') : values.projectName}
             </Text>
 
             <FormRow>
-              <Field label="Project name" error={errors.projectName}>
+              <Field label={`${terms.place} name`} error={errors.projectName}>
                 <TextField value={values.projectName} onChange={(next) => set('projectName', next)} invalid={Boolean(errors.projectName)} autoCapitalize="words" />
               </Field>
-              <Field label="Location" hint="Matched against the location a lead gives.">
+              <Field label="Location" hint={w(`Matched against the location a {lead} gives.`)}>
                 <TextField value={values.location} onChange={(next) => set('location', next)} autoCapitalize="words" />
               </Field>
             </FormRow>
@@ -318,16 +324,16 @@ function ProjectForm({
               <Field label="Price to" error={errors.maxPrice} width={220}>
                 <MoneyField value={values.maxPrice} onChange={(next) => set('maxPrice', next)} invalid={Boolean(errors.maxPrice)} currency={currency} />
               </Field>
-              <Field label="Status" hint="Inactive projects stop receiving new leads." width={220}>
+              <Field label="Status" hint={w(`Inactive {places} stop receiving new {leads}.`)} width={220}>
                 <Toggle value={values.active} onChange={(next) => set('active', next)} labels={['Active', 'Inactive']} />
               </Field>
             </FormRow>
 
-            <Field label="Unit types" hint="What this project sells, matched against the lead's answer.">
+            <Field label={terms.categories} hint={w(`What this {place} sells, matched against the {lead}'s answer.`)}>
               <TagInput values={values.unitTypes} onChange={(next) => set('unitTypes', next)} suggestions={UNIT_SUGGESTIONS} placeholder="Add a unit type" />
             </Field>
 
-            <Field label="Maps link" hint="Sent to the lead when a site visit is arranged.">
+            <Field label="Maps link" hint={w(`Sent to the {lead} when a {visit} is arranged.`)}>
               <TextField value={values.mapsUrl} onChange={(next) => set('mapsUrl', next)} autoCapitalize="none" placeholder="https://maps.app.goo.gl/…" />
             </Field>
 
@@ -335,7 +341,7 @@ function ProjectForm({
 
             <View style={{ flexDirection: 'row', gap: space.md, justifyContent: 'flex-end' }}>
               <Button label="Cancel" variant="outline" onPress={onCancel} />
-              <Button label={isNew ? 'Add project' : 'Save changes'} variant="primary" busy={busy} onPress={() => void submit()} />
+              <Button label={isNew ? w('Add {place}') : 'Save changes'} variant="primary" busy={busy} onPress={() => void submit()} />
             </View>
           </ScrollView>
         </Pressable>
@@ -363,6 +369,8 @@ function AssignSheet({
   onCancel: () => void;
   onSave: (salespersonIds: string[]) => Promise<void>;
 }) {
+  const { terms } = useProfile();
+  const w = (s: string) => words(s, terms);
   const reduced = useReducedMotion();
   const [selected, setSelected] = useState<string[]>(project.salespersonIds ?? []);
   const explained = error ? explain(error, 'Saving the assignment') : null;
@@ -393,7 +401,7 @@ function AssignSheet({
 
             {salespeople.length === 0 ? (
               <Text size="small" tone="faint">
-                No salespeople exist yet. Add one under Salespeople first.
+                No {terms.people.toLowerCase()} exist yet. Add one under {terms.people} first.
               </Text>
             ) : (
               salespeople.map((person) => {

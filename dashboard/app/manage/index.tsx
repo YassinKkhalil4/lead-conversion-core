@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { words } from '@/profile/words';
+import { useProfile } from '@/profile/ProfileProvider';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { explain } from '@/api/errors';
@@ -31,6 +33,8 @@ const TEMPERATURE_COLOR: Record<string, string> = {
 };
 
 export default function ManagerOverview() {
+  const { terms, manage } = useProfile();
+  const w = (s: string) => words(s, terms);
   const isDesk = useIsDesk();
   const router = useRouter();
   const [period, setPeriod] = useState<PeriodKey>('today');
@@ -145,7 +149,7 @@ export default function ManagerOverview() {
             lowerIsBetter
             hint="median, all time"
           />
-          <StatTile label="New leads" value={current.newLeads} previous={previous?.newLeads ?? null} />
+          <StatTile label={`New ${terms.leads.toLowerCase()}`} value={current.newLeads} previous={previous?.newLeads ?? null} />
           <StatTile label="Qualified" value={current.qualifiedLeads} previous={previous?.qualifiedLeads ?? null} />
         </View>
       )}
@@ -154,7 +158,7 @@ export default function ManagerOverview() {
           is revenue leaking right now, and it used to sit fourth, below two
           charts that are context rather than something to do. */}
       <Section
-        title="Leads at risk"
+        title={`${terms.leads} at risk`}
         note="Qualified and still unacknowledged, highest score first. This is revenue leaking right now."
       >
         <DataTable
@@ -164,7 +168,7 @@ export default function ManagerOverview() {
           onRowPress={(lead) => router.push(`/leads/${lead.leadId}`)}
           initialSort={{ key: 'score', direction: 'desc' }}
           emptyTitle="Nothing at risk"
-          emptyDetail="Qualified leads appear here while they are waiting to be acknowledged. An empty table means the team is keeping up."
+          emptyDetail={manage.atRiskEmptyDetail}
           columns={riskColumns}
         />
       </Section>
@@ -173,7 +177,7 @@ export default function ManagerOverview() {
         {salespeople.isError ? (
           <ErrorState
             title="Could not load the team"
-            detail={explain(salespeople.error, 'Loading salespeople').detail}
+            detail={explain(salespeople.error, w('Loading {people}')).detail}
             onRetry={() => void salespeople.refetch()}
           />
         ) : (
@@ -182,11 +186,11 @@ export default function ManagerOverview() {
             loading={salespeople.isLoading}
             keyOf={(person) => person.salespersonId}
             initialSort={{ key: 'overdue', direction: 'desc' }}
-            emptyTitle="No salespeople yet"
-            emptyDetail="Routing cannot assign a lead until at least one salesperson exists."
-            emptyActionLabel="Add salespeople"
+            emptyTitle={w(`No {people} yet`)}
+            emptyDetail={w(`Routing cannot assign a {lead} until at least one {person} exists.`)}
+            emptyActionLabel={w(`Add {people}`)}
             onEmptyAction={() => router.push('/manage/salespeople')}
-            columns={teamColumns}
+            columns={teamColumnsFor(terms.person)}
           />
         )}
       </Section>
@@ -197,7 +201,7 @@ export default function ManagerOverview() {
       >
         <Panel>
           <DistributionBar
-            label="Lead arrival to first contact"
+            label={`${terms.lead} arrival to first contact`}
             median={responseTime?.medianFirstContactSeconds ?? null}
             p90={responseTime?.p90FirstContactSeconds ?? null}
             worst={responseTime?.slowestFirstContactSeconds ?? null}
@@ -213,7 +217,7 @@ export default function ManagerOverview() {
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xl }}>
         <View style={{ flexGrow: 1, flexBasis: 320, gap: space.lg }}>
-          <Section title="Open leads by temperature">
+          <Section title={w(`Open {leads} by temperature`)}>
             <Panel>
               <BarChart
                 rows={(data?.leadsByTemperature ?? []).map((entry) => ({
@@ -221,17 +225,17 @@ export default function ManagerOverview() {
                   value: entry.count,
                 }))}
                 colorFor={(label) => TEMPERATURE_COLOR[label] ?? color.ink3}
-                emptyLabel="No open leads yet. Temperature appears once a lead is scored."
+                emptyLabel={w(`No open {leads} yet. Temperature appears once a {lead} is scored.`)}
               />
             </Panel>
           </Section>
         </View>
         <View style={{ flexGrow: 1, flexBasis: 320, gap: space.lg }}>
-          <Section title="Leads by source" note="Last 30 days">
+          <Section title={`${terms.leads} by source`} note="Last 30 days">
             <Panel>
               <BarChart
                 rows={(data?.leadsBySource ?? []).map((entry) => ({ label: entry.source, value: entry.count }))}
-                emptyLabel="No leads in the last 30 days."
+                emptyLabel={w(`No {leads} in the last 30 days.`)}
               />
             </Panel>
           </Section>
@@ -312,10 +316,10 @@ const riskColumns: Column<Lead>[] = [
 
 type TeamRow = ReturnType<typeof useSalespeople>['data'] extends { salespeople: (infer T)[] } | undefined ? T : never;
 
-const teamColumns: Column<TeamRow>[] = [
+const teamColumnsFor = (personHeader: string): Column<TeamRow>[] => [
   {
     key: 'name',
-    header: 'Salesperson',
+    header: personHeader,
     width: colWidth.name,
     sortValue: (person) => person.name,
     render: (person) => (

@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import { words } from '@/profile/words';
+import { useProfile } from '@/profile/ProfileProvider';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import type { SalespersonInput } from '@/api/endpoints';
 import { explain } from '@/api/errors';
@@ -33,6 +35,8 @@ const BLANK: SalespersonInput = {
 };
 
 export default function SalespeopleScreen() {
+  const { terms } = useProfile();
+  const w = (s: string) => words(s, terms);
   const query = useSalespeople();
   const save = useSaveSalesperson();
   const [editing, setEditing] = useState<{ salespersonId?: string; values: SalespersonInput } | null>(null);
@@ -59,14 +63,14 @@ export default function SalespeopleScreen() {
 
   return (
     <Page
-      title="Salespeople"
-      subtitle="Routing only ever assigns leads to someone listed here."
-      actions={<Button label="Add salesperson" variant="primary" onPress={() => open()} />}
+      title={terms.people}
+      subtitle={w(`Routing only ever assigns {leads} to someone listed here.`)}
+      actions={<Button label={w(`Add {person}`)} variant="primary" onPress={() => open()} />}
     >
       {query.isError ? (
         <ErrorState
-          title="Could not load salespeople"
-          detail={explain(query.error, 'Loading salespeople').detail}
+          title={w(`Could not load {people}`)}
+          detail={explain(query.error, w('Loading {people}')).detail}
           onRetry={() => void query.refetch()}
         />
       ) : (
@@ -74,14 +78,14 @@ export default function SalespeopleScreen() {
           <DataTable
             rows={query.data?.salespeople ?? []}
             loading={query.isLoading}
-            emptyActionLabel="Add salesperson"
+            emptyActionLabel={w(`Add {person}`)}
             onEmptyAction={() => open()}
             keyOf={(person) => person.salespersonId}
             onRowPress={open}
             initialSort={{ key: 'priority', direction: 'asc' }}
-            emptyTitle="No salespeople yet"
-            emptyDetail="Add one to begin. Until at least one exists with a phone number, routing has nobody to assign a qualified lead to and every lead will escalate to the manager."
-            columns={columns}
+            emptyTitle={w(`No {people} yet`)}
+            emptyDetail={w(`Add one to begin. Until at least one exists with a phone number, routing has nobody to assign a qualified {lead} to and every {lead} will escalate to the manager.`)}
+            columns={columnsFor(terms.categories)}
           />
         </Section>
       )}
@@ -105,7 +109,7 @@ export default function SalespeopleScreen() {
   );
 }
 
-const columns: Column<Salesperson>[] = [
+const columnsFor = (categoriesHeader: string): Column<Salesperson>[] => [
   {
     key: 'name',
     header: 'Name',
@@ -147,7 +151,7 @@ const columns: Column<Salesperson>[] = [
   },
   {
     key: 'specialties',
-    header: 'Unit types',
+    header: categoriesHeader,
     width: colWidth.name,
     render: (person) => <Tags values={person.unitSpecialties} />,
   },
@@ -265,6 +269,8 @@ function SalespersonForm({
 
   const scrollRef = useRef<ScrollView>(null);
   const examplePhone = examplePhoneFor(useAuth().user?.timezone);
+  const { terms } = useProfile();
+  const w = (s: string) => words(s, terms);
   const submit = async () => {
     const next: Record<string, string> = {};
     if (!values.name.trim()) next.name = 'A name is required.';
@@ -296,7 +302,7 @@ function SalespersonForm({
         >
           <ScrollView ref={scrollRef} contentContainerStyle={{ padding: space.xxl, gap: space.xl }}>
             <Text size="title" weight="bold">
-              {isNew ? 'Add salesperson' : values.name}
+              {isNew ? w('Add {person}') : values.name}
             </Text>
 
             <FormRow>
@@ -321,20 +327,20 @@ function SalespersonForm({
               </Field>
             </FormRow>
 
-            <Field label="Unit types" hint="Routing scores a match against the lead's answer.">
+            <Field label={terms.categories} hint={w(`Routing scores a match against the {lead}'s answer.`)}>
               <TagInput
                 values={values.unitSpecialties}
                 onChange={(next) => set('unitSpecialties', next)}
                 suggestions={UNIT_SUGGESTIONS}
-                placeholder="Add a unit type"
+                placeholder={w(`Add a {category}`)}
               />
             </Field>
 
-            <Field label="Locations" hint="Areas this person covers, matched against the lead's stated location.">
+            <Field label="Locations" hint={w(`Areas this person covers, matched against the {lead}'s stated location.`)}>
               <TagInput values={values.locations} onChange={(next) => set('locations', next)} placeholder="Add a location" />
             </Field>
 
-            <Field label="Languages" hint="Matched against the language the lead chose in the conversation.">
+            <Field label="Languages" hint={w(`Matched against the language the {lead} chose in the conversation.`)}>
               <TagInput
                 values={values.languages}
                 onChange={(next) => set('languages', next)}
@@ -354,7 +360,7 @@ function SalespersonForm({
               </Field>
               <Field
                 label="Capacity limit"
-                hint="Routing stops sending new leads once this many are open. If everyone is full the least loaded still receives it."
+                hint={w(`Routing stops sending new {leads} once this many are open. If everyone is full the least loaded still receives it.`)}
                 error={errors.capacityLimit}
                 width={260}
               >
@@ -362,7 +368,7 @@ function SalespersonForm({
               </Field>
               <Field
                 label="Status"
-                hint="Deactivating keeps history and stops new assignments. Salespeople are never deleted."
+                hint={`Deactivating keeps history and stops new assignments. ${terms.people} are never deleted.`}
                 width={260}
               >
                 <Toggle value={values.active} onChange={(next) => set('active', next)} labels={['Active', 'Inactive']} />
@@ -373,7 +379,7 @@ function SalespersonForm({
 
             <View style={{ flexDirection: 'row', gap: space.md, justifyContent: 'flex-end' }}>
               <Button label="Cancel" variant="outline" onPress={onCancel} />
-              <Button label={isNew ? 'Add salesperson' : 'Save changes'} variant="primary" busy={busy} onPress={() => void submit()} />
+              <Button label={isNew ? w('Add {person}') : 'Save changes'} variant="primary" busy={busy} onPress={() => void submit()} />
             </View>
           </ScrollView>
         </Pressable>

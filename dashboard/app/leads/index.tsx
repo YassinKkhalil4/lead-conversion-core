@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+import { words } from '@/profile/words';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { explain } from '@/api/errors';
 import type { Lead, LeadFilters } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
+import { useProfile } from '@/profile/ProfileProvider';
 import { Lockup } from '@/design/Mark';
 import { isHovered, surfaceTransition } from '@/design/motion';
 import { LeadListSkeleton, Skeleton } from '@/design/Skeleton';
@@ -25,6 +27,7 @@ type Filter = 'none' | 'pastSla' | 'unacknowledged';
 type Item = { kind: 'lead'; entry: RankedLead } | { kind: 'divider'; label: string };
 
 export default function Queue() {
+  const profile = useProfile();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
@@ -90,7 +93,7 @@ export default function Queue() {
 
     return (
       <Page
-        title="Leads"
+        title={profile.terms.leads}
         subtitle={summary}
         actions={
           <>
@@ -133,10 +136,10 @@ export default function Queue() {
               }}
             >
               <View style={{ flex: 2 }}>
-                <Label>Lead</Label>
+                <Label>{profile.list.leadColumn}</Label>
               </View>
               <View style={{ flex: 4 }}>
-                <Label>What they want</Label>
+                <Label>{profile.list.wantColumn}</Label>
               </View>
               <View style={{ width: 120 }}>
                 <Label>Temperature</Label>
@@ -360,6 +363,8 @@ function SinceDivider({ label }: { label: string }) {
 
 
 function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
+  const profile = useProfile();
+  const w = (s: string) => words(s, profile.terms);
   const router = useRouter();
   if (filter === 'pastSla') {
     return (
@@ -373,18 +378,14 @@ function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
     return (
       <EmptyState
         title="Every assignment is acknowledged"
-        detail="A lead lands here the moment routing assigns it to you, and stays until you acknowledge it."
+        detail={w(`A {lead} lands here the moment routing assigns it to you, and stays until you acknowledge it.`)}
       />
     );
   }
   return (
     <EmptyState
-      title={scope === 'mine' ? 'No leads assigned to you' : 'No leads yet'}
-      detail={
-        scope === 'mine'
-          ? 'A lead appears here when routing assigns it to you, and the queue sorts it by score.'
-          : 'Message your WhatsApp number from a personal phone to watch the first one arrive. Leads also come from the website form and Facebook lead ads, and each appears here as soon as its qualification conversation starts.'
-      }
+      title={scope === 'mine' ? profile.list.emptyMineTitle : profile.list.emptyAllTitle}
+      detail={scope === 'mine' ? profile.list.emptyMineDetail : profile.list.emptyAllDetail}
       actionLabel={scope === 'mine' ? undefined : 'Check your setup'}
       onAction={scope === 'mine' ? undefined : () => router.push('/manage')}
     />

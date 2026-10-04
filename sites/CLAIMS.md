@@ -18,8 +18,10 @@ An indexable build (`SITES_INDEXABLE=1`) is refused until `claimsConfirmed` in `
 | 10 | Every call is transcribed and kept with the reservation | voice, dashboard | Transcripts stored and shown in the dashboard |
 | 11 | A call and a WhatsApp thread from the same guest are one conversation | dashboard | Identity matching by phone number |
 | 12 | Host can take over in one tap | dashboard, FAQ | Same control as real estate, working for hospitality |
-| 13 | The dashboard is the same one real estate uses, with different labels | dashboard | Tenant-profile re-label layer (step 4) built |
+| 13 | The dashboard is the same one real estate uses, with different labels | dashboard | Built (`dashboard/src/profile`); a hospitality tenant must be added to `CLIENT_VERTICALS` and seen working |
 | 14 | Calls use a dedicated voice trunk | FAQ | Provider and number setup |
 | 15 | Speech recognition and synthesis are the only models; no generative model writes anything | voice, FAQ | True for the whole voice path, including detection |
+| 16 | The dashboard shows party size, date and shift, zone and deposit | dashboard view | The hospitality conversation config uses the answer keys `q_party_size`, `q_date_shift`, `q_zone`, `q_deposit` (`dashboard/src/profile/hospitality.ts`). Rename in one place if they differ |
+| 17 | Venues, hosts and zones are what routing matches on | dashboard view | The generic routing fields (project, salesperson, unit type) carry venue, host and zone for a hospitality tenant |
 
 Not claimed anywhere, on purpose: customer names, venue counts, uptime, accuracy figures, prices, a live demo number, a dashboard screenshot.

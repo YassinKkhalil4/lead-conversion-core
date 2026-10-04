@@ -7,6 +7,7 @@ import { Button } from '@/design/Button';
 import { Temperature } from '@/design/Temperature';
 import { Label, Text } from '@/design/Text';
 import { color, hitSlop, radius, space } from '@/design/tokens';
+import { useProfile } from '@/profile/ProfileProvider';
 import { currencyFor, fourFacts, indexAnswers, openingLine } from '@/leads/qualification';
 import { StagePicker } from './StagePicker';
 import { PAST_SLA_SECONDS } from '@/leads/queue';
@@ -40,8 +41,9 @@ export function CallPrep({
 }) {
   const index = indexAnswers(answers);
   const { user } = useAuth();
-  const facts = fourFacts(index, currencyFor(user?.timezone));
-  const opening = openingLine(lead.contact.name, index, lead.preferredLanguage);
+  const profile = useProfile();
+  const facts = fourFacts(index, currencyFor(user?.timezone), profile);
+  const opening = profile.features.openingLine ? openingLine(lead.contact.name, index, lead.preferredLanguage) : '';
   const phone = dialable(lead.contact.phoneE164);
   const whatsappNumber = phone.replace('+', '');
 
@@ -122,7 +124,7 @@ export function CallPrep({
 
         <FactGrid facts={facts} />
 
-        <OpeningLine text={opening} />
+        {profile.features.openingLine ? <OpeningLine text={opening} /> : null}
       </View>
 
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.lg }}>

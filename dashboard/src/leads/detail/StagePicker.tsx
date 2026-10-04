@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
+import { words } from '@/profile/words';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Label, Text } from '@/design/Text';
 import { color, hitSlop, radius, space, tracking } from '@/design/tokens';
 import { PIPELINE_STAGES, stageLabel } from '@/leads/labels';
+import { useProfile } from '@/profile/ProfileProvider';
 import { enter, exit, useDismiss, useReducedMotion } from '@/design/motion';
 
 /**
@@ -22,6 +24,8 @@ export function StagePicker({
   busy: boolean;
   onChange: (stage: string) => void;
 }) {
+  const profile = useProfile();
+  const w = (s: string) => words(s, profile.terms);
   const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
   const closeNow = useCallback(() => setOpen(false), []);
@@ -39,11 +43,11 @@ export function StagePicker({
     >
       <Label>Stage</Label>
       <Text size="small" weight="semibold" style={{ flex: 1 }}>
-        {stageLabel(stage)}
+        {stageLabel(stage, profile)}
       </Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Change stage, currently ${stageLabel(stage)}`}
+        accessibilityLabel={`Change stage, currently ${stageLabel(stage, profile)}`}
         onPress={() => setOpen(true)}
         disabled={busy}
         hitSlop={hitSlop}
@@ -74,7 +78,7 @@ export function StagePicker({
             }, closing ? exit('sheet') : enter('sheet', reduced)]}
           >
             <Text size="body" weight="semibold" style={{ paddingHorizontal: space.xl, paddingBottom: space.lg }}>
-              Move this lead to
+              {w('Move this {lead} to')}
             </Text>
             {PIPELINE_STAGES.map((option) => {
               const selected = option === stage;
@@ -99,7 +103,7 @@ export function StagePicker({
                   })}
                 >
                   <Text size="body" weight={selected ? 'semibold' : 'regular'} style={{ flex: 1 }}>
-                    {stageLabel(option)}
+                    {stageLabel(option, profile)}
                   </Text>
                   {selected ? (
                     <Text size="micro" tone="faint" style={{ letterSpacing: tracking.label }}>

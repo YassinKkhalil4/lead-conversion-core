@@ -1,5 +1,7 @@
 // Relative, not '@/': the root test suite imports this file directly.
 import type { QualificationAnswer } from '../api/types';
+import { realEstate } from '../profile/real-estate';
+import type { TenantProfile } from '../profile/types';
 
 export const QUESTION = {
   permission: 'q_permission',
@@ -158,17 +160,19 @@ export interface Fact {
 }
 
 /**
- * The four facts someone needs before dialling. Order is fixed so the position
- * of a value carries meaning even when a label is skimmed past.
+ * The four facts someone needs before acting. Order is fixed so the position
+ * of a value carries meaning even when a label is skimmed past. Which four, and
+ * under which labels, is the tenant profile's decision.
  */
-export function fourFacts(answers: AnswerIndex, currency = ''): Fact[] {
-  const budget = budgetValue(answers);
-  return [
-    { label: 'Budget', value: budget ? formatBudget(budget, currency) : '', numeric: true },
-    { label: 'Unit', value: valueOf(answers, QUESTION.unitType), numeric: false },
-    { label: 'Location', value: valueOf(answers, QUESTION.location), numeric: false },
-    { label: 'Timeline', value: valueOf(answers, QUESTION.timeline), numeric: false },
-  ];
+export function fourFacts(answers: AnswerIndex, currency = '', profile: TenantProfile = realEstate): Fact[] {
+  return profile.facts.map((fact) => {
+    if (fact.kind === 'budget') {
+      const budget = budgetValue(answers);
+      const shown = profile.features.currency ? currency : '';
+      return { label: fact.label, value: budget ? formatBudget(budget, shown) : '', numeric: fact.numeric };
+    }
+    return { label: fact.label, value: valueOf(answers, fact.key), numeric: fact.numeric };
+  });
 }
 
 /**
@@ -190,15 +194,18 @@ export function skipReason(questionKey: string, answers: AnswerIndex): string {
  * One line describing what the lead wants, for a queue row. Missing parts are
  * omitted rather than rendered as empty slots, so the line is always readable.
  */
-export function summaryLine(answers: AnswerIndex): string {
-  const budget = budgetValue(answers);
-  const parts = [
-    valueOf(answers, QUESTION.unitType),
-    valueOf(answers, QUESTION.location),
-    budget ? formatBudgetCompact(budget) : '',
-    valueOf(answers, QUESTION.paymentPlan),
-    valueOf(answers, QUESTION.timeline),
-  ].filter(Boolean);
+export function summaryLine(answers: AnswerIndex, profile: TenantProfile = realEstate): string {
+  const parts = profile.summary
+    .map((part) => {
+      if (part.kind === 'budget') {
+        const budget = budgetValue(answers);
+        return budget ? formatBudgetCompact(budget) : '';
+      }
+      const value = valueOf(answers, part.key);
+      if (value && part.unit && /^\d+$/.test(value)) return `${value} ${value === '1' ? part.unit[0] : part.unit[1]}`;
+      return value;
+    })
+    .filter(Boolean);
   return parts.join(' · ');
 }
 

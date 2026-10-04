@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useProfile } from '@/profile/ProfileProvider';
+import { words } from '@/profile/words';
 import { TextInput, View } from 'react-native';
 import { explain } from '@/api/errors';
 import type { Lead, Message } from '@/api/types';
@@ -24,6 +26,8 @@ export function ConversationTab({
   sending: boolean;
   sendError: unknown;
 }) {
+  const profile = useProfile();
+  const w = (s: string) => words(s, profile.terms);
   const [draft, setDraft] = useState('');
   const [pendingKey, setPendingKey] = useState(() => newRequestKey());
 
@@ -124,8 +128,8 @@ export function ConversationTab({
               </Text>
               <Text size="small" tone="muted" style={{ paddingTop: space.xs }}>
                 {lead.lastInboundAt
-                  ? 'WhatsApp only allows free text for 24 hours after the lead’s last message, and that window has passed.'
-                  : 'This lead has not sent a message yet, so WhatsApp has not opened a 24-hour session window.'}{' '}
+                  ? w('WhatsApp only allows free text for 24 hours after the {lead}’s last message, and that window has passed.')
+                  : w('This {lead} has not sent a message yet, so WhatsApp has not opened a 24-hour session window.')}{' '}
                 An approved template will reach them and reopens the window when they reply.
               </Text>
             </View>

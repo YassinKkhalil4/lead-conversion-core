@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { words } from '@/profile/words';
+import { useProfile } from '@/profile/ProfileProvider';
 import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +32,8 @@ import { Icon } from '@/design/Icon';
 const CLOSE_REASONS = ['won', 'lost', 'not_interested', 'unreachable', 'duplicate'];
 
 export default function CallPrepScreen() {
+  const profile = useProfile();
+  const w = (s: string) => words(s, profile.terms);
   const reduced = useReducedMotion();
   const { id } = useLocalSearchParams<{ id: string }>();
   const leadId = String(id ?? '');
@@ -57,7 +61,7 @@ export default function CallPrepScreen() {
   }
 
   if (query.isError || !query.data) {
-    const explained = explain(query.error, 'Loading this lead');
+    const explained = explain(query.error, w('Loading this {lead}'));
     return (
       <View style={{ flex: 1, backgroundColor: color.tint, paddingTop: insets.top + space.xl }}>
         <BackLink onPress={() => router.back()} />
@@ -125,7 +129,7 @@ export default function CallPrepScreen() {
         />
       </Collapsible>
 
-      <Collapsible title="Qualification" note={`${answered} of ${detail.qualification.answers.length} answered`}>
+      <Collapsible title={profile.qualificationTitle} note={`${answered} of ${detail.qualification.answers.length} answered`}>
         <QualificationTab qualification={detail.qualification} />
       </Collapsible>
 
@@ -137,7 +141,7 @@ export default function CallPrepScreen() {
       </Collapsible>
 
       <Collapsible
-        title="Why you got this lead"
+        title={w(`Why you got this {lead}`)}
         note={
           detail.latestRoutingRun
             ? `${nounCount(detail.latestRoutingRun.candidates.length, 'candidate')} considered`
@@ -179,7 +183,7 @@ export default function CallPrepScreen() {
         onPress={() => void run(() => stopFollowUp.mutateAsync('stopped_from_dashboard'))}
       />
       <Button
-        label={lead.status === 'closed' ? `Closed: ${lead.closedStatus}` : 'Close this lead'}
+        label={lead.status === 'closed' ? `Closed: ${lead.closedStatus}` : w('Close this {lead}')}
         variant="text"
         disabled={lead.status === 'closed'}
         onPress={() => setClosing(true)}
@@ -259,10 +263,10 @@ export default function CallPrepScreen() {
             }, enter('panel', reduced)]}
           >
             <Text size="body" weight="semibold">
-              Close this lead as
+              {w('Close this {lead} as')}
             </Text>
             <Text size="small" tone="muted" style={{ paddingBottom: space.sm }}>
-              This stops scheduled follow-ups and SLA timers for the lead.
+              {w('This stops scheduled follow-ups and SLA timers for the {lead}.')}
             </Text>
             {CLOSE_REASONS.map((reason) => (
               <Button

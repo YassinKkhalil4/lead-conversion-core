@@ -5,6 +5,7 @@ import { Temperature } from '@/design/Temperature';
 import { Text } from '@/design/Text';
 import { color, layout, rowHeight, tracking } from '@/design/tokens';
 import { QueueState, type RankedLead, rowSummary } from '@/leads/queue';
+import { useProfile } from '@/profile/ProfileProvider';
 import { queueClock } from '@/time/format';
 
 /**
@@ -32,13 +33,14 @@ export const QueueRow = memo(function QueueRow({
   desk?: boolean;
 }) {
   const { lead, state } = entry;
+  const profile = useProfile();
   const pastSla = state === QueueState.UnacknowledgedPastSla;
   const withinSla = state === QueueState.UnacknowledgedWithinSla;
   const isUrgent = pastSla || withinSla;
 
   const edge = pastSla ? color.warn : withinSla ? color.warn : 'transparent';
   const clockColor = pastSla ? color.warn : withinSla ? color.warn : color.ink2;
-  const summary = rowSummary(lead);
+  const summary = rowSummary(lead, profile);
   const clock = queueClock(entry.clockFrom);
 
   return (

@@ -7,6 +7,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/auth/AuthProvider';
+import { ProfileProvider } from '@/profile/ProfileProvider';
 import { color } from '@/design/tokens';
 import { ScreenErrorBoundary } from '@/nav/ErrorBoundary';
 import { Shell } from '@/nav/Shell';
@@ -119,6 +120,7 @@ export default function RootLayout() {
         }}
       >
         <AuthProvider>
+          <ProfileProvider>
           <StatusBar style="dark" />
           {/* One shell instance around every authenticated route, so moving
               between surfaces does not remount the navigation. */}
@@ -134,6 +136,7 @@ export default function RootLayout() {
               />
             </ScreenErrorBoundary>
           </Shell>
+          </ProfileProvider>
         </AuthProvider>
       </PersistQueryClientProvider>
     </SafeAreaProvider>

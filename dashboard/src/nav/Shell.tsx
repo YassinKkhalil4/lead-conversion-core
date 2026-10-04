@@ -8,6 +8,7 @@ import { Lockup, Mark } from '@/design/Mark';
 import { Text } from '@/design/Text';
 import { color, hitSlop, radius, space } from '@/design/tokens';
 import { useIsDesk } from '@/desk/Page';
+import { useProfile } from '@/profile/ProfileProvider';
 import { navFor } from './routes';
 import { enter, exit, useDismiss, useReducedMotion } from '@/design/motion';
 
@@ -22,11 +23,12 @@ import { enter, exit, useDismiss, useReducedMotion } from '@/design/motion';
  */
 export function Shell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const profile = useProfile();
   const isDesk = useIsDesk();
 
   if (!user) return <>{children}</>;
 
-  const items = navFor(user.role);
+  const items = navFor(user.role, profile);
   if (items.length <= 1) return <>{children}</>;
 
   if (user.role === 'salesperson') {
@@ -59,6 +61,7 @@ function SideRail({ role }: { role: Role }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const profile = useProfile();
   const insets = useSafeAreaInsets();
 
   return (
@@ -84,7 +87,7 @@ function SideRail({ role }: { role: Role }) {
         </Text>
       </View>
 
-      {navFor(role).map((item) => {
+      {navFor(role, profile).map((item) => {
         const active = isActive(pathname, item.href);
         return (
           <Pressable
@@ -139,6 +142,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
+  const profile = useProfile();
 
   return (
     <View style={{ flex: 1, backgroundColor: color.tint }}>
@@ -182,7 +186,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
               gap: space.xs,
             }, closing ? exit('drawer') : enter('drawer', reduced)]}
           >
-            {navFor(role).map((item) => {
+            {navFor(role, profile).map((item) => {
               const active = isActive(pathname, item.href);
               return (
                 <Pressable
@@ -224,6 +228,7 @@ function DrawerShell({ role, children }: { role: Role; children: ReactNode }) {
 }
 
 function BottomTabs({ role }: { role: Role }) {
+  const profile = useProfile();
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -238,7 +243,7 @@ function BottomTabs({ role }: { role: Role }) {
         paddingBottom: insets.bottom,
       }}
     >
-      {navFor(role).map((item) => {
+      {navFor(role, profile).map((item) => {
         const active = isActive(pathname, item.href);
         return (
           <Pressable

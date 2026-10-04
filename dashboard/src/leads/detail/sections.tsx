@@ -1,9 +1,11 @@
 import { View } from 'react-native';
+import { words } from '@/profile/words';
 import type { ActivityItem, LeadDetail, QualificationAnswer, RoutingRun, ScoreRun } from '@/api/types';
 import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
 import { color, radius, space } from '@/design/tokens';
 import { eventLabel, factorLabel, questionLabel } from '@/leads/labels';
+import { useProfile } from '@/profile/ProfileProvider';
 import { indexAnswers, skipReason } from '@/leads/qualification';
 import { ageAgo, timestamp } from '@/time/format';
 
@@ -40,6 +42,7 @@ function Row({ children, last = false }: { children: React.ReactNode; last?: boo
 
 /** Unanswered questions stay visible and are labelled, never hidden. */
 export function QualificationTab({ qualification }: { qualification: LeadDetail['qualification'] }) {
+  const profile = useProfile();
   const answers = qualification.answers;
   const answered = answers.filter((answer) => answer.answered).length;
 
@@ -47,7 +50,7 @@ export function QualificationTab({ qualification }: { qualification: LeadDetail[
     return (
       <EmptyState
         title="No qualification questions recorded"
-        detail="Answers appear here as the WhatsApp conversation progresses through the nine questions."
+        detail={profile.qualificationEmptyDetail}
       />
     );
   }
@@ -57,7 +60,7 @@ export function QualificationTab({ qualification }: { qualification: LeadDetail[
   return (
     <View>
       <SectionHeading
-        title="Qualification"
+        title={profile.qualificationTitle}
         note={`${answered} of ${answers.length} answered · session ${qualification.status.replace(/_/g, ' ')}`}
       />
       {answers.map((answer: QualificationAnswer, position) => (
@@ -68,7 +71,7 @@ export function QualificationTab({ qualification }: { qualification: LeadDetail[
             </Text>
             <View style={{ flex: 1, gap: space.xs }}>
               <Text size="small" weight="semibold" tone={answer.answered ? 'default' : 'faint'}>
-                {questionLabel(answer.questionKey)}
+                {questionLabel(answer.questionKey, profile)}
               </Text>
               {answer.answered ? (
                 <>
@@ -100,6 +103,7 @@ export function QualificationTab({ qualification }: { qualification: LeadDetail[
 }
 
 export function ScoreTab({ scoreRun }: { scoreRun: ScoreRun | null }) {
+  const profile = useProfile();
   if (!scoreRun) {
     return (
       <EmptyState
@@ -131,7 +135,7 @@ export function ScoreTab({ scoreRun }: { scoreRun: ScoreRun | null }) {
           <View style={{ flexDirection: 'row', gap: space.lg, alignItems: 'flex-start' }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text size="small" weight="semibold">
-                {factorLabel(factor.key)}
+                {factorLabel(factor.key, profile)}
               </Text>
               <Text size="micro" tone="muted">
                 {factor.reason || 'No reason recorded'}
@@ -152,7 +156,7 @@ export function ScoreTab({ scoreRun }: { scoreRun: ScoreRun | null }) {
               {scoreRun.missingAnswers.length === 1 ? '' : 's'}
             </Text>
             <Text size="micro" tone="muted">
-              {scoreRun.missingAnswers.map((key) => questionLabel(key)).join(', ')}. These contributed no points.
+              {scoreRun.missingAnswers.map((key) => questionLabel(key, profile)).join(', ')}. These contributed no points.
             </Text>
           </View>
         </Row>
@@ -183,11 +187,13 @@ function MatchFlag({ label, matched }: { label: string; matched: boolean }) {
 }
 
 export function RoutingTab({ routingRun }: { routingRun: RoutingRun | null }) {
+  const profile = useProfile();
+  const w = (s: string) => words(s, profile.terms);
   if (!routingRun) {
     return (
       <EmptyState
         title="Not routed yet"
-        detail="Routing runs after scoring. It records every salesperson considered and why one was chosen."
+        detail={w(`Routing runs after scoring. It records every {person} considered and why one was chosen.`)}
       />
     );
   }
@@ -250,11 +256,13 @@ export function RoutingTab({ routingRun }: { routingRun: RoutingRun | null }) {
 }
 
 export function ActivityTab({ activity }: { activity: ActivityItem[] }) {
+  const profile = useProfile();
+  const w = (s: string) => words(s, profile.terms);
   if (activity.length === 0) {
     return (
       <EmptyState
         title="No activity recorded"
-        detail="Every intake, message, SLA timer, follow-up and dashboard action on this lead is appended here as it happens."
+        detail={w(`Every intake, message, SLA timer, follow-up and dashboard action on this {lead} is appended here as it happens.`)}
       />
     );
   }
@@ -267,7 +275,7 @@ export function ActivityTab({ activity }: { activity: ActivityItem[] }) {
           <View style={{ flexDirection: 'row', gap: space.lg, alignItems: 'flex-start' }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text size="small" weight="semibold">
-                {eventLabel(event.eventType)}
+                {eventLabel(event.eventType, profile)}
               </Text>
               <Text size="micro" tone="faint">
                 {event.actorType}

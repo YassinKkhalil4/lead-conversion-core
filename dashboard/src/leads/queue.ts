@@ -1,4 +1,6 @@
 import type { Lead } from '../api/types';
+import { realEstate } from '../profile/real-estate';
+import type { TenantProfile } from '../profile/types';
 import { indexAnswerMap, summaryLine } from './qualification';
 
 /**
@@ -126,8 +128,8 @@ function humaniseStage(stage: string): string {
  * to the matched project and then to where the conversation has reached —
  * something true rather than an empty row.
  */
-export function rowSummary(lead: Lead): string {
-  const answers = summaryLine(indexAnswerMap(lead.qualificationAnswers));
+export function rowSummary(lead: Lead, profile: TenantProfile = realEstate): string {
+  const answers = summaryLine(indexAnswerMap(lead.qualificationAnswers), profile);
   if (answers) return answers;
 
   const project = [lead.project?.projectName, lead.project?.location].filter(Boolean).join(' · ');

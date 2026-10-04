@@ -1,60 +1,23 @@
+import { realEstate } from '../profile/real-estate';
+import type { TenantProfile } from '../profile/types';
+
+/**
+ * Labels come from the tenant profile. Every function takes the profile last
+ * and defaults to real estate, so a caller that has not been given one (and the
+ * tests that predate profiles) gets the labels the app always had.
+ */
+
 /** Question keys are stable identifiers from the conversation configuration. */
-const QUESTION_LABELS: Record<string, string> = {
-  q_permission: 'Permission to ask',
-  q_location: 'Location',
-  q_unit_type: 'Unit type',
-  q_budget: 'Budget',
-  q_payment_plan: 'Payment plan',
-  q_down_payment: 'Down payment',
-  q_timeline: 'Timeline',
-  q_purpose: 'Purpose',
-  q_site_visit: 'Site visit',
-};
-
-export function questionLabel(key: string): string {
-  return QUESTION_LABELS[key] ?? humanise(key.replace(/^q_/, ''));
+export function questionLabel(key: string, profile: TenantProfile = realEstate): string {
+  return profile.questionLabels[key] ?? humanise(key.replace(/^q_/, ''));
 }
 
-const FACTOR_LABELS: Record<string, string> = {
-  base: 'Base score',
-  budget: 'Budget',
-  timeline: 'Timeline',
-  site_visit: 'Site visit',
-  payment_plan: 'Payment plan',
-  purpose: 'Purpose',
-  unit_type: 'Unit type',
-  location_present: 'Location given',
-  qualified_state: 'Reached qualified',
-};
-
-export function factorLabel(key: string): string {
-  return FACTOR_LABELS[key] ?? humanise(key);
+export function factorLabel(key: string, profile: TenantProfile = realEstate): string {
+  return profile.factorLabels[key] ?? humanise(key);
 }
 
-const EVENT_LABELS: Record<string, string> = {
-  'lead.intake_received': 'Lead received',
-  'message.send_requested': 'Outbound message queued',
-  'sla.scheduled': 'SLA timer scheduled',
-  'sla.cancelled': 'SLA timer cancelled',
-  'sla.sent': 'SLA reminder sent',
-  'followup.scheduled': 'Follow-up scheduled',
-  'followup.cancelled': 'Follow-up cancelled',
-  'dashboard.assignment_acknowledged': 'Assignment acknowledged',
-  'dashboard.lead_closed': 'Lead closed',
-  'dashboard.followups_stopped': 'Follow-ups stopped',
-  'dashboard.human_takeover_enabled': 'Human took over',
-  'dashboard.human_takeover_disabled': 'Handed back to the engine',
-  // Notification types, which share this lookup with audit events.
-  'salesperson.lead_assignment_notification': 'New lead assigned',
-  'salesperson.sla_assignment_reminder': 'SLA reminder',
-  'salesperson.appointment_booked_notification': 'Viewing booked',
-  'operator.sla_escalation': 'SLA escalation',
-  'operator.daily_report': 'Daily report',
-  'operator.routing_attention_required': 'Routing needs attention',
-};
-
-export function eventLabel(eventType: string): string {
-  return EVENT_LABELS[eventType] ?? humanise(eventType.replace(/^[a-z]+\./, ''));
+export function eventLabel(eventType: string, profile: TenantProfile = realEstate): string {
+  return profile.eventLabels[eventType] ?? humanise(eventType.replace(/^[a-z]+\./, ''));
 }
 
 /** The pipeline stages accepted by PATCH /api/leads/:id/stage, in order. */
@@ -67,21 +30,12 @@ export const PIPELINE_STAGES = [
   'ghosted',
 ] as const;
 
-const STAGE_LABELS: Record<string, string> = {
-  new: 'New',
-  in_progress: 'In progress',
-  site_visit_scheduled: 'Site visit scheduled',
-  closed_won: 'Closed won',
-  closed_lost: 'Closed lost',
-  ghosted: 'Ghosted',
-};
-
-export function stageLabel(stage: string | null | undefined): string {
+export function stageLabel(stage: string | null | undefined, profile: TenantProfile = realEstate): string {
   // A lead from an API build before pipeline_stage existed, or from a cached
   // response persisted before it, has no stage. Read it as the default rather
   // than throwing inside humanise.
-  if (typeof stage !== 'string' || stage === '') return STAGE_LABELS.new ?? 'New';
-  return STAGE_LABELS[stage] ?? humanise(stage);
+  if (typeof stage !== 'string' || stage === '') return profile.stageLabels.new ?? 'New';
+  return profile.stageLabels[stage] ?? humanise(stage);
 }
 
 /** Outbound delivery state, phrased the way a salesperson would read it. */
