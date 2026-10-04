@@ -2,7 +2,8 @@ import { timingSafeEqual } from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
 import { getEnv } from '../config/env.js';
 
-function safeEqual(received: string, expected: string): boolean {
+/** Constant-time string comparison for secrets and tokens. */
+export function safeEqual(received: string, expected: string): boolean {
   const a = Buffer.from(received);
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);

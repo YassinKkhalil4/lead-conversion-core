@@ -3,18 +3,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { describePostgres } from './helpers/postgres.js';
 
-function commandExists(command: string): boolean {
-  try {
-    execFileSync('sh', ['-lc', `command -v ${command}`], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const hasPostgres = ['initdb', 'pg_ctl', 'createdb'].every(commandExists);
-const describePg = hasPostgres ? describe : describe.skip;
+const describePg = describePostgres(['initdb', 'pg_ctl', 'createdb']);
 
 describePg('readiness worker requirements with real PostgreSQL', () => {
   const root = mkdtempSync(join(tmpdir(), 'lead-core-ready-test.'));

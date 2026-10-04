@@ -4,18 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClaimedOutboxCommand } from '../src/infrastructure/runtime.js';
+import { describePostgres } from './helpers/postgres.js';
 
-function commandExists(command: string): boolean {
-  try {
-    execFileSync('sh', ['-lc', `command -v ${command}`], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const hasPostgres = ['initdb', 'pg_ctl', 'createdb'].every(commandExists);
-const describePg = hasPostgres ? describe : describe.skip;
+const describePg = describePostgres(['initdb', 'pg_ctl', 'createdb']);
 
 describePg('NotificationOutboxDispatcher with real PostgreSQL', () => {
   const root = mkdtempSync(join(tmpdir(), 'lead-core-notification-test.'));
