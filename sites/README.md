@@ -27,6 +27,10 @@ docker run --rm -v "$PWD":/app -w /app node:22-bookworm sh -c 'node sites/build.
 
 The default build is `noindex` with a `Disallow: /` robots.txt. Launch with `SITES_INDEXABLE=1`.
 
+## Publishing
+
+`sites/deploy/publish.sh` stages the built sites into `/var/www/kadensio-{root,real-estate,hospitality}/releases/<stamp>` (`stage`), then installs the Caddy config and reloads (`golive`, refuses until both subdomains resolve to this server), and can restore the previous Caddy files (`rollback`). Kadensio only. `real-estate.kadensio.com` is the current landing moved and linked back to the platform (`landing.mjs`); `copy/real-estate.mjs` is an alternative page and is not published.
+
 ## Rules
 
 - Components never hold copy. Text lives in `copy/`.

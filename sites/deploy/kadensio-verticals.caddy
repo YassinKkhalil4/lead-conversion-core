@@ -1,0 +1,36 @@
+# real-estate.kadensio.com and hospitality.kadensio.com (static sites, built by sites/build.mjs).
+# Installed to /etc/caddy/sites/ by sites/deploy/publish.sh once DNS resolves.
+
+(kadensio_static) {
+	encode zstd gzip
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+}
+
+real-estate.kadensio.com {
+	# The waitlist form on the landing posts here; the API serves it at /public/waitlist.
+	handle /api/waitlist {
+		rewrite * /public/waitlist
+		reverse_proxy 127.0.0.1:8084
+	}
+
+	# Company-level legal pages live on kadensio.com.
+	redir /privacy.html https://kadensio.com/privacy.html 301
+	redir /terms.html https://kadensio.com/terms.html 301
+	redir /dpa.html https://kadensio.com/dpa.html 301
+
+	handle {
+		root * /var/www/kadensio-real-estate/current
+		file_server
+		import kadensio_static
+	}
+}
+
+hospitality.kadensio.com {
+	handle {
+		root * /var/www/kadensio-hospitality/current
+		file_server
+		import kadensio_static
+	}
+}

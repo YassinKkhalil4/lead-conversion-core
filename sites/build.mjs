@@ -8,7 +8,8 @@
 
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { CONTACT_EMAIL } from "./copy/shared.mjs";
+import { CONTACT_EMAIL, ORIGINS } from "./copy/shared.mjs";
+import { LEGAL, realEstateFromLanding, rootLegalPages, sitemapXml } from "./landing.mjs";
 import { fileURLToPath } from "node:url";
 
 import root from "./copy/root.mjs";
@@ -114,10 +115,21 @@ for (const [id, html] of sites) {
     cpSync(join(repo, "landing", "assets", f), join(out, "assets", f));
   }
   for (const f of EXTRA_ASSETS[id] ?? []) cpSync(join(repo, "landing", "assets", f), join(out, "assets", f));
+  const base = ORIGINS[id];
   writeFileSync(
     join(out, "robots.txt"),
-    indexable ? "User-agent: *\nAllow: /\n" : "User-agent: *\nDisallow: /\n",
+    indexable ? `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n` : "User-agent: *\nDisallow: /\n",
   );
+  const stamp = new Date().toISOString().slice(0, 10);
+  const urls = [`${base}/`, ...(id === "root" ? LEGAL.map((f) => `${base}/${f}`) : [])];
+  if (indexable) writeFileSync(join(out, "sitemap.xml"), sitemapXml(urls, stamp));
 }
+
+// The company-level legal pages stay on kadensio.com.
+rootLegalPages({ repo, out: join(dist, "root") });
+
+// real-estate.kadensio.com is the current landing, moved and linked back to the platform.
+// (sites/copy/real-estate.mjs is an alternative page and is not published.)
+realEstateFromLanding({ repo, out: join(dist, "real-estate-landing") });
 
 console.log(`built ${sites.map(([id]) => id).join(", ")} (${indexable ? "indexable" : "noindex"}) -> sites/dist`);

@@ -2,6 +2,8 @@
 
 `src/` has no hospitality code: no voice pipeline, no CoverManager or floor-plan integration, no Catalan, no reservation flow. Everything on hospitality.kadensio.com comes from the owner's brief, not from the repo. Real estate is different: its numbers come from `landing/lead-scoring.html` and the live landing.
 
+**Status:** on 2026-10-04 the owner asked for hospitality to be published and indexable, which confirms these claims. Several are not yet backed by code in this repo (rows 1-4, 6-10, 14, 15 depend on a voice pipeline and a floor-plan integration that live outside it), so treat the table as the list of what must be true in production.
+
 An indexable build (`SITES_INDEXABLE=1`) is refused until `claimsConfirmed` in `copy/hospitality.mjs` is set to `true`. Set it only after each row is true today, or the copy is changed to match.
 
 | # | Claim on the page | Where | Confirm |

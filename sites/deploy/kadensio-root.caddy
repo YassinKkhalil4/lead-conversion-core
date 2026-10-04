@@ -1,0 +1,26 @@
+# kadensio.com: the platform site. Replaces the block in /etc/caddy/sites/kadensio.caddy
+# at go-live. The old landing pages moved to real-estate.kadensio.com, so their old
+# addresses redirect there and keep their links and search standing.
+
+kadensio.com, www.kadensio.com {
+	# Kept so a cached copy of the old landing can still submit its waitlist form.
+	handle /api/waitlist {
+		rewrite * /public/waitlist
+		reverse_proxy 127.0.0.1:8084
+	}
+
+	redir /lead-scoring.html https://real-estate.kadensio.com/lead-scoring.html 301
+	redir /official-vs-unofficial-whatsapp-automation.html https://real-estate.kadensio.com/official-vs-unofficial-whatsapp-automation.html 301
+	redir /speed-to-lead-real-estate.html https://real-estate.kadensio.com/speed-to-lead-real-estate.html 301
+	redir /llms.txt https://real-estate.kadensio.com/llms.txt 301
+
+	handle {
+		root * /var/www/kadensio-root/current
+		file_server
+		encode zstd gzip
+
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		header /index.html Cache-Control "no-cache"
+	}
+}

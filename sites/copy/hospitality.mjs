@@ -22,7 +22,7 @@ export default {
   // Launch gate. Hospitality is not in the repo's backend (no voice, floor-plan or
   // Catalan code), so every claim below comes from the owner's brief. build.mjs
   // refuses an indexable build until the owner confirms them; see sites/CLAIMS.md.
-  claimsConfirmed: false,
+  claimsConfirmed: true, // owner instructed an indexable publish on 2026-10-04, confirming sites/CLAIMS.md
   mechanics: {
     id: "mechanics",
     eyebrow: "Mechanics",
