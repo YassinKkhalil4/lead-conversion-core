@@ -139,6 +139,55 @@ export function mappingTable({ caption, head, rows, cta }) {
   </table>`;
 }
 
+/** Ruled data table. `num` is the index of a right-aligned numeric column; `foot` is an optional total row. */
+export function dataTable({ caption, head, rows, num = -1, foot }) {
+  const cell = (tag, v, i) => `<${tag}${i === num ? ' class="num"' : ""}>${esc(v)}</${tag}>`;
+  const row = (r, tag = "td") => `<tr>${r.map((v, i) => (i === 0 && tag === "td" ? `<th scope="row">${esc(v)}</th>` : cell(tag, v, i))).join("")}</tr>`;
+  return `<div class="table-wrap"><table class="mapping data">
+    <caption>${esc(caption)}</caption>
+    <thead><tr>${head.map((v, i) => cell("th", v, i).replace("<th", '<th scope="col"')).join("")}</tr></thead>
+    <tbody>${rows.map((r) => row(r)).join("")}</tbody>
+    ${foot ? `<tfoot>${row(foot)}</tfoot>` : ""}
+  </table></div>`;
+}
+
+/** Score bands as one three-cell strip. */
+export const bands = (items) =>
+  `<ul class="bands">${items.map(([n, r]) => `<li><strong>${esc(n)}</strong><span>${esc(r)}</span></li>`).join("")}</ul>`;
+
+/** The nine questions, numbered, as a ruled grid. */
+export const questions = (items) =>
+  `<ol class="questions">${items.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>`;
+
+export function figure({ base, alt, caption, width = 1280, height = 800, eager = false }) {
+  return `<figure class="shot">
+    <img src="assets/${base}-1280.jpg" srcset="assets/${base}-1280.jpg 1280w, assets/${base}-2560.jpg 2560w"
+         sizes="(min-width: 1200px) 1104px, 92vw" width="${width}" height="${height}"
+         ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" alt="${esc(alt)}">
+    <figcaption>${esc(caption)}</figcaption>
+  </figure>`;
+}
+
+export const faq = (items) =>
+  `<div class="faq">${items.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}</div>`;
+
+/** Closing call to action: demo by email, or try the live number. */
+export function closing({ id, eyebrow, h2, lead, primary, secondary }) {
+  return `<section class="section section-tint" id="${esc(id)}">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">${esc(eyebrow)}</p>
+      <h2>${esc(h2)}</h2>
+      <p class="lead">${esc(lead)}</p>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-primary btn-lg" href="${esc(primary.href)}">${esc(primary.label)} ${arrowIcon}</a>
+      ${secondary ? `<a class="link-arrow link-lg" href="${esc(secondary.href)}">${esc(secondary.label)}</a>` : ""}
+    </div>
+  </div>
+</section>`;
+}
+
 export function footer(site) {
   const f = site.footer;
   const isRoot = site.id === "root";

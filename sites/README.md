@@ -12,7 +12,8 @@ Three static sites, one shared shell. Frontend only: nothing here touches `src/`
 copy/      text only, one file per site, plus shared.mjs (URLs, verticals, wording rule)
 shared/    base.css (forked from landing/styles.css), components.css, ui.mjs (header, footer, hero, sections)
 build.mjs  renders the three sites into dist/ (no dependencies)
-check.mjs  invariants: no dead anchors, gateways, backlinks, vocabulary and overclaim checks
+check.mjs  invariants: no dead anchors, gateways, backlinks, vocabulary and overclaim checks,
+           and the real-estate scoring arithmetic (example sums to its score, factor maxima to 123)
 ```
 
 ## Build and check
@@ -34,6 +35,7 @@ The default build is `noindex` with a `Disallow: /` robots.txt. Launch with `SIT
 
 ## Not done yet
 
-- Vertical sections (mechanics, scoring/voice, dashboard) and the full root FAQ.
+- Hospitality sections (mechanics, voice, dashboard) and the full root FAQ.
+- Real estate is complete through step 2: mechanics, the nine questions, scoring (real_estate_v1 numbers, from `landing/lead-scoring.html`), dashboard, FAQ, closing. If the scoring model changes, change `copy/real-estate.mjs` and run `check.mjs`.
 - Caddy blocks, DNS and release directories for the two subdomains. Nothing is deployed and `landing/` still serves kadensio.com.
 - The dashboard re-label layer (tenant profile).

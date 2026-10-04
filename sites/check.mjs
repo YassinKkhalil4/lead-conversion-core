@@ -4,6 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import realEstate from "./copy/real-estate.mjs";
 import { ORIGINS, PLATFORM_LABEL, PLATFORM_URL } from "./copy/shared.mjs";
 
 const dist = join(dirname(fileURLToPath(import.meta.url)), "dist");
@@ -46,6 +47,26 @@ for (const v of ["real-estate", "hospitality"]) {
 // Claims we cannot make: voice needs speech models, official APIs do not make bans impossible.
 for (const site of ["root", "real-estate", "hospitality"]) {
   check(!/zero.hallucination|completely eliminate|no (llm|ai)s? anywhere/i.test(read(site)), `${site}: overclaim wording`);
+}
+
+// Real estate scoring: the page must agree with its own arithmetic.
+{
+  const sc = realEstate.scoring;
+  const sum = sc.example.reduce((n, [, pts]) => n + pts, 0);
+  check(sum === sc.exampleScore, `real-estate: worked example sums to ${sum}, page says ${sc.exampleScore}`);
+  const maxes = sc.factors.map(([, pts]) => Math.max(...pts.match(/\d+/g).map(Number)));
+  const total = maxes.reduce((a, b) => a + b, 0);
+  check(total === 123, `real-estate: factor maximums sum to ${total}, page says 123`);
+  check(sc.factors.length === 10 && sc.example.length === 10, "real-estate: expected ten factors");
+  const exampleNames = sc.example.map(([n]) => n).join("|");
+  check(exampleNames === sc.factors.map(([n]) => n).join("|"), "real-estate: example factors differ from the factor table");
+  const html = read("real-estate");
+  check(html.includes(">99<"), "real-estate: worked-example score missing from page");
+  for (const [name, range] of sc.bands) {
+    check(html.includes(`<strong>${name}</strong><span>${range}</span>`), `real-estate: band ${name} missing from page`);
+  }
+  check((html.match(/<li>/g) ?? []).length >= 9 + 6, "real-estate: questions or steps missing");
+  check(existsSync(join(dist, "real-estate/assets/product-queue-1280.jpg")), "real-estate: screenshot missing");
 }
 
 if (failures.length) { console.error(failures.map((f) => `FAIL ${f}`).join("\n")); process.exit(1); }
