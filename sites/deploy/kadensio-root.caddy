@@ -1,6 +1,11 @@
 # kadensio.com: the platform site. Replaces the block in /etc/caddy/sites/kadensio.caddy
 # at go-live. The old landing pages moved to real-estate.kadensio.com, so their old
 # addresses redirect there and keep their links and search standing.
+#
+# Caching: file names carry a content hash (sites/fingerprint.mjs), so hashed files are
+# immutable for a year and everything else (HTML, the unhashed originals) revalidates.
+# Cloudflare sits in front of this host and gives any response with no Cache-Control a
+# 4 hour browser cache, which is what let a stale stylesheet meet new HTML.
 
 kadensio.com, www.kadensio.com {
 	# Kept so a cached copy of the old landing can still submit its waitlist form.
@@ -19,8 +24,9 @@ kadensio.com, www.kadensio.com {
 		file_server
 		encode zstd gzip
 
-		@assets path /assets/*
-		header @assets Cache-Control "public, max-age=31536000, immutable"
-		header /index.html Cache-Control "no-cache"
+		@hashed path_regexp \.[0-9a-f]+\.(css|js|woff2|svg|png|jpg|jpeg|webp|ico)$
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@mutable not path_regexp \.[0-9a-f]+\.(css|js|woff2|svg|png|jpg|jpeg|webp|ico)$
+		header @mutable Cache-Control "no-cache"
 	}
 }

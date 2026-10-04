@@ -1,7 +1,7 @@
 // Invariants for the three sites. Run after build.mjs; exits non-zero on failure.
 //   docker run --rm -v "$PWD":/app -w /app node:22-bookworm sh -c 'node sites/build.mjs && node sites/check.mjs'
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -83,6 +83,35 @@ for (const site of ["root", "real-estate", "hospitality"]) {
     const r = spawnSync("node", [join(dirname(fileURLToPath(import.meta.url)), "build.mjs")], { env: { ...process.env, SITES_INDEXABLE: "1" } });
     check(r.status === 1, "launch gate: an indexable build must be refused while claimsConfirmed is false");
     check(read("hospitality").includes("noindex"), "hospitality: must be noindex while unconfirmed");
+  }
+}
+
+// Caching: every local file a page loads resolves, and carries a content hash, so a
+// cache can never pair new HTML with an old stylesheet or asset.
+{
+  const HASHED = /\.[0-9a-f]{10}\.[A-Za-z0-9]+$/;
+  const walk = (d) => readdirSync(d).flatMap((n) => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  for (const site of ["root", "real-estate", "real-estate-landing", "hospitality"]) {
+    const dir = join(dist, site);
+    for (const file of walk(dir).filter((f) => f.endsWith(".html"))) {
+      const html = readFileSync(file, "utf8");
+      const refs = new Set();
+      for (const m of html.matchAll(/(?:src|href)="([^"#?]+)"/g)) refs.add(m[1]);
+      for (const m of html.matchAll(/srcset="([^"]+)"/g)) for (const part of m[1].split(",")) refs.add(part.trim().split(/\s+/)[0]);
+      for (const ref of refs) {
+        if (/^(https?:|mailto:|tel:|\/cdn-cgi\/|\/$)/.test(ref) || ref.endsWith(".html") || ref === "/") continue;
+        const rel = ref.replace(/^\//, "");
+        check(existsSync(join(dir, rel)), `${site}: ${file.slice(dir.length + 1)} references missing ${ref}`);
+        if (/^assets\/|\.css$/.test(rel)) check(HASHED.test(rel), `${site}: ${file.slice(dir.length + 1)} loads unhashed ${ref}`);
+      }
+    }
+    for (const css of walk(dir).filter((f) => /\.[0-9a-f]{10}\.css$/.test(f))) {
+      for (const m of readFileSync(css, "utf8").matchAll(/url\(["']?([^"')]+)["']?\)/g)) {
+        if (/^(data:|https?:)/.test(m[1])) continue;
+        check(existsSync(join(dir, m[1])), `${site}: ${css.slice(dir.length + 1)} url(${m[1]}) missing`);
+        check(HASHED.test(m[1]), `${site}: ${css.slice(dir.length + 1)} url(${m[1]}) is unhashed`);
+      }
+    }
   }
 }
 

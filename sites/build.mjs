@@ -9,6 +9,7 @@
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { CONTACT_EMAIL, ORIGINS } from "./copy/shared.mjs";
+import { fingerprint } from "./fingerprint.mjs";
 import { LEGAL, realEstateFromLanding, rootLegalPages, sitemapXml } from "./landing.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -131,5 +132,8 @@ rootLegalPages({ repo, out: join(dist, "root") });
 // real-estate.kadensio.com is the current landing, moved and linked back to the platform.
 // (sites/copy/real-estate.mjs is an alternative page and is not published.)
 realEstateFromLanding({ repo, out: join(dist, "real-estate-landing") });
+
+// Hashed file names, last, once every file is in place.
+for (const id of ["root", "real-estate", "real-estate-landing", "hospitality"]) fingerprint(join(dist, id));
 
 console.log(`built ${sites.map(([id]) => id).join(", ")} (${indexable ? "indexable" : "noindex"}) -> sites/dist`);

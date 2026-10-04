@@ -3,9 +3,13 @@
 
 (kadensio_static) {
 	encode zstd gzip
-	@assets path /assets/*
-	header @assets Cache-Control "public, max-age=31536000, immutable"
-	header /index.html Cache-Control "no-cache"
+	# Hashed names (sites/fingerprint.mjs) never change content: cache for a year.
+	# Everything else, HTML included, revalidates. No response is left without a
+	# Cache-Control, so a proxy cannot invent a lifetime for it.
+	@hashed path_regexp \.[0-9a-f]+\.(css|js|woff2|svg|png|jpg|jpeg|webp|ico)$
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@mutable not path_regexp \.[0-9a-f]+\.(css|js|woff2|svg|png|jpg|jpeg|webp|ico)$
+	header @mutable Cache-Control "no-cache"
 }
 
 real-estate.kadensio.com {

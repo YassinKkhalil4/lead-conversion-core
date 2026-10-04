@@ -31,6 +31,12 @@ The default build is `noindex` with a `Disallow: /` robots.txt. Launch with `SIT
 
 `sites/deploy/publish.sh` stages the built sites into `/var/www/kadensio-{root,real-estate,hospitality}/releases/<stamp>` (`stage`), then installs the Caddy config and reloads (`golive`, refuses until both subdomains resolve to this server), and can restore the previous Caddy files (`rollback`). Kadensio only. `real-estate.kadensio.com` is the current landing moved and linked back to the platform (`landing.mjs`); `copy/real-estate.mjs` is an alternative page and is not published.
 
+## Caching
+
+`fingerprint.mjs` renames the stylesheet and every asset to a content-hashed name (`styles.09cec9761b.css`) and rewrites every reference, as the last build step. Caddy (`deploy/*.caddy`) serves hashed names as immutable for a year and everything else, HTML included, with `no-cache`. `check.mjs` fails if a page loads an unhashed or missing local file.
+
+Why: kadensio.com sits behind Cloudflare's proxy. Files served with no `Cache-Control` get a 4 hour browser cache from Cloudflare, and the old assets were marked immutable under names that never changed. After a deploy a returning visitor could hold an old stylesheet against new HTML and see a half-styled page. Never serve a file whose content can change under a name that a cache may keep. The unhashed originals stay on disk so old links do not 404; nothing links to them.
+
 ## Rules
 
 - Components never hold copy. Text lives in `copy/`.
