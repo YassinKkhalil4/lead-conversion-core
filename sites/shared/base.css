@@ -1,0 +1,219 @@
+/* Shared base for the three marketing sites. Forked from landing/styles.css (tokens, base, header, buttons, footer) so the live landing is untouched. */
+/* Kadensio: marketing site.
+
+   Direction: a ledger. Ruled columns, tabular figures, wide margins, one
+   green. Geist and Geist Mono, self-hosted and subset to Latin. Light and
+   dark follow the system, and the whole page keeps whichever it is in.
+
+   Shape rule: buttons and inputs are 6px. Everything else is square and is
+   separated by hairlines, never by a card, a shadow or a tint.
+   Space: a 4px base. 8, 12, 16, 24, 32, 48, 64, 96, 144.
+   Accent: --accent on the primary button, links, the hot band and the
+   winning side of the comparison. Nowhere else.
+   See docs/design/2026-10-04-visual-direction.md. */
+
+/* ---------- Fonts ---------- */
+
+@font-face {
+  font-family: "Geist";
+  src: url("assets/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("assets/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+/* Arial resized to Geist's metrics, so the swap moves nothing on the page. */
+@font-face {
+  font-family: "Geist Fallback";
+  src: local("Arial"), local("ArialMT"), local("Helvetica");
+  size-adjust: 104.94%;
+  ascent-override: 95.77%;
+  descent-override: 28.11%;
+  line-gap-override: 0%;
+}
+
+/* ---------- Tokens ---------- */
+
+:root {
+  color-scheme: light dark;
+
+  --bg:         #F6F8F6;
+  --bg-2:       #EDF1EE;
+  --surface:    #FFFFFF;
+  --ink:        #0C1F1A;
+  --ink-2:      #33423D;
+  --ink-3:      #55645F;
+  --line:       rgba(12, 31, 26, .18);
+  --line-2:     rgba(12, 31, 26, .10);
+  --field-line: rgba(12, 31, 26, .48);
+
+  --accent:      #007A47;
+  --accent-hi:   #00613A;
+  --accent-wash: #E1EFE7;
+  --on-accent:   #FFFFFF;
+  --warn:        #9A4B1E;
+  --danger:      #B03A14;
+
+  --sans: "Geist", "Geist Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --wrap: 1200px;
+  --gut: clamp(1.25rem, 4.5vw, 3rem);
+  --sec: clamp(5rem, 11vw, 9.5rem);
+
+  --r: 6px;
+
+  /* Motion. One vocabulary: a strong ease-out for anything entering or being
+     pressed, plain ease for colour, one spring for the few things that should
+     feel alive. UI stays under 300ms; the hero sequence is the one exception. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* { duration: 0.5, bounce: 0.15 } sampled into linear(): settles in 640ms with 0.6% overshoot. */
+  --spring: linear(0, 0.035, 0.119, 0.228, 0.345, 0.46, 0.565, 0.658, 0.737, 0.802, 0.856, 0.897, 0.93, 0.954, 0.972, 0.985, 0.994, 1, 1.003, 1.005, 1.006, 1.006, 1.006, 1.005, 1.005, 1.004, 1.003, 1.003, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:         #07130F;
+    --bg-2:       #0B1A16;
+    --surface:    #0F221D;
+    --ink:        #EAF0ED;
+    --ink-2:      #B7C3BF;
+    --ink-3:      #8F9C98;
+    --line:       rgba(234, 240, 237, .20);
+    --line-2:     rgba(234, 240, 237, .10);
+    --field-line: rgba(234, 240, 237, .46);
+
+    --accent:      #1FC07A;
+    --accent-hi:   #45D394;
+    --accent-wash: #0E2B21;
+    --on-accent:   #04170F;
+    --warn:        #E8A07A;
+    --danger:      #F0A183;
+  }
+}
+
+/* ---------- Base ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  font-feature-settings: "ss01" 0, "tnum" 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 500; color: var(--ink); text-wrap: balance; }
+h1 { font-size: clamp(2.5rem, 0.9rem + 5.4vw, 4.75rem); line-height: 1.02; letter-spacing: -0.045em; }
+h2 { font-size: clamp(2rem, 1.1rem + 2.8vw, 3.25rem); line-height: 1.06; letter-spacing: -0.04em; }
+h3 { font-size: 1.1875rem; line-height: 1.3; letter-spacing: -0.018em; font-weight: 550; }
+p  { margin: 0; text-wrap: pretty; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+dl, dd { margin: 0; }
+
+a { color: inherit; }
+a, button { -webkit-tap-highlight-color: transparent; }
+.btn, .link-arrow, .nav a { touch-action: manipulation; }
+::selection { background: var(--accent); color: var(--on-accent); }
+input, textarea, select { caret-color: var(--accent); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+.skip {
+  position: absolute; left: 1rem; top: -4rem; z-index: 30;
+  background: var(--ink); color: var(--bg);
+  padding: .65rem 1rem; border-radius: var(--r);
+  font-weight: 500; text-decoration: none;
+}
+.skip:focus { top: 1rem; }
+
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gut); }
+
+.icon { width: 1.1em; height: 1.1em; flex: none; fill: currentColor; }
+
+.lead { font-size: clamp(1.125rem, 1.02rem + .4vw, 1.3125rem); line-height: 1.55; color: var(--ink-2); max-width: 36rem; }
+
+.section { padding: var(--sec) 0; }
+.section-tint { background: var(--bg-2); }
+.section-head { max-width: 42rem; }
+.section-head .lead { margin-top: 1.5rem; }
+
+/* ---------- Header ---------- */
+
+.site-header {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: saturate(140%) blur(12px);
+  -webkit-backdrop-filter: saturate(140%) blur(12px);
+  border-bottom: 1px solid var(--line-2);
+}
+.header-inner { display: flex; align-items: center; gap: 2rem; min-height: 4rem; }
+.logo { display: inline-flex; align-items: center; line-height: 0; }
+.logo img { height: 28px; width: auto; }
+.logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  .logo-light { display: none; }
+  .logo-dark { display: block; }
+}
+
+.nav { display: flex; gap: 2rem; margin-left: auto; }
+.nav a {
+  font-size: .9375rem; font-weight: 450; color: var(--ink-2);
+  text-decoration: none; padding: .35rem 0;
+  transition: color .15s ease, box-shadow .15s ease;
+}
+.nav a[aria-current="page"] { color: var(--ink); box-shadow: inset 0 -1px 0 var(--ink); }
+.header-cta { margin-left: .5rem; }
+@media (max-width: 859px) { .nav { display: none; } .header-cta { margin-left: auto; } }
+
+/* ---------- Buttons and links ---------- */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+  min-height: 2.75rem; padding: 0 1.15rem;
+  font: inherit; font-size: .9375rem; font-weight: 550; letter-spacing: -0.01em;
+  line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer;
+  border-radius: var(--r); border: 1px solid transparent;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .12s var(--ease-out);
+}
+/* Heard the press: a 3% scale-down while held, eased back on release. */
+.btn:active { transform: scale(0.97); }
+.btn .icon { transition: transform .2s var(--ease-out); }
+.btn-lg { min-height: 3.5rem; padding: 0 1.6rem; font-size: 1.0625rem; }
+
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+
+.link-arrow {
+  display: inline-flex; align-items: center; gap: .4rem;
+  color: var(--ink); font-weight: 550; text-decoration: underline;
+  text-decoration-color: var(--line); text-underline-offset: 6px; text-decoration-thickness: 1px;
+  transition: text-decoration-color .15s ease, color .15s ease;
+}
+.link-lg { font-size: 1.0625rem; }
+
+.site-footer { padding: 3rem 0 3.5rem; border-top: 1px solid var(--line); }
+.footer-inner { display: grid; gap: 1.5rem; align-items: start; }
+@media (min-width: 760px) { .footer-inner { grid-template-columns: auto 1fr; gap: 4rem; } }
+.logo-footer img { height: 22px; }
+.footer-meta { font-size: .9375rem; color: var(--ink-3); }
+.footer-meta a, .footer-legal a { color: var(--ink-2); text-decoration: none; }
+.footer-legal { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin-top: .75rem; font-size: .9375rem; }

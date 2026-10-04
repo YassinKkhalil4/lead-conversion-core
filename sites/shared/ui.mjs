@@ -1,0 +1,190 @@
+// Shared page shell: head, header, footer and the building blocks the three
+// sites use. Plain functions returning strings; no framework, no dependencies.
+
+import { CONTACT_EMAIL, ORIGINS, PLATFORM_LABEL, PLATFORM_URL, VERTICALS } from "../copy/shared.mjs";
+
+export const esc = (s) =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const ICONS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-arrow" viewBox="0 0 256 256"><path d="M198,64V168a6,6,0,0,1-12,0V78.48L68.24,196.24a6,6,0,0,1-8.48-8.48L177.52,70H88a6,6,0,0,1,0-12H192A6,6,0,0,1,198,64Z"/></symbol>
+</svg>`;
+const arrowIcon = `<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>`;
+
+export function head(site, { indexable }) {
+  const url = ORIGINS[site.id] + "/";
+  return `<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(site.title)}</title>
+<meta name="description" content="${esc(site.description)}">
+<meta name="robots" content="${indexable ? "index, follow" : "noindex, nofollow"}">
+<link rel="canonical" href="${url}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kadensio">
+<meta property="og:url" content="${url}">
+<meta property="og:title" content="${esc(site.title)}">
+<meta property="og:description" content="${esc(site.description)}">
+<meta name="theme-color" content="#0C1F1A">
+<link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>`;
+}
+
+const logo = (href, label, h = 26) => `<a class="logo" href="${href}" aria-label="${esc(label)}">
+      <img class="logo-light" src="assets/kadensio-lockup.svg" alt="Kadensio" width="104" height="${h}" decoding="async">
+      <img class="logo-dark" src="assets/kadensio-lockup-reversed.svg" alt="Kadensio" width="104" height="${h}" decoding="async">
+    </a>`;
+
+const navLinks = (items) =>
+  items.length
+    ? `<nav class="nav" aria-label="Primary">${items.map((n) => `<a href="${esc(n.href)}">${esc(n.label)}</a>`).join("")}</nav>`
+    : "";
+
+const demoHref = (site) =>
+  `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(site.cta?.subject ?? "Kadensio")}`;
+
+/** Root site: gateways live in the header (desktop) and a bottom bar (phone). */
+export function rootHeader(site, nav) {
+  const [a, b] = VERTICALS;
+  return `<header class="site-header">
+  <div class="wrap header-inner">
+    ${logo("/", "Kadensio, home")}
+    ${navLinks(nav)}
+    <div class="header-gateways">
+      <a class="btn btn-ghost" href="${a.url}">${esc(a.name)} ${arrowIcon}</a>
+      <a class="btn btn-primary" href="${b.url}">${esc(b.name)} ${arrowIcon}</a>
+    </div>
+  </div>
+</header>`;
+}
+
+export function gatewayBar() {
+  const [a, b] = VERTICALS;
+  return `<div class="gateway-bar" role="navigation" aria-label="Industries">
+  <a class="btn btn-ghost" href="${a.url}">${esc(a.name)}</a>
+  <a class="btn btn-primary" href="${b.url}">${esc(b.name)}</a>
+</div>`;
+}
+
+/** Vertical sites: the way back to the platform is the first row of the sticky header. */
+export function verticalHeader(site, nav) {
+  const sibling = VERTICALS.find((v) => v.id !== site.id);
+  return `<header class="site-header">
+  <div class="parent-bar"><div class="wrap parent-bar-inner">
+    <a class="parent-link" href="${PLATFORM_URL}"><span class="arrow" aria-hidden="true">←</span> ${esc(PLATFORM_LABEL)}</a>
+    <a class="sibling" href="${sibling.url}">${esc(sibling.name)} →</a>
+  </div></div>
+  <div class="wrap header-inner">
+    ${logo(`${ORIGINS[site.id]}/`, "Kadensio " + (VERTICALS.find((v) => v.id === site.id)?.name ?? ""))}
+    ${navLinks(nav)}
+    <a class="btn btn-primary header-cta" href="${demoHref(site)}">${esc(site.cta.label)}</a>
+  </div>
+</header>`;
+}
+
+export function hero(site, { gateways = false } = {}) {
+  const h = site.hero;
+  const gw = gateways
+    ? `<div class="gateways" role="group" aria-label="${esc(h.gatewayHeading)}">${VERTICALS.map(
+        (v) => `
+      <a class="gateway" href="${v.url}">
+        <span class="gateway-host">${esc(v.host)}</span>
+        <span class="gateway-name">${esc(v.name)} ${arrowIcon}</span>
+        <span class="gateway-line">${esc(v.line)}</span>
+      </a>`,
+      ).join("")}
+    </div>`
+    : "";
+  const actions = site.cta
+    ? `<div class="hero-actions"><a class="btn btn-primary btn-lg" href="${demoHref(site)}">${esc(site.cta.label)} ${arrowIcon}</a></div>`
+    : "";
+  return `<section class="hero" id="top">
+  <div class="wrap">
+    <p class="eyebrow">${esc(h.eyebrow)}</p>
+    <h1>${esc(h.h1)}</h1>
+    <p class="lead">${esc(h.lead)}</p>
+    ${gw}${actions}
+    <ul class="proof">${h.proof.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+  </div>
+</section>`;
+}
+
+export function section({ id, eyebrow, h2, lead, body, tint = false }) {
+  return `<section class="section${tint ? " section-tint" : ""}" id="${esc(id)}">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">${esc(eyebrow)}</p>
+      <h2>${esc(h2)}</h2>
+      ${lead ? `<p class="lead">${esc(lead)}</p>` : ""}
+    </div>
+    ${body}
+  </div>
+</section>`;
+}
+
+export const pipeline = (steps) =>
+  `<ol class="pipeline">${steps.map(([t, d]) => `<li><strong>${esc(t)}</strong><span>${esc(d)}</span></li>`).join("")}</ol>`;
+
+export const ledger = (rows) =>
+  `<dl class="ledger">${rows.map(([t, d]) => `<div class="ledger-row"><dt>${esc(t)}</dt><dd>${esc(d)}</dd></div>`).join("")}</dl>`;
+
+export function mappingTable({ caption, head, rows, cta }) {
+  const link = (v) => `<a href="${v.url}">${esc(v.name)}</a>`;
+  return `<table class="mapping">
+    <caption>${esc(caption)}</caption>
+    <thead><tr><th scope="col">${esc(head[0])}</th><th scope="col">${link(cta[0])}</th><th scope="col">${link(cta[1])}</th></tr></thead>
+    <tbody>${rows.map(([a, b, c]) => `<tr><th scope="row">${esc(a)}</th><td>${esc(b)}</td><td>${esc(c)}</td></tr>`).join("")}</tbody>
+  </table>`;
+}
+
+export function footer(site) {
+  const f = site.footer;
+  const isRoot = site.id === "root";
+  const platform = isRoot
+    ? ""
+    : `<a class="footer-platform" href="${PLATFORM_URL}"><span class="arrow" aria-hidden="true">←</span> Powered by ${esc(PLATFORM_LABEL)}</a>`;
+  const sibling = f.sibling ? VERTICALS.find((v) => v.id === f.sibling.id) : null;
+  const gateways = isRoot
+    ? `<p class="footer-gateways">${VERTICALS.map((v) => `<a href="${v.url}">${esc(v.name)} →</a>`).join("")}</p>`
+    : sibling
+      ? `<p class="footer-gateways"><a href="${sibling.url}">${esc(f.sibling.label)} →</a></p>`
+      : "";
+  const legal = (f.legal ?? [
+    ["Privacy Policy", `${ORIGINS.root}/privacy.html`],
+    ["Terms of Service", `${ORIGINS.root}/terms.html`],
+    ["Data Processing Addendum", `${ORIGINS.root}/dpa.html`],
+  ])
+    .map(([label, href]) => `<a href="${href}">${esc(label)}</a>`)
+    .join("");
+  return `<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p class="logo logo-footer"><img class="logo-light" src="assets/kadensio-lockup.svg" alt="Kadensio" width="88" height="22" decoding="async"><img class="logo-dark" src="assets/kadensio-lockup-reversed.svg" alt="Kadensio" width="88" height="22" decoding="async"></p>
+    <div>
+      ${platform}
+      <p class="footer-meta">${esc(f.meta)} <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>
+      ${gateways}
+      <p class="footer-legal">${legal}</p>
+    </div>
+  </div>
+</footer>`;
+}
+
+export function page(site, { indexable, header, main, extraBody = "", bodyClass = "" }) {
+  return `<!DOCTYPE html>
+<html lang="${site.lang}">
+${head(site, { indexable })}
+<body${bodyClass ? ` class="${bodyClass}"` : ""}>
+${ICONS}
+<a class="skip" href="#main">Skip to content</a>
+${header}
+<main id="main">
+${main}
+</main>
+${footer(site)}
+${extraBody}
+</body>
+</html>
+`;
+}

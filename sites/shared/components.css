@@ -1,0 +1,101 @@
+/* Components that exist only in the multi-site shell. Same rules as base.css:
+   6px buttons, everything else square, separated by hairlines, one accent. */
+
+/* ---------- Parent bar (vertical sites) ----------
+   First row of the sticky header, so the way back to the platform is on screen
+   at every scroll position. */
+
+.parent-bar { border-bottom: 1px solid var(--line-2); background: var(--bg-2); }
+.parent-bar-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 2.5rem; font-size: .875rem; }
+.parent-link { display: inline-flex; align-items: center; gap: .5rem; color: var(--ink); font-weight: 550; text-decoration: none; padding: .5rem 0; }
+.parent-link .arrow { color: var(--accent); transition: transform .2s var(--ease-out); }
+.parent-link:hover .arrow { transform: translateX(-3px); }
+.parent-bar .sibling { color: var(--ink-3); text-decoration: none; }
+.parent-bar .sibling:hover { color: var(--ink); }
+@media (max-width: 559px) { .parent-bar .sibling { display: none; } }
+
+/* ---------- Header gateways (root site) ---------- */
+
+.header-gateways { display: flex; gap: .5rem; margin-left: .5rem; }
+@media (max-width: 859px) { .header-gateways { display: none; } }
+
+/* Mobile: the two gateways are pinned to the bottom edge instead. */
+.gateway-bar {
+  position: fixed; inset: auto 0 0 0; z-index: 25;
+  display: none; grid-template-columns: 1fr 1fr; gap: .5rem;
+  padding: .625rem var(--gut) calc(.625rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: saturate(140%) blur(12px);
+  -webkit-backdrop-filter: saturate(140%) blur(12px);
+  border-top: 1px solid var(--line);
+}
+.gateway-bar .btn { min-height: 3rem; }
+@media (max-width: 859px) {
+  .gateway-bar { display: grid; }
+  body.has-gateway-bar { padding-bottom: 4.5rem; }
+}
+
+/* ---------- Hero gateways ---------- */
+
+.gateways { display: grid; border: 1px solid var(--ink); margin-top: clamp(2rem, 4vw, 3rem); }
+@media (min-width: 760px) { .gateways { grid-template-columns: 1fr 1fr; } .gateway + .gateway { border-left: 1px solid var(--ink); } }
+.gateway + .gateway { border-top: 1px solid var(--ink); }
+@media (min-width: 760px) { .gateway + .gateway { border-top: 0; } }
+.gateway {
+  display: grid; gap: .75rem; padding: clamp(1.25rem, 3vw, 2rem);
+  color: inherit; text-decoration: none;
+  transition: background-color .15s ease;
+}
+.gateway:hover { background: var(--accent-wash); }
+.gateway-host { font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); letter-spacing: .01em; }
+.gateway-name { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2rem); font-weight: 500; letter-spacing: -0.03em; line-height: 1.1; }
+.gateway-name .icon { color: var(--accent); width: 1.25rem; height: 1.25rem; transition: transform .2s var(--ease-out); }
+.gateway:hover .gateway-name .icon { transform: translate(3px, -3px); }
+.gateway-line { color: var(--ink-2); font-size: 1rem; line-height: 1.5; max-width: 26rem; }
+
+/* ---------- Sections ---------- */
+
+.eyebrow { font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); letter-spacing: .02em; margin-bottom: 1.25rem; }
+.hero .lead { margin-top: 1.5rem; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; margin-top: 2rem; }
+.proof { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin-top: 2.5rem; font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); }
+
+/* Ruled ledger: label column, statement column. */
+.ledger { margin-top: clamp(2rem, 4vw, 3rem); border-top: 1px solid var(--ink); }
+.ledger-row { display: grid; gap: .5rem; padding: 1.5rem 0; border-bottom: 1px solid var(--line); }
+@media (min-width: 760px) { .ledger-row { grid-template-columns: 14rem 1fr; gap: 3rem; } }
+.ledger-row dt { font-weight: 550; letter-spacing: -0.015em; }
+.ledger-row dd { color: var(--ink-2); max-width: 40rem; }
+
+/* Pipeline: numbered, ruled steps. */
+.pipeline { margin-top: clamp(2rem, 4vw, 3rem); border-top: 1px solid var(--ink); counter-reset: step; }
+.pipeline li { counter-increment: step; display: grid; grid-template-columns: 2.5rem 1fr; gap: .25rem 1rem; padding: 1.1rem 0; border-bottom: 1px solid var(--line); }
+@media (min-width: 760px) { .pipeline li { grid-template-columns: 3rem 14rem 1fr; gap: 1.5rem; align-items: baseline; } }
+.pipeline li::before { content: counter(step, decimal-leading-zero); font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); padding-top: .2rem; }
+.pipeline strong { font-weight: 550; letter-spacing: -0.015em; }
+.pipeline span { color: var(--ink-2); grid-column: 2; }
+@media (min-width: 760px) { .pipeline span { grid-column: auto; } }
+
+/* Mapping table (one primitive, two presentations). */
+.mapping { width: 100%; border-collapse: collapse; margin-top: clamp(2rem, 4vw, 3rem); font-size: .9375rem; }
+.mapping caption { text-align: left; color: var(--ink-3); font-family: var(--mono); font-size: .8125rem; padding-bottom: .75rem; }
+.mapping th, .mapping td { text-align: left; padding: .85rem 1rem .85rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.mapping thead th { border-bottom: 1px solid var(--ink); font-weight: 550; }
+.mapping tbody th { font-weight: 450; color: var(--ink-3); }
+.mapping td a { color: var(--ink); }
+
+.footer-gateways { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin-top: .75rem; font-size: .9375rem; }
+.footer-gateways a { color: var(--ink); font-weight: 550; text-decoration: none; }
+.footer-gateways a:hover { color: var(--accent); }
+.footer-platform { display: inline-flex; gap: .5rem; align-items: center; color: var(--ink); font-weight: 550; text-decoration: none; margin-bottom: .75rem; }
+.footer-platform .arrow { color: var(--accent); }
+
+/* ---------- Hero spacing and header CTA alignment ---------- */
+
+.hero { padding: clamp(3rem, 5.5vw, 4.5rem) 0 clamp(4.5rem, 9vw, 8rem); }
+.hero h1 { max-width: 15em; }
+
+/* With no nav (a vertical site whose sections are not written yet) the CTA still
+   sits on the right; with a nav, the nav takes the free space instead. */
+.header-inner .header-cta { margin-left: auto; }
+.header-inner .nav + .header-cta { margin-left: .5rem; }
