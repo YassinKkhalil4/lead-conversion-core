@@ -157,7 +157,7 @@ export const bands = (items) =>
 
 /** The nine questions, numbered, as a ruled grid. */
 export const questions = (items) =>
-  `<ol class="questions">${items.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>`;
+  `<ol class="questions" style="--cols:${items.length % 3 === 0 ? 3 : items.length}">${items.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>`;
 
 export function figure({ base, alt, caption, width = 1280, height = 800, eager = false }) {
   return `<figure class="shot">

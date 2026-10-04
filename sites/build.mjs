@@ -21,6 +21,13 @@ const repo = join(here, "..");
 const dist = join(here, "dist");
 const indexable = process.env.SITES_INDEXABLE === "1";
 
+// Launch gate: hospitality capabilities are not in the backend repo, so an
+// indexable build needs the owner's confirmation (sites/CLAIMS.md).
+if (indexable && !hospitality.claimsConfirmed) {
+  console.error("Refusing an indexable build: hospitality.claimsConfirmed is false. Confirm the claims in sites/CLAIMS.md first.");
+  process.exit(1);
+}
+
 /** Keep only nav links whose target id exists in the rendered main. */
 const liveNav = (nav, main) => nav.filter((n) => !n.href.startsWith("#") || main.includes(`id="${n.href.slice(1)}"`));
 
@@ -35,9 +42,29 @@ function rootPage() {
   return page(s, { indexable, header: rootHeader(s, liveNav(s.nav, main)), main, extraBody: gatewayBar(), bodyClass: "has-gateway-bar" });
 }
 
+const sub = (h, lead, body) => `<div class="sub"><h3>${esc(h)}</h3>${lead ? `<p class="lead">${esc(lead)}</p>` : ""}${body}</div>`;
+
+function hospitalityMain(s) {
+  const m = s.mechanics, v = s.voice, d = s.dashboard;
+  return [
+    hero(s),
+    section({
+      ...m,
+      body:
+        pipeline(m.steps) +
+        sub(m.questionsHeading, m.questionsLead, questions(m.questions) + `<p class="note">${esc(m.zonesNote)}</p>`) +
+        sub(m.exampleHeading, m.exampleLead, dataTable({ caption: m.exampleCaption, head: m.exampleHead, rows: m.example })),
+      tint: true,
+    }),
+    section({ ...v, body: ledger(v.rows) + `<p class="lead" style="margin-top:1.5rem">${esc(v.note)}</p>` }),
+    section({ ...d, body: ledger(d.rows), tint: true }),
+    section({ ...s.faq, body: faq(s.faq.items) }),
+    closing({ ...s.closing, primary: { label: s.cta.label, href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(s.cta.subject)}` } }),
+  ].join("\n");
+}
+
 function realEstateMain(s) {
   const m = s.mechanics, sc = s.scoring, d = s.dashboard;
-  const sub = (h, lead, body) => `<div class="sub"><h3>${esc(h)}</h3>${lead ? `<p class="lead">${esc(lead)}</p>` : ""}${body}</div>`;
   const scoreRow = ["Score", String(sc.exampleScore), sc.exampleBand];
   return [
     hero(s),
@@ -65,7 +92,7 @@ function verticalPage(s, mainFn = hero) {
 const sites = [
   ["root", rootPage()],
   ["real-estate", verticalPage(realEstate, realEstateMain)],
-  ["hospitality", verticalPage(hospitality)],
+  ["hospitality", verticalPage(hospitality, hospitalityMain)],
 ];
 
 /** Screenshots come from the live landing too; only the site that shows them gets them. */

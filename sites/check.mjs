@@ -4,6 +4,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import hospitality from "./copy/hospitality.mjs";
 import realEstate from "./copy/real-estate.mjs";
 import { ORIGINS, PLATFORM_LABEL, PLATFORM_URL } from "./copy/shared.mjs";
 
@@ -67,6 +69,21 @@ for (const site of ["root", "real-estate", "hospitality"]) {
   }
   check((html.match(/<li>/g) ?? []).length >= 9 + 6, "real-estate: questions or steps missing");
   check(existsSync(join(dist, "real-estate/assets/product-queue-1280.jpg")), "real-estate: screenshot missing");
+}
+
+// Hospitality: sections, languages, and the launch gate.
+{
+  const html = read("hospitality");
+  for (const id of ["mechanics", "voice", "dashboard", "faq", "demo"]) check(html.includes(`id="${id}"`), `hospitality: section #${id} missing`);
+  for (const lang of ["English", "Spanish", "Catalan"]) check(html.includes(lang), `hospitality: ${lang} not mentioned`);
+  check(html.includes("Sala Interior") && html.includes("Terrace"), "hospitality: zones missing");
+  check(html.includes("speech synthesis") && html.includes("speech recognition"), "hospitality: voice section must name the speech models");
+  check(existsSync(join(dirname(fileURLToPath(import.meta.url)), "CLAIMS.md")), "hospitality: CLAIMS.md missing");
+  if (!hospitality.claimsConfirmed) {
+    const r = spawnSync("node", [join(dirname(fileURLToPath(import.meta.url)), "build.mjs")], { env: { ...process.env, SITES_INDEXABLE: "1" } });
+    check(r.status === 1, "launch gate: an indexable build must be refused while claimsConfirmed is false");
+    check(read("hospitality").includes("noindex"), "hospitality: must be noindex while unconfirmed");
+  }
 }
 
 if (failures.length) { console.error(failures.map((f) => `FAIL ${f}`).join("\n")); process.exit(1); }
