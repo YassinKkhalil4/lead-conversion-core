@@ -124,6 +124,7 @@ const columns: Column<Salesperson>[] = [
   },
   {
     key: 'email',
+    optional: true,
     header: 'Email',
     width: colWidth.long,
     sortValue: (person) => person.email,
@@ -164,6 +165,7 @@ const columns: Column<Salesperson>[] = [
   },
   {
     key: 'priority',
+    optional: true,
     header: 'Priority',
     width: colWidth.num,
     numeric: true,
@@ -193,6 +195,7 @@ const columns: Column<Salesperson>[] = [
   },
   {
     key: 'avgAck',
+    optional: true,
     header: 'Avg to ack',
     width: colWidth.short,
     numeric: true,

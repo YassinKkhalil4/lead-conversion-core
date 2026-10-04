@@ -93,11 +93,11 @@ export const color = {
 export const radius = {
   none: 0,
   /** Tags and chips. */
-  sm: 6,
-  /** Controls and panels, the landing page's 10px control radius. */
-  md: 10,
-  /** Sheets and large surfaces. */
-  lg: 12,
+  sm: 4,
+  /** Controls: buttons, inputs, segmented controls. The landing page's 6px. */
+  md: 6,
+  /** Panels, tables and sheets. */
+  lg: 8,
   pill: 999,
 } as const;
 

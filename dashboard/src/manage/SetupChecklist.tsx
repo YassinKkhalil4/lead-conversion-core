@@ -62,7 +62,7 @@ export function SetupChecklist() {
       style={{
         borderWidth: 1,
         borderColor: color.line,
-        borderRadius: radius.md,
+        borderRadius: radius.lg,
         backgroundColor: color.paper,
         padding: layout.panel,
         gap: space.lg,
@@ -118,7 +118,6 @@ function StepRow({ step, number, onOpen }: { step: SetupStep; number: number; on
           size="label"
           weight="semibold"
           tone={step.done ? 'muted' : 'default'}
-          style={step.done ? { textDecorationLine: 'line-through' } : undefined}
         >
           {step.title}
         </Text>

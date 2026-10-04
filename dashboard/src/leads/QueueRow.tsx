@@ -24,9 +24,12 @@ import { queueClock } from '@/time/format';
 export const QueueRow = memo(function QueueRow({
   entry,
   onPress,
+  desk = false,
 }: {
   entry: RankedLead;
   onPress: (leadId: string) => void;
+  /** Wide screens: one aligned line per lead, in columns, not a stretched card. */
+  desk?: boolean;
 }) {
   const { lead, state } = entry;
   const pastSla = state === QueueState.UnacknowledgedPastSla;
@@ -62,6 +65,47 @@ export const QueueRow = memo(function QueueRow({
     >
       <View style={{ width: isUrgent ? layout.edgeMarker : 0, backgroundColor: edge }} />
 
+      {desk ? (
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: layout.rowX,
+            paddingLeft: isUrgent ? layout.rowX - layout.edgeMarker : layout.rowX,
+            paddingRight: layout.rowX,
+            paddingVertical: layout.rowY,
+          }}
+        >
+          <View style={{ flex: 2, minWidth: 0 }}>
+            <Text size="large" weight={isUrgent ? 'bold' : 'semibold'} numberOfLines={1} autoDirection>
+              {lead.contact.name || lead.contact.phoneE164}
+            </Text>
+          </View>
+          <View style={{ flex: 4, minWidth: 0 }}>
+            <Text size="small" tone="muted" numberOfLines={1} autoDirection>
+              {summary}
+            </Text>
+          </View>
+          <View style={{ width: 120, alignItems: 'flex-start' }}>
+            <Temperature value={lead.temperature} />
+          </View>
+          <View style={{ width: 120, alignItems: 'flex-end' }}>
+            <Text size="body" weight={isUrgent ? 'bold' : 'medium'} numeric style={{ color: clockColor }}>
+              {clock}
+            </Text>
+            {isUrgent ? (
+              <Text size="micro" weight="bold" style={{ color: clockColor, letterSpacing: tracking.label }}>
+                {pastSla ? 'PAST SLA' : 'NEEDS ACK'}
+              </Text>
+            ) : state === QueueState.AwaitingReply ? (
+              <Text size="micro" weight="medium" tone="faint" style={{ letterSpacing: tracking.label }}>
+                NO REPLY
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : (
       <View
         style={{
           flex: 1,
@@ -116,6 +160,7 @@ export const QueueRow = memo(function QueueRow({
           <Temperature value={lead.temperature} />
         </View>
       </View>
+      )}
     </Pressable>
   );
 });

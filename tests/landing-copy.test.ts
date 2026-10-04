@@ -161,3 +161,33 @@ describe('early-access form contract', () => {
   });
 });
 
+describe('product images', () => {
+  const html = read('index.html');
+  const imgs = [...html.matchAll(/<img\b[^>]*>/g)].map((m) => m[0]);
+  const real = imgs.filter((tag) => /src="assets\/product-/.test(tag));
+
+  it('are present, so the page is not text alone', () => {
+    expect(real.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(imgs.map((tag) => [/src="([^"]+)"/.exec(tag)?.[1] ?? tag, tag]))('%s has alt text and fixed dimensions', (_src, tag) => {
+    expect(tag).toMatch(/\balt="/);
+    expect(tag).toMatch(/\bwidth="\d+"/);
+    expect(tag).toMatch(/\bheight="\d+"/);
+  });
+
+  it('only references files that exist, including every srcset candidate', () => {
+    const refs = new Set<string>();
+    for (const m of html.matchAll(/(?:src|srcset)="([^"]*assets\/[^"]*)"/g)) {
+      for (const part of m[1]!.split(',')) refs.add(part.trim().split(/\s+/)[0]!);
+    }
+    expect(refs.size).toBeGreaterThan(4);
+    for (const ref of refs) expect(existsSync(join(LANDING, ref)), ref).toBe(true);
+  });
+
+  it('say that the screens show sample data', () => {
+    expect(html).toMatch(/lead queue[^<]*Sample data/);
+    expect(html).toMatch(/whole conversation attached[^<]*Sample data/);
+  });
+});
+

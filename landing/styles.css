@@ -165,7 +165,7 @@ input, textarea, select { caret-color: var(--accent); }
 }
 .header-inner { display: flex; align-items: center; gap: 2rem; min-height: 4rem; }
 .logo { display: inline-flex; align-items: center; line-height: 0; }
-.logo img { height: 24px; width: auto; }
+.logo img { height: 28px; width: auto; }
 .logo-dark { display: none; }
 @media (prefers-color-scheme: dark) {
   .logo-light { display: none; }
@@ -220,14 +220,35 @@ input, textarea, select { caret-color: var(--accent); }
   align-items: start;
 }
 @media (min-width: 960px) {
-  .hero-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(3rem, 7vw, 7rem); }
+  .hero-grid { gap: clamp(2.5rem, 4vw, 3.5rem); }
 }
-.hero-copy .lead { max-width: 26rem; }
+.hero-copy .lead { max-width: 30rem; }
+@media (min-width: 960px) {
+  /* Copy and buttons share a row; the product image takes the full measure
+     beneath them, wide enough that its own text stays readable. */
+  .hero-copy { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem 3rem; }
+  .hero-copy .hero-cta { margin-top: 0; flex: none; }
+}
 .hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem 2rem; margin-top: 2.5rem; }
 @media (max-width: 479px) { .hero-cta .btn { width: 100%; } }
 
 /* The sample lead, set as a ledger: one ink rule, hairlines, no panel. */
-.hero-figure { margin: 0; min-width: 0; }
+/* Real product images. A hairline and a long, tinted shadow lift them off the
+   page without a card around them. */
+.shot { margin: 0; min-width: 0; }
+.shot picture { display: block; }
+@media (max-width: 719px) { .shot img { max-width: 24rem; margin-inline: auto; } .shot .figure-caption { text-align: center; } }
+.shot img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 40px 70px -48px rgba(12, 31, 26, .55);
+  background: var(--surface);
+}
+.shot .figure-caption { margin-top: 1rem; }
+.team-shot { margin-top: clamp(2.5rem, 5vw, 4rem); }
+
+.ledger-figure { margin: clamp(2rem, 4vw, 3rem) 0 0; min-width: 0; max-width: 30rem; }
 .timeline-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
   padding-bottom: .9rem;
@@ -298,7 +319,9 @@ input, textarea, select { caret-color: var(--accent); }
 .how-grid { display: grid; gap: clamp(3rem, 6vw, 6rem); }
 @media (min-width: 960px) {
   .how-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); }
-  .how-grid .section-head { position: sticky; top: 7rem; align-self: start; }
+}
+@media (min-width: 960px) and (min-height: 920px) {
+  .how-grid .section-head { position: sticky; top: 6rem; align-self: start; }
 }
 .steps { border-top: 2px solid var(--ink); }
 .step { padding: 2.25rem 0 2.5rem; border-bottom: 1px solid var(--line-2); }
@@ -558,30 +581,34 @@ input, textarea, select { caret-color: var(--accent); }
    one explanation on the page, seen once per visit, so it may take a beat:
    a short rise per row, 70ms apart, and the booked row lands last. Nothing
    waits on it; the text is real and readable the whole time. */
+/* Hidden only when script is running to reveal it. */
+.js .timeline:not(.is-playing) li { opacity: 0; }
+@media print { .js .timeline li { opacity: 1; } }
+
 @keyframes ledger-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes ledger-fade { from { opacity: 0; } }
 @keyframes ledger-done { from { color: var(--ink); } }
 
 @media (prefers-reduced-motion: no-preference) {
-  .timeline li { animation: ledger-in 360ms var(--ease-out) backwards; }
-  .timeline li:nth-child(1) { animation-delay: 200ms; }
-  .timeline li:nth-child(2) { animation-delay: 270ms; }
-  .timeline li:nth-child(3) { animation-delay: 340ms; }
-  .timeline li:nth-child(4) { animation-delay: 410ms; }
-  .timeline li:nth-child(5) { animation-delay: 480ms; }
-  .timeline li:nth-child(6) { animation-delay: 550ms; }
-  .timeline li.tl-done time,
-  .timeline li.tl-done .tl-body { animation: ledger-done 400ms ease 800ms backwards; }
+  .timeline.is-playing li { animation: ledger-in 360ms var(--ease-out) backwards; }
+  .timeline.is-playing li:nth-child(1) { animation-delay: 200ms; }
+  .timeline.is-playing li:nth-child(2) { animation-delay: 270ms; }
+  .timeline.is-playing li:nth-child(3) { animation-delay: 340ms; }
+  .timeline.is-playing li:nth-child(4) { animation-delay: 410ms; }
+  .timeline.is-playing li:nth-child(5) { animation-delay: 480ms; }
+  .timeline.is-playing li:nth-child(6) { animation-delay: 550ms; }
+  .timeline.is-playing li.tl-done time,
+  .timeline.is-playing li.tl-done .tl-body { animation: ledger-done 400ms ease 800ms backwards; }
 }
 /* Reduced motion keeps the order and drops the movement. */
 @media (prefers-reduced-motion: reduce) {
   .btn:active { transform: none; }
-  .timeline li { animation: ledger-fade 200ms ease backwards; }
-  .timeline li:nth-child(2) { animation-delay: 60ms; }
-  .timeline li:nth-child(3) { animation-delay: 120ms; }
-  .timeline li:nth-child(4) { animation-delay: 180ms; }
-  .timeline li:nth-child(5) { animation-delay: 240ms; }
-  .timeline li:nth-child(6) { animation-delay: 300ms; }
+  .timeline.is-playing li { animation: ledger-fade 200ms ease backwards; }
+  .timeline.is-playing li:nth-child(2) { animation-delay: 60ms; }
+  .timeline.is-playing li:nth-child(3) { animation-delay: 120ms; }
+  .timeline.is-playing li:nth-child(4) { animation-delay: 180ms; }
+  .timeline.is-playing li:nth-child(5) { animation-delay: 240ms; }
+  .timeline.is-playing li:nth-child(6) { animation-delay: 300ms; }
 }
 
 /* Moving between pages crossfades the content in 160ms and leaves the header

@@ -10,7 +10,7 @@ import { Text } from '@/design/Text';
 import { colWidth, color, layout, radius, space } from '@/design/tokens';
 import { BarChart, DistributionBar, StatTile } from '@/desk/charts';
 import { type Column, DataTable } from '@/desk/DataTable';
-import { Page, Panel, Section } from '@/desk/Page';
+import { Page, Panel, Section, useIsDesk } from '@/desk/Page';
 import { atLeast, countLabel, optionalNumber, ratioLabel } from '@/desk/safe';
 import { useLeadList } from '@/leads/hooks';
 import { useSalespeople, useSummary } from '@/manage/hooks';
@@ -31,6 +31,7 @@ const TEMPERATURE_COLOR: Record<string, string> = {
 };
 
 export default function ManagerOverview() {
+  const isDesk = useIsDesk();
   const router = useRouter();
   const [period, setPeriod] = useState<PeriodKey>('today');
 
@@ -103,8 +104,9 @@ export default function ManagerOverview() {
             <View
               key={index}
               style={{
-                flexGrow: index === 0 ? 2 : 1,
-                flexBasis: index === 0 ? 280 : 180,
+                flexGrow: index === 0 && isDesk ? 2 : index === 0 ? 0 : 1,
+                flexBasis: index === 0 && !isDesk ? '100%' : 0,
+                minWidth: index === 0 ? 0 : 150,
                 padding: layout.panel,
                 borderWidth: 1,
                 borderColor: color.line2,
@@ -375,6 +377,7 @@ const teamColumns: Column<TeamRow>[] = [
   },
   {
     key: 'avgAck',
+    optional: true,
     header: 'Avg to ack',
     width: colWidth.short,
     numeric: true,
@@ -389,6 +392,7 @@ const teamColumns: Column<TeamRow>[] = [
   },
   {
     key: 'priority',
+    optional: true,
     header: 'Priority',
     width: colWidth.num,
     numeric: true,

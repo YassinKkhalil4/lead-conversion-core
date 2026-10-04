@@ -9,7 +9,7 @@ import { Button } from '@/design/Button';
 import { DetailSkeleton } from '@/design/Skeleton';
 import { ErrorState, InlineNotice } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
-import { color, hitSlop, radius, space } from '@/design/tokens';
+import { color, hitSlop, layout, radius, space } from '@/design/tokens';
 import { CallPrep } from '@/leads/detail/CallPrep';
 import { Collapsible } from '@/leads/detail/Collapsible';
 import { ConversationTab } from '@/leads/detail/ConversationTab';
@@ -83,108 +83,162 @@ export default function CallPrepScreen() {
   const inboundCount = detail.messages.filter((message) => message.direction === 'inbound').length;
   const answered = detail.qualification.answers.filter((answer) => answer.answered).length;
 
+  const notices = (
+    <>
+      {acknowledge.isPaused ? (
+        <InlineNotice text="Acknowledgement saved on this device. It will be sent as soon as you are back online." />
+      ) : null}
+      {actionExplained ? <ErrorState title={actionExplained.title} detail={actionExplained.detail} /> : null}
+    </>
+  );
+
+  const prep = (
+    <CallPrep
+      lead={lead}
+      answers={detail.qualification.answers}
+      waitingSeconds={ranked.needsAcknowledgement ? ranked.waitingSeconds : null}
+      acknowledging={acknowledge.isPending}
+      onAcknowledge={() => void run(() => acknowledge.mutateAsync(leadId))}
+      changingStage={setStage.isPending}
+      onChangeStage={(stage) => void run(() => setStage.mutateAsync(stage))}
+    />
+  );
+
+  /* Everything below here is reference material. On a phone it starts closed,
+     so the screen can be read in the ten seconds before dialling. On a desk
+     there is room beside the call prep, so the conversation starts open. */
+  const reference = (
+    <>
+      <Collapsible
+        title="Conversation"
+        note={`${nounCount(detail.messages.length, 'message')} · ${inboundCount} from them`}
+        initiallyOpen={isDesk}
+      >
+        <ConversationTab
+          lead={lead}
+          messages={detail.messages}
+          sending={reply.isPending}
+          sendError={reply.error}
+          onSend={async ({ text, requestKey }) => {
+            await reply.mutateAsync({ requestKey, payload: { kind: 'text', text } });
+          }}
+        />
+      </Collapsible>
+
+      <Collapsible title="Qualification" note={`${answered} of ${detail.qualification.answers.length} answered`}>
+        <QualificationTab qualification={detail.qualification} />
+      </Collapsible>
+
+      <Collapsible
+        title="Why this score"
+        note={detail.latestScoreRun ? `${detail.latestScoreRun.score} · ${detail.latestScoreRun.temperature}` : 'not scored'}
+      >
+        <ScoreTab scoreRun={detail.latestScoreRun} />
+      </Collapsible>
+
+      <Collapsible
+        title="Why you got this lead"
+        note={
+          detail.latestRoutingRun
+            ? `${nounCount(detail.latestRoutingRun.candidates.length, 'candidate')} considered`
+            : 'not routed'
+        }
+      >
+        <RoutingTab routingRun={detail.latestRoutingRun} />
+      </Collapsible>
+
+      <Collapsible title="Activity" note={nounCount(detail.activity.length, 'event')}>
+        <ActivityTab activity={detail.activity} />
+      </Collapsible>
+    </>
+  );
+
+  /* Secondary actions are text controls, not buttons: they are rare and must
+     not compete with the one action in the call prep. */
+  const secondary = (
+    <View
+      style={{
+        borderTopWidth: 1,
+        borderTopColor: color.line2,
+        paddingHorizontal: space.xl,
+        paddingVertical: space.xl,
+        gap: space.lg,
+      }}
+    >
+      <Button
+        label={lead.humanTakeover ? 'Hand back to the engine' : 'Take over the conversation'}
+        variant="text"
+        busy={takeover.isPending}
+        onPress={() => void run(() => takeover.mutateAsync(!lead.humanTakeover))}
+      />
+      <Button
+        label={lead.stopFollowUp ? 'Follow-ups already stopped' : 'Stop follow-ups'}
+        variant="text"
+        disabled={lead.stopFollowUp}
+        busy={stopFollowUp.isPending}
+        onPress={() => void run(() => stopFollowUp.mutateAsync('stopped_from_dashboard'))}
+      />
+      <Button
+        label={lead.status === 'closed' ? `Closed: ${lead.closedStatus}` : 'Close this lead'}
+        variant="text"
+        disabled={lead.status === 'closed'}
+        onPress={() => setClosing(true)}
+      />
+    </View>
+  );
+
+  const surface = {
+    backgroundColor: color.paper,
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  } as const;
+
   return (
     <View style={{ flex: 1, backgroundColor: color.tint }}>
       <ScrollView
         style={{ flex: 1 }}
-        // A phone-width column reads better than a full-width one on a desk:
-        // the facts, the opener and the actions stay within one glance.
-        contentContainerStyle={{ paddingTop: insets.top + space.sm, width: '100%', maxWidth: isDesk ? 860 : undefined, alignSelf: 'center' }}
+        contentContainerStyle={
+          isDesk
+            ? {
+                padding: layout.pageDesk,
+                paddingBottom: insets.bottom + space.huge,
+                width: '100%',
+                maxWidth: 1120,
+                alignSelf: 'center',
+                gap: space.lg,
+              }
+            : { paddingTop: insets.top + space.sm, width: '100%', alignSelf: 'center' }
+        }
         refreshControl={
           <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={color.ink2} />
         }
       >
-        <View style={{ backgroundColor: color.paper }}>
-          <BackLink onPress={() => router.back()} />
-        </View>
-
-        {acknowledge.isPaused ? (
-          <InlineNotice text="Acknowledgement saved on this device. It will be sent as soon as you are back online." />
-        ) : null}
-        {actionExplained ? <ErrorState title={actionExplained.title} detail={actionExplained.detail} /> : null}
-
-        <CallPrep
-          lead={lead}
-          answers={detail.qualification.answers}
-          waitingSeconds={ranked.needsAcknowledgement ? ranked.waitingSeconds : null}
-          acknowledging={acknowledge.isPending}
-          onAcknowledge={() => void run(() => acknowledge.mutateAsync(leadId))}
-          changingStage={setStage.isPending}
-          onChangeStage={(stage) => void run(() => setStage.mutateAsync(stage))}
-        />
-
-        {/* Everything below here is reference material and starts closed. */}
-        <Collapsible title="Conversation" note={`${nounCount(detail.messages.length, 'message')} · ${inboundCount} from them`}>
-          <ConversationTab
-            lead={lead}
-            messages={detail.messages}
-            sending={reply.isPending}
-            sendError={reply.error}
-            onSend={async ({ text, requestKey }) => {
-              await reply.mutateAsync({ requestKey, payload: { kind: 'text', text } });
-            }}
-          />
-        </Collapsible>
-
-        <Collapsible title="Qualification" note={`${answered} of ${detail.qualification.answers.length} answered`}>
-          <QualificationTab qualification={detail.qualification} />
-        </Collapsible>
-
-        <Collapsible
-          title="Why this score"
-          note={detail.latestScoreRun ? `${detail.latestScoreRun.score} · ${detail.latestScoreRun.temperature}` : 'not scored'}
-        >
-          <ScoreTab scoreRun={detail.latestScoreRun} />
-        </Collapsible>
-
-        <Collapsible
-          title="Why you got this lead"
-          note={
-            detail.latestRoutingRun
-              ? `${nounCount(detail.latestRoutingRun.candidates.length, 'candidate')} considered`
-              : 'not routed'
-          }
-        >
-          <RoutingTab routingRun={detail.latestRoutingRun} />
-        </Collapsible>
-
-        <Collapsible title="Activity" note={nounCount(detail.activity.length, 'event')}>
-          <ActivityTab activity={detail.activity} />
-        </Collapsible>
-
-        {/* Secondary actions are text controls, not buttons: they are rare and
-            must not compete with the one action above. */}
-        <View
-          style={{
-            borderTopWidth: 1,
-            borderTopColor: color.line2,
-            paddingHorizontal: space.xl,
-            paddingVertical: space.xl,
-            gap: space.lg,
-          }}
-        >
-          <Button
-            label={lead.humanTakeover ? 'Hand back to the engine' : 'Take over the conversation'}
-            variant="text"
-            busy={takeover.isPending}
-            onPress={() => void run(() => takeover.mutateAsync(!lead.humanTakeover))}
-          />
-          <Button
-            label={lead.stopFollowUp ? 'Follow-ups already stopped' : 'Stop follow-ups'}
-            variant="text"
-            disabled={lead.stopFollowUp}
-            busy={stopFollowUp.isPending}
-            onPress={() => void run(() => stopFollowUp.mutateAsync('stopped_from_dashboard'))}
-          />
-          <Button
-            label={lead.status === 'closed' ? `Closed: ${lead.closedStatus}` : 'Close this lead'}
-            variant="text"
-            disabled={lead.status === 'closed'}
-            onPress={() => setClosing(true)}
-          />
-        </View>
-
-        <View style={{ height: insets.bottom + space.xl }} />
+        {isDesk ? (
+          <>
+            <BackLink onPress={() => router.back()} flush />
+            {notices}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: layout.sectionGap }}>
+              <View style={[{ width: 420, flexShrink: 0 }, surface]}>
+                <View style={{ paddingTop: space.md }}>{prep}</View>
+                {secondary}
+              </View>
+              <View style={[{ flex: 1, minWidth: 0 }, surface]}>{reference}</View>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ backgroundColor: color.paper }}>
+              <BackLink onPress={() => router.back()} />
+            </View>
+            {notices}
+            {prep}
+            {reference}
+            {secondary}
+            <View style={{ height: insets.bottom + space.xl }} />
+          </>
+        )}
       </ScrollView>
 
       <Modal visible={closing} transparent animationType="fade" onRequestClose={() => setClosing(false)}>
@@ -229,14 +283,14 @@ export default function CallPrepScreen() {
   );
 }
 
-function BackLink({ onPress }: { onPress: () => void }) {
+function BackLink({ onPress, flush = false }: { onPress: () => void; flush?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
       hitSlop={hitSlop}
       accessibilityRole="button"
       accessibilityLabel="Back to the queue"
-      style={{ paddingHorizontal: space.xl, paddingVertical: space.md }}
+ style={{ paddingHorizontal: flush ? 0 : space.xl, paddingVertical: space.md, alignSelf: 'flex-start' }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
         <Icon name="arrowLeft" size={14} color={color.ink2} />

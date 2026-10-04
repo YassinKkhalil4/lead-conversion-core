@@ -59,6 +59,7 @@ export default function Login() {
         label="Email"
         error={errors.email?.message}
         inputProps={{
+          placeholder: 'you@brokerage.com',
           autoCapitalize: 'none',
           autoComplete: 'email',
           autoCorrect: false,
@@ -74,6 +75,7 @@ export default function Login() {
         label="Password"
         error={errors.password?.message}
         inputProps={{
+          placeholder: 'Your password',
           autoCapitalize: 'none',
           autoComplete: 'current-password',
           secureTextEntry: true,
@@ -100,41 +102,61 @@ export default function Login() {
           contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: layout.pageDesk }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={{ width: '100%', maxWidth: 400, gap: layout.sectionGap }}>
-            <View style={{ gap: layout.rowY }}>
-              <Lockup height={30} />
-              <Text size="body" tone="muted">
-                Lead inbox for WhatsApp qualification.
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 960,
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: space.huge,
+            }}
+          >
+            {/* The statement: what this screen is for, in the type the rest of
+                the app uses for a page's one big line. */}
+            <View style={{ flexGrow: 1, flexBasis: 360, gap: layout.sectionGap }}>
+              <Lockup height={32} />
+              <View style={{ gap: layout.rowY }}>
+                <Text size="display" weight="semibold" style={{ letterSpacing: -1.6 }}>
+                  Your leads, ranked by who needs you now.
+                </Text>
+                <Text size="large" tone="muted">
+                  Lead inbox for WhatsApp qualification.
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ flexGrow: 1, flexBasis: 360, maxWidth: 420, gap: layout.rowY }}>
+              <Text size="title" weight="semibold" role="heading" aria-level={1}>
+                Sign in
+              </Text>
+              <View
+                style={{
+                  padding: layout.panel + 4,
+                  gap: layout.panel,
+                  borderWidth: 1,
+                  borderColor: color.line,
+                  borderRadius: radius.lg,
+                  backgroundColor: color.paper,
+                }}
+              >
+                {fields}
+                {explained ? (
+                  <View style={{ gap: space.xs }}>
+                    <Text size="small" weight="semibold" style={{ color: color.warn }}>
+                      {explained.title}
+                    </Text>
+                    <Text size="small" tone="muted">
+                      {explained.detail}
+                    </Text>
+                  </View>
+                ) : null}
+                <Button label={submitLabel} variant="primary" size="large" grow busy={isSubmitting} onPress={() => void onSubmit()} />
+              </View>
+              <Text size="micro" tone="faint">
+                Accounts are created by your admin. There is no self-service sign-up.
               </Text>
             </View>
-
-            <View
-              style={{
-                padding: layout.panel,
-                gap: layout.panel,
-                borderWidth: 1,
-                borderColor: color.line2,
-                borderRadius: radius.md,
-                backgroundColor: color.paper,
-              }}
-            >
-              {fields}
-              {explained ? (
-                <View style={{ gap: space.xs }}>
-                  <Text size="small" weight="semibold" style={{ color: color.warn }}>
-                    {explained.title}
-                  </Text>
-                  <Text size="small" tone="muted">
-                    {explained.detail}
-                  </Text>
-                </View>
-              ) : null}
-              <Button label={submitLabel} variant="primary" grow busy={isSubmitting} onPress={() => void onSubmit()} />
-            </View>
-
-            <Text size="micro" tone="faint">
-              Accounts are created by your admin. There is no self-service sign-up.
-            </Text>
           </View>
         </ScrollView>
       </View>

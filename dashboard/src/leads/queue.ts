@@ -1,5 +1,5 @@
-import type { Lead } from '@/api/types';
-import { indexAnswerMap, summaryLine } from '@/leads/qualification';
+import type { Lead } from '../api/types';
+import { indexAnswerMap, summaryLine } from './qualification';
 
 /**
  * The backend schedules its first assignment reminder 15 minutes after
@@ -146,7 +146,10 @@ export interface DayCounts {
  * Counted from the leads currently loaded, which is exact for a salesperson's
  * own queue and an undercount only if they have more leads than a page holds.
  */
-export function countToday(leads: Lead[], now: Date = new Date()): DayCounts {
+export function countToday(input: Lead[], now: Date = new Date()): DayCounts {
+  // The queue loads two lists, the unacknowledged leads and the recent ones, and
+  // a lead can be in both. Count each lead once, as `rankLeads` already does.
+  const leads = [...new Map(input.map((lead) => [lead.leadId, lead])).values()];
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const isToday = (value: string | null | undefined): boolean =>
     Boolean(value) && Date.parse(value as string) >= dayStart;

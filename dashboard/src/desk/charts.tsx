@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { Label, Text } from '@/design/Text';
 import { color, layout, radius, space } from '@/design/tokens';
+import { useIsDesk } from '@/desk/Page';
 import { duration } from '@/time/format';
 
 /**
@@ -206,17 +207,22 @@ export function StatTile({
   const unchanged = delta === 0;
 
   const late = overdue && value !== null && value > 0;
+  const desk = useIsDesk();
 
   return (
     <View
       style={{
-        flexGrow: primary ? 2 : 1,
-        flexBasis: primary ? 280 : 180,
+        // Wide: the lead tile takes two shares of one row. Narrow: it takes the
+        // whole first row and the rest share the row beneath it, so the strip
+        // never wraps into a lone orphan.
+        flexGrow: primary && desk ? 2 : primary ? 0 : 1,
+        flexBasis: primary && !desk ? '100%' : 0,
+        minWidth: primary ? 0 : 150,
         gap: space.sm,
         padding: layout.panel,
         borderWidth: 1,
         borderColor: color.line,
-        borderRadius: radius.md,
+        borderRadius: radius.lg,
         backgroundColor: color.paper,
       }}
     >

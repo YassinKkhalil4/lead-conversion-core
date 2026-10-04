@@ -63,3 +63,38 @@ is the only small-caps label on the page.
 The skill states that dashboards and dense product UI are not its target. The
 app screens therefore take only what transfers (type scale, spacing, hierarchy
 and one corner rule through the existing token file) and keep their structure.
+
+## Revision after review (same day)
+
+A critical review of the live site and the app found problems the first pass
+missed. Both were fixed.
+
+**Landing page.** The ledger redesign was clean but austere: no imagery anywhere,
+which the Taste skill's own checklist rules out ("real images, no pure-text
+minimalism"), and several dead zones beside headings.
+
+- The product is now shown as it is: real screenshots of the dashboard (sample
+  data, labelled as such), not div-built mock-ups. The hero carries the lead
+  queue at full container width, so its text stays readable. The team section
+  carries the lead detail. Small screens get the phone's own layout through
+  `<picture>`, because a 1280px window squeezed to 350px is unreadable.
+- The 30-second ledger moved from the hero into "How it works", where it fills
+  the sticky column beside the four steps it proves. It plays once, when it
+  scrolls into view; without script it is simply visible, and print shows it.
+- The sticky column only sticks when the viewport is tall enough to hold it.
+
+**Dashboard.** It had never had a visual pass, and its tokens still described the
+old landing page (10 to 12px radii, bordered cards). Defects found and fixed:
+
+| Defect | Fix |
+|---|---|
+| Leads on a desktop was a phone layout stretched to 1,200px, with a 1,050px "Unacknowledged" button | A real page: title, filters at the top, ruled table with aligned columns. Phones keep the thumb-reach layout |
+| Lead detail was a phone column jammed at the top of a desktop | Two columns: call prep, and the conversation open beside it |
+| Table header rule stopped short of the rows | Columns share spare width; the rule belongs to the row |
+| Salespeople table clipped 4 of 10 columns at 1440px | Optional columns drop out when they do not fit, and a footnote names them |
+| Overview tiles wrapped 3 + 1 on tablet | Lead tile on its own row, then three equal |
+| Strikethrough on finished checklist steps | Quiet text and the check |
+| Brand drawn twice on phone and tablet | One |
+| Plain login | A statement beside the form, and placeholders |
+| "11 received today" for 8 leads | `countToday` counted a lead once per list it appeared in |
+| Radii out of step with the site | One scale: 4, 6, 8 |

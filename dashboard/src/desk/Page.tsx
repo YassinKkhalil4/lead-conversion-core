@@ -103,7 +103,7 @@ export function Panel({ head, children }: { head?: string; children: ReactNode }
         backgroundColor: color.paper,
         borderWidth: 1,
         borderColor: color.line,
-        borderRadius: radius.md,
+        borderRadius: radius.lg,
         overflow: 'hidden',
       }}
     >

@@ -32,6 +32,7 @@
 <link rel="icon" href="assets/kadensio-icon-small.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/kadensio-icon.svg">
 <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<script>document.documentElement.className += ' js';</script>
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
 {
@@ -188,20 +189,16 @@
             <a class="link-arrow link-lg" href="#waitlist">Get early access</a>
           </p>
         </div>
-        <figure class="hero-figure" aria-labelledby="timeline-caption">
-          <div class="timeline-head">
-            <p class="timeline-title">New lead</p>
-            <p class="timeline-total">30s end to end</p>
-          </div>
-          <ol class="timeline">
-            <li><time>02:00:04</time><p class="tl-body">Message received<span class="tl-meta">On your WhatsApp number</span></p></li>
-            <li><time>02:00:05</time><p class="tl-body">Language chosen<span class="tl-meta">English, picked by the buyer</span></p></li>
-            <li><time>02:00:24</time><p class="tl-body">Nine answers recorded<span class="tl-meta">Apartment, Dubai Marina, up to 4 million, installments</span></p></li>
-            <li><time>02:00:25</time><p class="tl-body">Scored 93, hot<span class="tl-meta">Ten factors, each with a written reason</span></p></li>
-            <li><time>02:00:26</time><p class="tl-body">Sent to Mariam Haddad<span class="tl-meta">Covers Dubai Marina, speaks English</span></p></li>
-            <li class="tl-done"><time>02:00:34</time><p class="tl-body">Viewing booked<span class="tl-meta">Thursday 11:00, in your Google Calendar</span></p></li>
-          </ol>
-          <figcaption class="figure-caption" id="timeline-caption">Sample timeline for one lead.</figcaption>
+        <figure class="shot hero-shot">
+          <picture>
+            <source media="(max-width: 719px)" srcset="assets/product-queue-phone.jpg" width="390" height="780">
+            <img src="assets/product-queue-1280.jpg"
+                 srcset="assets/product-queue-1280.jpg 1280w, assets/product-queue-2560.jpg 2560w"
+                 sizes="(min-width: 1200px) 1104px, 92vw"
+                 width="1280" height="800" fetchpriority="high" decoding="async"
+                 alt="The Kadensio lead queue: eight leads ranked by urgency, each with what the buyer wants, a temperature and how long they have been waiting. Sample data.">
+          </picture>
+          <figcaption class="figure-caption">The lead queue, as your team sees it. Sample data.</figcaption>
         </figure>
       </div>
     </div>
@@ -255,6 +252,21 @@
       <div class="section-head">
         <h2 id="how-h">Four steps, with nobody on shift.</h2>
         <p class="lead">It runs a fixed script on the official Meta WhatsApp Business Platform, so it cannot invent a price, a payment plan or a unit that does not exist.</p>
+        <figure class="ledger-figure" aria-labelledby="timeline-caption">
+          <div class="timeline-head">
+            <p class="timeline-title">New lead</p>
+            <p class="timeline-total">30s end to end</p>
+          </div>
+          <ol class="timeline">
+            <li><time>02:00:04</time><p class="tl-body">Message received<span class="tl-meta">On your WhatsApp number</span></p></li>
+            <li><time>02:00:05</time><p class="tl-body">Language chosen<span class="tl-meta">English, picked by the buyer</span></p></li>
+            <li><time>02:00:24</time><p class="tl-body">Nine answers recorded<span class="tl-meta">Apartment, Dubai Marina, up to 4 million, installments</span></p></li>
+            <li><time>02:00:25</time><p class="tl-body">Scored 93, hot<span class="tl-meta">Ten factors, each with a written reason</span></p></li>
+            <li><time>02:00:26</time><p class="tl-body">Sent to Mariam Haddad<span class="tl-meta">Covers Dubai Marina, speaks English</span></p></li>
+            <li class="tl-done"><time>02:00:34</time><p class="tl-body">Viewing booked<span class="tl-meta">Thursday 11:00, in your Google Calendar</span></p></li>
+          </ol>
+          <figcaption class="figure-caption" id="timeline-caption">Sample timeline for one lead.</figcaption>
+        </figure>
       </div>
       <ol class="steps">
         <li class="step">
@@ -298,6 +310,17 @@
         <h2 id="team-h">Your salespeople see the hottest lead first.</h2>
         <p class="lead">Every lead lands in a web dashboard with the whole conversation attached, so the first call starts where the qualification ended.</p>
       </div>
+      <figure class="shot team-shot">
+        <picture>
+          <source media="(max-width: 719px)" srcset="assets/product-detail-phone.jpg" width="390" height="780">
+          <img src="assets/product-detail-1280.jpg"
+               srcset="assets/product-detail-1280.jpg 1280w, assets/product-detail-2560.jpg 2560w"
+               sizes="(min-width: 1200px) 1104px, 92vw"
+               width="1280" height="800" loading="lazy" decoding="async"
+               alt="A lead in Kadensio: the buyer's phone number, four facts, a suggested opening line and the full WhatsApp conversation beside them. Sample data.">
+        </picture>
+        <figcaption class="figure-caption">One lead, with the whole conversation attached. Sample data.</figcaption>
+      </figure>
       <div class="team-grid">
         <div class="team-main">
           <h3>Hot leads first</h3>
@@ -541,6 +564,23 @@
 <script>
 (function () {
   'use strict';
+
+  // The ledger plays once, when it scrolls into view. Without script it is
+  // simply visible: the `js` class that hides it before play is never set.
+  var ledger = document.querySelector('.timeline');
+  if (ledger) {
+    if ('IntersectionObserver' in window) {
+      var seen = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) {
+          ledger.classList.add('is-playing');
+          seen.disconnect();
+        }
+      }, { threshold: 0.35 });
+      seen.observe(ledger);
+    } else {
+      ledger.classList.add('is-playing');
+    }
+  }
 
   // Relative on purpose. Caddy serves this path on kadensio.com and on
   // www.kadensio.com, and a cross-origin call from one to the other is blocked

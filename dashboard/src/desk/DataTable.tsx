@@ -1,9 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Skeleton } from '@/design/Skeleton';
 import { EmptyState } from '@/design/StateBlock';
 import { Text } from '@/design/Text';
 import { color, layout, radius } from '@/design/tokens';
+import { DESK_BREAKPOINT } from '@/desk/Page';
 import { Icon } from '@/design/Icon';
 import { isHovered, surfaceTransition } from '@/design/motion';
 
@@ -15,7 +16,30 @@ export interface Column<T> {
   numeric?: boolean;
   /** Returning null makes the column unsortable. */
   sortValue?: (row: T) => string | number | null;
+  /**
+   * Lower-value columns the table may drop, right to left, when the full set
+   * does not fit the window. The table says which it dropped, and the same
+   * values stay reachable in the row's own form.
+   */
+  optional?: boolean;
   render: (row: T) => ReactNode;
+}
+
+/** The side rail's width, which wide screens spend before the table sees any. */
+const RAIL = 232;
+
+/** Drops optional columns, last first, until the rest fit `available`. */
+export function fitColumns<T>(columns: Column<T>[], available: number): { shown: Column<T>[]; hidden: Column<T>[] } {
+  const shown = [...columns];
+  const hidden: Column<T>[] = [];
+  const total = () => shown.reduce((sum, column) => sum + column.width, 0);
+  while (total() > available) {
+    const index = [...shown].reverse().findIndex((column) => column.optional);
+    if (index === -1) break;
+    const at = shown.length - 1 - index;
+    hidden.unshift(...shown.splice(at, 1));
+  }
+  return { shown, hidden };
 }
 
 type Direction = 'asc' | 'desc';
@@ -25,12 +49,14 @@ type Direction = 'asc' | 'desc';
  * one-handed on a phone; this is read at a desk, where columns and sorting are
  * what make a team comparable.
  *
- * It scrolls horizontally rather than collapsing, so a narrow window hides no
- * column and the reader keeps the same mental model at every width.
+ * Columns keep fixed minimum widths and the table scrolls sideways when they
+ * do not fit. The exception is a column marked `optional`: those drop out,
+ * last first, only when the window cannot hold the full set, and a footnote
+ * names whatever was dropped so nothing disappears without a word.
  */
 export function DataTable<T>({
   rows,
-  columns,
+  columns: allColumns,
   keyOf,
   onRowPress,
   emptyTitle,
@@ -66,6 +92,10 @@ export function DataTable<T>({
   initialSort?: { key: string; direction: Direction };
 }) {
   const [sort, setSort] = useState<{ key: string; direction: Direction } | null>(initialSort ?? null);
+  const { width: windowWidth } = useWindowDimensions();
+  const desk = windowWidth >= DESK_BREAKPOINT;
+  const available = windowWidth - (desk ? RAIL + layout.pageDesk * 2 : layout.pagePhone * 2) - 2;
+  const { shown: columns, hidden } = useMemo(() => fitColumns(allColumns, available), [allColumns, available]);
 
   const sorted = useMemo(() => {
     if (!sort) return rows;
@@ -103,7 +133,7 @@ export function DataTable<T>({
               <View
                 key={column.key}
                 style={{
-                  width: column.width,
+                  ...cellBox(column.width),
                   paddingHorizontal: layout.rowX,
                   paddingVertical: layout.rowY,
                   alignItems: column.numeric ? 'flex-end' : 'flex-start',
@@ -143,7 +173,7 @@ export function DataTable<T>({
             <View
               key={column.key}
               style={{
-                width: column.width,
+                ...cellBox(column.width),
                 paddingHorizontal: layout.rowX,
                 paddingVertical: layout.rowY,
                 minHeight: layout.tableRow,
@@ -189,8 +219,25 @@ export function DataTable<T>({
             </Pressable>
           );
         })}
+      {hidden.length > 0 ? (
+        <View style={{ paddingHorizontal: layout.rowX, paddingVertical: layout.rowY - 2, borderTopWidth: 1, borderTopColor: color.line2 }}>
+          <Text size="micro" tone="faint">
+            {hidden.length === 1 ? '1 column is' : `${hidden.length} columns are`} hidden at this width: {hidden.map((column) => column.header).join(', ')}.
+          </Text>
+        </View>
+      ) : null}
     </Frame>
   );
+}
+
+/**
+ * A column's box: it never shrinks below its width, and any spare width in the
+ * frame is shared equally, so the grid fills the measure instead of leaving a
+ * ragged gap on the right. Header, body and skeleton cells use the same box, so
+ * their edges always line up.
+ */
+function cellBox(width: number) {
+  return { flexBasis: width, minWidth: width, flexGrow: 1, flexShrink: 0 } as const;
 }
 
 /**
@@ -209,7 +256,7 @@ function Frame({ children, minWidth }: { children: ReactNode; minWidth?: number 
           minWidth,
           borderWidth: 1,
           borderColor: color.line,
-          borderRadius: radius.md,
+          borderRadius: radius.lg,
           overflow: 'hidden',
           backgroundColor: color.paper,
         }}
@@ -230,7 +277,7 @@ function HeaderRow<T>({
   onSort?: (update: (current: { key: string; direction: Direction } | null) => { key: string; direction: Direction }) => void;
 }) {
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: color.paper }}>
+    <View style={{ flexDirection: 'row', backgroundColor: color.paper, borderBottomWidth: 1, borderBottomColor: color.line }}>
       {columns.map((column) => {
         const sortable = Boolean(column.sortValue) && Boolean(onSort);
         const active = sort?.key === column.key;
@@ -247,13 +294,11 @@ function HeaderRow<T>({
               )
             }
             style={{
-              width: column.width,
+              ...cellBox(column.width),
               paddingHorizontal: layout.rowX,
               // Tighter than a row, so the header reads as one rather than as
               // a first row that happens to be shouting.
               paddingVertical: layout.headerY,
-              borderBottomWidth: 1,
-              borderBottomColor: color.line,
               backgroundColor: color.paper,
               alignItems: column.numeric ? 'flex-end' : 'flex-start',
             }}

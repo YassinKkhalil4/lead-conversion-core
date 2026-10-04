@@ -9,8 +9,9 @@ import { Lockup } from '@/design/Mark';
 import { isHovered, surfaceTransition } from '@/design/motion';
 import { LeadListSkeleton, Skeleton } from '@/design/Skeleton';
 import { EmptyState, ErrorState } from '@/design/StateBlock';
-import { Text } from '@/design/Text';
-import { useIsDesk } from '@/desk/Page';
+import { Button } from '@/design/Button';
+import { Label, Text } from '@/design/Text';
+import { Page, useIsDesk } from '@/desk/Page';
 import { color, hitSlop, layout, radius, space, tracking } from '@/design/tokens';
 import { QueueRow } from '@/leads/QueueRow';
 import { useLeadList, useUnacknowledgedLeads } from '@/leads/hooks';
@@ -34,7 +35,11 @@ export default function Queue() {
   const [scope, setScope] = useState<Scope>(user?.role === 'salesperson' ? 'mine' : 'all');
   // On a wide screen everyone but a salesperson has the side rail, which
   // already carries the mark and sign-out.
-  const hasRail = useIsDesk() && user?.role !== 'salesperson';
+  const isDeskScreen = useIsDesk();
+  const hasRail = isDeskScreen && user?.role !== 'salesperson';
+  // Managers on a narrow screen already have the drawer's top bar, which carries
+  // the mark and the brokerage. Only a salesperson, who has no bar, needs it here.
+  const showsLockup = user?.role === 'salesperson';
   const [filter, setFilter] = useState<Filter>('none');
 
   const baseFilters = useMemo<LeadFilters>(
@@ -76,6 +81,102 @@ export default function Queue() {
     void unacknowledged.refetch();
   };
 
+  if (hasRail) {
+    const summary = loading
+      ? undefined
+      : urgent > 0
+        ? `${urgent} ${urgent === 1 ? 'assignment needs' : 'assignments need'} you now. ${today.received} received today.`
+        : `Nothing is past its SLA. ${today.received} received · ${today.acknowledged} acknowledged · ${today.replied} replied today.`;
+
+    return (
+      <Page
+        title="Leads"
+        subtitle={summary}
+        actions={
+          <>
+            <Segmented
+              options={[
+                { key: 'all', label: 'Everyone' },
+                { key: 'mine', label: 'Mine' },
+              ]}
+              value={scope}
+              onChange={(next) => setScope(next as Scope)}
+            />
+            <Segmented
+              options={[
+                { key: 'none', label: 'All' },
+                { key: 'pastSla', label: 'Past SLA' },
+                { key: 'unacknowledged', label: 'Unacknowledged' },
+              ]}
+              value={filter}
+              onChange={(next) => setFilter(next as Filter)}
+            />
+          </>
+        }
+      >
+        {loading ? (
+          <View style={{ borderWidth: 1, borderColor: color.line, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: color.paper }}>
+            <LeadListSkeleton rows={7} />
+          </View>
+        ) : explained ? (
+          <ErrorState title={explained.title} detail={explained.detail} onRetry={refreshAll} />
+        ) : (
+          <View style={{ borderWidth: 1, borderColor: color.line, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: color.paper }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: layout.rowX,
+                paddingHorizontal: layout.rowX,
+                paddingVertical: layout.headerY,
+                borderBottomWidth: 1,
+                borderBottomColor: color.line,
+              }}
+            >
+              <View style={{ flex: 2 }}>
+                <Label>Lead</Label>
+              </View>
+              <View style={{ flex: 4 }}>
+                <Label>What they want</Label>
+              </View>
+              <View style={{ width: 120 }}>
+                <Label>Temperature</Label>
+              </View>
+              <View style={{ width: 120, alignItems: 'flex-end' }}>
+                <Label>Waiting</Label>
+              </View>
+            </View>
+            {items.length === 0 ? (
+              <QueueEmpty filter={filter} scope={scope} />
+            ) : (
+              items.map((item) =>
+                item.kind === 'divider' ? (
+                  <SinceDivider key={`divider-${item.label}`} label={item.label} />
+                ) : (
+                  <QueueRow
+                    key={item.entry.lead.leadId}
+                    entry={item.entry}
+                    desk
+                    onPress={(leadId) => router.push(`/leads/${leadId}`)}
+                  />
+                ),
+              )
+            )}
+            {filter === 'none' && recent.hasNextPage ? (
+              <View style={{ padding: space.xl, alignItems: 'center', borderTopWidth: 1, borderTopColor: color.line2 }}>
+                <Button
+                  label="Show more"
+                  variant="outline"
+                  busy={recent.isFetchingNextPage}
+                  onPress={() => void recent.fetchNextPage()}
+                />
+              </View>
+            ) : null}
+          </View>
+        )}
+      </Page>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: color.tint }}>
       <View style={{ paddingTop: insets.top + space.md, backgroundColor: color.paper }}>
@@ -84,11 +185,11 @@ export default function Queue() {
             sign-out used to sit opposite it and won the first glance on the
             screen this person works in all day. It now lives with the other
             controls at the bottom, in reach. */}
-        {hasRail ? null : (
+        {showsLockup ? (
           <View style={{ paddingHorizontal: layout.rowX, paddingBottom: space.sm }}>
             <Lockup height={22} />
           </View>
-        )}
+        ) : null}
 
         {loading ? (
           <View style={{ height: layout.queueHeader, paddingHorizontal: layout.rowX, justifyContent: 'center', gap: space.md }}>
