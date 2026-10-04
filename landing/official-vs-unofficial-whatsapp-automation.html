@@ -24,18 +24,51 @@
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
 {
-"@context": "https://schema.org",
-"@type": "Article",
-"@id": "https://kadensio.com/official-vs-unofficial-whatsapp-automation.html#article",
-"headline": "Official vs unofficial WhatsApp automation: what each one risks",
-"description": "What WhatsApp's terms say about auto-messaging and unofficial clients, what the official WhatsApp Business Platform allows, and how to check which one a vendor uses.",
-"url": "https://kadensio.com/official-vs-unofficial-whatsapp-automation.html",
-"inLanguage": "en",
-"datePublished": "2026-10-04",
-"dateModified": "2026-10-04",
-"author": {"@type": "Person", "name": "Yassin Khalil", "jobTitle": "Founder, Kadensio"},
-"publisher": {"@type": "Organization", "@id": "https://kadensio.com/#organization", "name": "Kadensio", "url": "https://kadensio.com/"},
-"about": {"@id": "https://kadensio.com/#software"}
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "Article",
+   "@id": "https://kadensio.com/official-vs-unofficial-whatsapp-automation.html#article",
+   "headline": "Official vs unofficial WhatsApp automation: what each one risks",
+   "description": "What WhatsApp's terms say about auto-messaging and unofficial clients, what the official WhatsApp Business Platform allows, and how to check which one a vendor uses.",
+   "url": "https://kadensio.com/official-vs-unofficial-whatsapp-automation.html",
+   "inLanguage": "en",
+   "datePublished": "2026-10-04",
+   "dateModified": "2026-10-04",
+   "author": {
+    "@type": "Person",
+    "name": "Yassin Khalil",
+    "jobTitle": "Founder, Kadensio"
+   },
+   "publisher": {
+    "@type": "Organization",
+    "@id": "https://kadensio.com/#organization",
+    "name": "Kadensio",
+    "url": "https://kadensio.com/"
+   },
+   "about": {
+    "@id": "https://kadensio.com/#software"
+   },
+   "image": "https://kadensio.com/assets/og.png"
+  },
+  {
+   "@type": "BreadcrumbList",
+   "itemListElement": [
+    {
+     "@type": "ListItem",
+     "position": 1,
+     "name": "Kadensio",
+     "item": "https://kadensio.com/"
+    },
+    {
+     "@type": "ListItem",
+     "position": 2,
+     "name": "Official vs unofficial WhatsApp automation",
+     "item": "https://kadensio.com/official-vs-unofficial-whatsapp-automation.html"
+    }
+   ]
+  }
+ ]
 }
 </script>
 </head>
@@ -71,47 +104,47 @@
 <nav class="doc-toc" aria-labelledby="toc-h">
 <h2 id="toc-h">On this page</h2>
 <ol>
-<li><a href="#unofficial">What unofficial means</a></li>
-<li><a href="#risk">What happens to the number</a></li>
+<li><a href="#unofficial">Unofficial automation</a></li>
+<li><a href="#risk">The risk to your number</a></li>
 <li><a href="#official">The official route</a></li>
-<li><a href="#check">Three questions to ask a vendor</a></li>
-<li><a href="#kadensio">What this means for Kadensio</a></li>
+<li><a href="#check">Three questions for a vendor</a></li>
+<li><a href="#kadensio">Kadensio's route and its costs</a></li>
 </ol>
 </nav>
 <article class="doc">
 <section id="unofficial" aria-labelledby="unofficial-h">
-<h2 id="unofficial-h"><span class="doc-n">01</span>What unofficial means</h2>
+<h2 id="unofficial-h"><span class="doc-n">01</span>Unofficial automation</h2>
 <p>Unofficial automation drives an ordinary WhatsApp account with software. Some tools script WhatsApp Web in a browser. Others reuse a scraped session or pose as a phone. They are cheap and quick to set up, and they work until WhatsApp notices.</p>
 <p>WhatsApp's <a href="https://www.whatsapp.com/legal/terms-of-service">Terms of Service</a> prohibit bulk messaging, auto-messaging and auto-dialing. They also prohibit unofficial clients or automation used to harm WhatsApp or its users.</p>
 </section>
 <section id="risk" aria-labelledby="risk-h">
-<h2 id="risk-h"><span class="doc-n">02</span>What happens to the number</h2>
+<h2 id="risk-h"><span class="doc-n">02</span>The risk to your number</h2>
 <p>WhatsApp says it may restrict or ban an account that breaks its terms. For a business that uses a service against its policies, it says it may limit or remove access to WhatsApp Business. The enforcement language is in the <a href="https://business.whatsapp.com/policy">WhatsApp Business Messaging Policy</a>, and Meta explains <a href="https://faq.whatsapp.com/717472490411581/">restricted accounts</a> in its help centre.</p>
-<p>For a brokerage the damage is practical. The number is printed on listings, hoardings and business cards. A ban cuts the line buyers use to reach you, and reprinting a new number is slow and expensive.</p>
+<p>For a brokerage, a ban cuts the line buyers use to reach you. You print the number on listings, hoardings and business cards, and reprinting is slow and expensive.</p>
 </section>
 <section id="official" aria-labelledby="official-h">
 <h2 id="official-h"><span class="doc-n">03</span>The official route</h2>
 <p>The <a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform">WhatsApp Business Platform</a> is Meta's own route for companies. A business account registers a number, and software sends and receives messages through Meta's Cloud API. Two Meta rules shape how automation behaves on it.</p>
-<p><strong>The 24-hour window.</strong> When a customer messages you, a 24-hour customer service window opens. Inside it you can send free-form replies. Each new customer message resets the timer. Meta describes this under <a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/send-messages">service messages</a>.</p>
+<p><strong>The 24-hour window.</strong> A 24-hour customer service window opens when a customer messages you. Inside it you can send free-form replies, and each new customer message resets the timer. Meta describes this under <a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/send-messages">service messages</a>.</p>
 <p><strong>Templates outside the window.</strong> After the window closes, only a template message can reach the customer, and a template must have the status APPROVED before you can send it. See Meta's <a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/overview">template fundamentals</a>.</p>
 <p>Both rules suit a qualification flow. The buyer writes first, so the window is open for the whole conversation. A follow-up after the window closes needs wording that Meta has already approved.</p>
 </section>
 <section id="check" aria-labelledby="check-h">
-<h2 id="check-h"><span class="doc-n">04</span>Three questions to ask a vendor</h2>
+<h2 id="check-h"><span class="doc-n">04</span>Three questions for a vendor</h2>
 <ol>
 <li><strong>Which Meta account is my number registered in, and can you show it to me?</strong> On the official route the number sits in a Meta business account. A vendor on the official route can name the account and show you the number inside it.</li>
-<li><strong>How do you message a buyer after the 24-hour window closes?</strong> The official answer is approved templates. If the vendor has no templates, ask how messages leave the window.</li>
-<li><strong>What happens to my number if WhatsApp flags it?</strong> Expect a straight answer about the policy and the risk. Walk away from a promise that nobody can keep.</li>
+<li><strong>How do you message a buyer after the 24-hour window closes?</strong> The official answer names approved templates. If the vendor has none, ask how messages leave the window.</li>
+<li><strong>What happens to my number if WhatsApp flags it?</strong> Expect a straight answer about the policy and the risk. A vendor who promises it cannot happen is guessing.</li>
 </ol>
 </section>
 <section id="kadensio" aria-labelledby="kadensio-h">
-<h2 id="kadensio-h"><span class="doc-n">05</span>What this means for Kadensio</h2>
+<h2 id="kadensio-h"><span class="doc-n">05</span>Kadensio's route and its costs</h2>
 <p>Kadensio runs on the WhatsApp Business Platform. It never drives WhatsApp Web and never uses a scraped session. We tested the route end to end on live numbers through the production Meta API, in Arabic and English.</p>
 <p>The official route has costs, and you should know them before you start:</p>
 <ul>
-<li>Your number must be registered on the Platform. If your buyers know a number that runs on the ordinary WhatsApp Business app today, moving it is the first job in setup.</li>
+<li>You register your number on the Platform. If your buyers know a number that runs on the ordinary WhatsApp Business app today, moving it is the first job in setup.</li>
 <li>Meta charges for some messages. Kadensio passes those charges through at cost with no markup, as the <a href="terms.html">Terms of Service</a> set out.</li>
-<li>Templates need Meta's approval before use, so the wording of any message sent outside the window is settled before launch.</li>
+<li>Templates need Meta's approval before use, so you settle the wording of any message sent outside the window before launch.</li>
 </ul>
 </section>
 <section aria-labelledby="next-h">

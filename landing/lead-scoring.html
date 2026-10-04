@@ -25,17 +25,50 @@
 <script type="application/ld+json">
 {
  "@context": "https://schema.org",
- "@type": "TechArticle",
- "@id": "https://kadensio.com/lead-scoring.html#article",
- "headline": "How the lead score works",
- "description": "The ten factors Kadensio uses to score a real estate lead, the points each one carries, and why the score is fixed arithmetic.",
- "url": "https://kadensio.com/lead-scoring.html",
- "inLanguage": "en",
- "datePublished": "2026-09-27",
- "dateModified": "2026-09-27",
- "author": {"@type": "Person", "name": "Yassin Khalil", "jobTitle": "Founder, Kadensio"},
- "publisher": {"@type": "Organization", "@id": "https://kadensio.com/#organization", "name": "Kadensio", "url": "https://kadensio.com/"},
- "about": {"@id": "https://kadensio.com/#software"}
+ "@graph": [
+  {
+   "@type": "TechArticle",
+   "@id": "https://kadensio.com/lead-scoring.html#article",
+   "headline": "How the lead score works",
+   "description": "The ten factors Kadensio uses to score a real estate lead, the points each one carries, and why the score is fixed arithmetic.",
+   "url": "https://kadensio.com/lead-scoring.html",
+   "inLanguage": "en",
+   "datePublished": "2026-09-27",
+   "dateModified": "2026-09-27",
+   "author": {
+    "@type": "Person",
+    "name": "Yassin Khalil",
+    "jobTitle": "Founder, Kadensio"
+   },
+   "publisher": {
+    "@type": "Organization",
+    "@id": "https://kadensio.com/#organization",
+    "name": "Kadensio",
+    "url": "https://kadensio.com/"
+   },
+   "about": {
+    "@id": "https://kadensio.com/#software"
+   },
+   "image": "https://kadensio.com/assets/og.png"
+  },
+  {
+   "@type": "BreadcrumbList",
+   "itemListElement": [
+    {
+     "@type": "ListItem",
+     "position": 1,
+     "name": "Kadensio",
+     "item": "https://kadensio.com/"
+    },
+    {
+     "@type": "ListItem",
+     "position": 2,
+     "name": "How the lead score works",
+     "item": "https://kadensio.com/lead-scoring.html"
+    }
+   ]
+  }
+ ]
 }
 </script>
 </head>
@@ -144,7 +177,7 @@
       <section id="why" aria-labelledby="why-h">
         <h2 id="why-h"><span class="doc-n">04</span>Why fixed arithmetic</h2>
         <p>A sales manager has to be able to check a score. With ten visible factors, you can show the salesperson who got the lead, and the one who didn't, where each point came from.</p>
-        <p>Kadensio stores each score with the model version and a fingerprint of the exact answers behind it. When it scores the same answers again, it recognises the run it already has, and you can trace any score back to what the buyer said.</p>
+        <p>Kadensio stores each score with the model version and a fingerprint of the exact answers behind it. Scoring the same answers again returns the run Kadensio already holds, so you can trace any score back to what the buyer said.</p>
       </section>
 
       <section id="limits" aria-labelledby="limits-h">

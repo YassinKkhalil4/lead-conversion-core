@@ -45,3 +45,29 @@ and internal links that resolve.
 - Pricing. There is none to publish. The FAQ says so plainly.
 - Retention beyond the checklist and empty states needs usage data (which setup
   step people stall on). The dashboard records no analytics by design.
+
+## Second pass with the installed skills
+
+The first pass worked from general knowledge. The named skills were then
+installed from their sources and applied:
+
+- `coreyhaines31/marketingskills` @ `dda3841`: copywriting, cro, onboarding,
+  seo-audit, schema (read in full where used).
+- `hardikpandya/stop-slop` @ `8da1f03`: core rules, phrase list, structure list.
+
+What the skills caught that the first pass missed:
+
+| Skill | Finding | Change |
+|---|---|---|
+| stop-slop | Passive voice hid the actor, including the study caveat ("was sponsored"). | Actor named: "a company selling lead-response software sponsored the second". Same fix in 9 other sentences. |
+| stop-slop | "Wh-" openers and "What changes is..." in body text. | Restructured. Headings on the new pages became noun phrases. |
+| stop-slop | Contrast reveals ("You do not need a study. X"; "a direction, not a forecast"). | State the point directly. |
+| stop-slop | A four-verb hero sentence. | Split into two sentences of different length. |
+| copywriting | An unsupported "usually sit at night and on Fridays", and "most speed-to-lead advice". | Removed. The measurement method no longer predicts its own result. |
+| schema | Article markup without `image`, no breadcrumbs. | `image` and `BreadcrumbList` added on the three article pages. |
+| onboarding | The empty lead queue explained but offered no action. | Admins get a "Check your setup" button to the checklist. |
+
+Still open, because the brand rules forbid inventing it: social proof. The CRO
+skill puts testimonials and customer numbers high on the list. Kadensio has no
+customers to cite yet. When the first brokerage agrees to be named, that quote
+belongs directly under the hero buttons. `[NEED: first named customer]`

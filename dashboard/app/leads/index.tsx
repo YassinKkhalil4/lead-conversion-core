@@ -258,6 +258,7 @@ function SinceDivider({ label }: { label: string }) {
 
 
 function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
+  const router = useRouter();
   if (filter === 'pastSla') {
     return (
       <EmptyState
@@ -282,6 +283,8 @@ function QueueEmpty({ filter, scope }: { filter: Filter; scope: Scope }) {
           ? 'A lead appears here when routing assigns it to you, and the queue sorts it by score.'
           : 'Message your WhatsApp number from a personal phone to watch the first one arrive. Leads also come from the website form and Facebook lead ads, and each appears here as soon as its qualification conversation starts.'
       }
+      actionLabel={scope === 'mine' ? undefined : 'Check your setup'}
+      onAction={scope === 'mine' ? undefined : () => router.push('/manage')}
     />
   );
 }
