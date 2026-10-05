@@ -21,7 +21,7 @@ const bootstrapSchema = z.object({
   projectRecordId: z.string().optional().default(''),
   currentStage: z.string().optional().default(''),
   currentQuestionKey: z.string().optional().default(''),
-  preferredLanguage: z.enum(['Arabic', 'English', '']).optional().default(''),
+  preferredLanguage: z.enum(['Arabic', 'English', 'Spanish', 'Catalan', '']).optional().default(''),
   answers: z.record(z.string()).optional().default({}),
   retryCount: z.number().int().min(0).optional().default(0),
   status: z.string().optional().default(''),

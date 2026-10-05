@@ -1,3 +1,4 @@
+import { localized } from './language.js';
 import type {
   CompiledQuestion,
   Language,
@@ -128,7 +129,7 @@ export function parseQuestionAnswer(
   if (byValue) return { ok: true, value: byValue.value, source: 'value' };
 
   const byLabel = question.options.find((option) => {
-    const labels = [option.labels[language], option.labels.Arabic, option.labels.English]
+    const labels = [localized(option.labels, language), option.labels.Arabic, option.labels.English, option.labels.Spanish, option.labels.Catalan]
       .filter(Boolean)
       .map((label) => normalizeDigits(label).toLocaleLowerCase());
     return labels.some(

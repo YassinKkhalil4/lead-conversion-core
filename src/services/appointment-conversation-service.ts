@@ -2,7 +2,8 @@ import type { Db } from '../db/pool.js';
 import { APPOINTMENT_SLOT_STAGE } from '../domain/engine.js';
 import { formatSlotLabel, generateAppointmentSlots } from '../domain/appointment-slots.js';
 import { renderTemplate } from '../domain/render.js';
-import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
+import { defaultLanguage, localized } from '../domain/language.js';
+import type { BaseLanguage, CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
 import type { MessagingPayload } from '../integrations/messaging/types.js';
 import { AuditRepository, RuntimeOutboxRepository, sha256Hex, stableJson } from '../infrastructure/runtime.js';
 import { AppointmentService } from './appointment-service.js';
@@ -17,7 +18,7 @@ const MAX_SLOTS = 9;
  * client that has never been re-published still gets usable copy. A config key
  * of the same name overrides the built-in text when one exists.
  */
-const DEFAULT_TEXTS: Record<string, Record<Language, string>> = {
+const DEFAULT_TEXTS: Record<string, Record<BaseLanguage, string>> = {
   appointment_slot_offer: {
     English: 'Great 🙌 Pick the time that suits you and we will arrange the visit.',
     Arabic: 'تمام 🙌 اختار الميعاد اللي يناسبك وإحنا هنرتب الزيارة.',
@@ -76,7 +77,7 @@ export class AppointmentConversationService {
    * list, or falls through to the closing message when no offer can be made.
    */
   async composeSlotOffer(client: Db, context: TurnContext): Promise<AppointmentTurnResult> {
-    const language: Language = context.state.preferredLanguage || 'Arabic';
+    const language: Language = context.state.preferredLanguage || defaultLanguage(context.config);
 
     // The interactive list is a session message. Meta only accepts it inside
     // the 24-hour customer service window, and no approved template covers a
@@ -135,7 +136,7 @@ export class AppointmentConversationService {
 
     const options = rows.rows.slice(0, MAX_SLOTS).map((row) => ({
       id: `appt:${offer.appointmentOfferId}:${row.appointment_slot_id}`,
-      label: formatSlotLabel(row.starts_at.toISOString(), row.timezone || scheduling.timezone)[language],
+      label: localized(formatSlotLabel(row.starts_at.toISOString(), row.timezone || scheduling.timezone), language),
     }));
 
     await this.audit.record(client, {
@@ -211,14 +212,14 @@ export class AppointmentConversationService {
       return this.reofferOrClose(client, context, `slot_${outcome}`);
     }
 
-    const language: Language = context.state.preferredLanguage || 'Arabic';
+    const language: Language = context.state.preferredLanguage || defaultLanguage(context.config);
     const appointment = await client.query<{ starts_at: Date; timezone: string }>(
       'SELECT starts_at, timezone FROM app.appointments WHERE appointment_id=$1',
       [appointmentId],
     );
     const booked = appointment.rows[0];
     const slotLabel = booked
-      ? formatSlotLabel(booked.starts_at.toISOString(), booked.timezone)[language]
+      ? localized(formatSlotLabel(booked.starts_at.toISOString(), booked.timezone), language)
       : '';
     const text = this.textFor(context, 'appointment_booked_ack', language).replace('{{slot}}', slotLabel);
 
@@ -279,7 +280,7 @@ export class AppointmentConversationService {
     if (!this.windowIsOpen(context.state)) {
       return this.fallThroughToClosing(client, context, `${reason}_window_closed`);
     }
-    const language: Language = context.state.preferredLanguage || 'Arabic';
+    const language: Language = context.state.preferredLanguage || defaultLanguage(context.config);
     const reoffer = await this.composeSlotOffer(client, context);
     if (reoffer.decision.replyKey !== 'appointment_slot_offer') return reoffer;
     return {
@@ -300,10 +301,10 @@ export class AppointmentConversationService {
     context: TurnContext,
     reason: string,
   ): Promise<AppointmentTurnResult> {
-    const language: Language = context.state.preferredLanguage || 'Arabic';
+    const language: Language = context.state.preferredLanguage || defaultLanguage(context.config);
     const message = context.config.messages.qualified_closing;
     const text = message
-      ? renderTemplate(message.texts[language], {
+      ? renderTemplate(localized(message.texts, language), {
           lead_name: context.state.leadName,
           company_name: context.state.companyName,
           project_name: context.state.projectName,
@@ -358,8 +359,10 @@ export class AppointmentConversationService {
   }
 
   private textFor(context: TurnContext, key: string, language: Language): string {
-    const configured = context.config.messages[key]?.texts[language];
-    const template = configured || DEFAULT_TEXTS[key]?.[language] || '';
+    const message = context.config.messages[key];
+    const configured = message ? localized(message.texts, language) : '';
+    const builtIn = DEFAULT_TEXTS[key];
+    const template = configured || (builtIn ? builtIn[language === 'Arabic' ? 'Arabic' : 'English'] : '') || '';
     return renderTemplate(template, {
       lead_name: context.state.leadName,
       company_name: context.state.companyName,

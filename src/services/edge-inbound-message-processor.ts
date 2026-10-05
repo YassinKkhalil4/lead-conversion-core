@@ -5,7 +5,8 @@ import { ConversationRepository } from '../repositories/conversation-repository.
 import { evaluateConversation } from '../domain/engine.js';
 import { isOptOutMessage } from '../domain/opt-out.js';
 import { renderTemplate } from '../domain/render.js';
-import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
+import { configLanguages, defaultLanguage, localized } from '../domain/language.js';
+import type { BaseLanguage, CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
 import { pool, type Db } from '../db/pool.js';
 import { rollbackQuietly } from '../db/transaction.js';
 import {
@@ -93,10 +94,13 @@ function optOutDecision(state: ConversationState): ReplyDecision {
 const GREETING_DEFAULTS: Record<Language, string> = {
   English: 'Hi {{lead_name}} 👋 Thanks for reaching out to {{company_name}}.',
   Arabic: 'أهلاً بيك {{lead_name}} 👋 شكراً لتواصلك مع {{company_name}}.',
+  Spanish: 'Hola {{lead_name}} 👋 Gracias por escribir a {{company_name}}.',
+  Catalan: 'Hola {{lead_name}} 👋 Gràcies per escriure a {{company_name}}.',
 };
 
 function greetingLine(config: CompiledConfig, state: ConversationState, language: Language): string {
-  const configured = config.messages.direct_inbound_greeting?.texts[language];
+  const message = config.messages.direct_inbound_greeting;
+  const configured = message ? localized(message.texts, language) : '';
   return renderTemplate(configured || GREETING_DEFAULTS[language], {
     lead_name: state.leadName,
     company_name: state.companyName,
@@ -115,16 +119,21 @@ function greetingLine(config: CompiledConfig, state: ConversationState, language
  */
 function greetingText(config: CompiledConfig, state: ConversationState): string {
   if (state.preferredLanguage) return greetingLine(config, state, state.preferredLanguage);
-  return `${greetingLine(config, state, 'English')}\n${greetingLine(config, state, 'Arabic')}`;
+  return configLanguages(config).map((language) => greetingLine(config, state, language)).join('\n');
 }
 
+const FALLBACK_DEFAULTS: Record<Language, string> = {
+  English: 'One of our team members will continue this conversation shortly.',
+  Arabic: 'أحد أعضاء فريقنا هيكمل المحادثة معاك قريب.',
+  Spanish: 'Una persona de nuestro equipo continuará esta conversación enseguida.',
+  Catalan: 'Una persona del nostre equip continuarà aquesta conversa de seguida.',
+};
+
 function fallbackMessageText(config: CompiledConfig, state: ConversationState): string {
-  const language: Language = state.preferredLanguage || 'Arabic';
+  const language: Language = state.preferredLanguage || defaultLanguage(config);
   const fallback = config.messages.fallback;
-  if (!fallback) return language === 'English'
-    ? 'One of our team members will continue this conversation shortly.'
-    : 'أحد أعضاء فريقنا هيكمل المحادثة معاك قريب.';
-  return renderTemplate(fallback.texts[language], {
+  if (!fallback) return FALLBACK_DEFAULTS[language];
+  return renderTemplate(localized(fallback.texts, language), {
     lead_name: state.leadName,
     company_name: state.companyName,
     project_name: state.projectName,

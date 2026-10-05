@@ -1,0 +1,78 @@
+[
+  {
+    "action": "reply",
+    "replyKey": "q_timeline",
+    "text": "When are you planning to buy?",
+    "messageKind": "list",
+    "interactiveOptions": [
+      {
+        "id": "tl_now",
+        "label": "As soon as possible"
+      },
+      {
+        "id": "tl_3m",
+        "label": "Within 3 months"
+      },
+      {
+        "id": "tl_6m",
+        "label": "Within 6 months"
+      },
+      {
+        "id": "tl_explore",
+        "label": "Just exploring"
+      }
+    ],
+    "stageBefore": "asking_down_payment",
+    "stageAfter": "asking_timeline",
+    "questionKey": "q_down_payment",
+    "saveKey": "q_down_payment",
+    "parsedValue": "5500000",
+    "parseSource": "parser",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_down_payment",
+          "saveKey": "q_down_payment",
+          "parsedValue": "5500000",
+          "collected": {
+            "q_down_payment": "5500000"
+          },
+          "raw": "٥ مليون ونص",
+          "parseSource": "parser"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_timeline",
+      "currentQuestionKey": "q_timeline",
+      "answers": {
+        "q_down_payment": "5500000"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 1
+    }
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "action": "reply",
+    "replyKey": "appointment_slot_reprompt",
+    "text": "معلش، مش فاهم قصدك 🙏 ممكن تختار من الاختيارات دي؟",
+    "messageKind": "text",
+    "stageBefore": "awaiting_appointment_slot",
+    "stageAfter": "awaiting_appointment_slot",
+    "outboxEvents": [
+      {
+        "eventType": "appointment_slot_reply_unparsed",
+        "payload": {
+          "raw": "tomorrow"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "awaiting_appointment_slot",
+      "currentQuestionKey": "",
+      "answers": {},
+      "retryCount": 1,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 1
+    }
+  },
+  {
+    "action": "complete",
+    "replyKey": "qualified_closing",
+    "text": "تمام يا Ahmed، شكراً ليك 🙏 المستشار العقاري المختص هيتواصل معاك في أقرب وقت بكل التفاصيل المناسبة ليك.",
+    "messageKind": "text",
+    "stageBefore": "awaiting_appointment_slot",
+    "stageAfter": "qualified",
+    "outboxEvents": [
+      {
+        "eventType": "appointment_offer_abandoned",
+        "payload": {
+          "reason": "slot_reply_unparsed_after_retry"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "qualified",
+      "currentQuestionKey": "",
+      "answers": {},
+      "retryCount": 0,
+      "status": "qualified",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 2
+    }
+  }
+]

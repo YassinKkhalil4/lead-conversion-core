@@ -1,4 +1,4 @@
-import type { Language } from './types.js';
+import type { BaseLanguage } from './types.js';
 
 /**
  * Meta caps an interactive list row title at 24 characters and silently
@@ -28,7 +28,7 @@ export interface GeneratedSlot {
   startsAt: string;
   localDate: string;
   localTime: string;
-  labels: Record<Language, string>;
+  labels: Record<BaseLanguage, string>;
 }
 
 interface ZonedParts {
@@ -132,7 +132,7 @@ function fitTitle(full: string, compact: string): string {
   return full.length <= SLOT_TITLE_MAX_LENGTH ? full : compact;
 }
 
-function slotLabels(dateString: string, time: string): Record<Language, string> {
+function slotLabels(dateString: string, time: string): Record<BaseLanguage, string> {
   const weekday = weekdayIndex(dateString);
   const [, month = '1', day = '1'] = dateString.split('-');
   const dayNumber = String(Number(day));
@@ -197,7 +197,7 @@ export function generateAppointmentSlots(input: {
 }
 
 /** Rebuilds the row title for an already-persisted slot instant. */
-export function formatSlotLabel(startsAt: string, timezone: string): Record<Language, string> {
+export function formatSlotLabel(startsAt: string, timezone: string): Record<BaseLanguage, string> {
   const parts = zonedParts(new Date(startsAt), timezone || 'Africa/Cairo');
   const dateString = [
     String(parts.year).padStart(4, '0'),

@@ -1,0 +1,107 @@
+[
+  {
+    "action": "reply",
+    "replyKey": "language_selection",
+    "text": "👋 Welcome!\nPlease choose your preferred language.\n👋 أهلاً بيك!\nاختار اللغة اللي تفضلها.",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "lang_en",
+        "label": "🇺🇸 English"
+      },
+      {
+        "id": "lang_ar",
+        "label": "🇪🇬 العربية"
+      }
+    ],
+    "stageBefore": "",
+    "stageAfter": "language_selection",
+    "outboxEvents": [],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "",
+      "currentStage": "language_selection",
+      "currentQuestionKey": "language_selection",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 1
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_permission",
+    "text": "Hello Ahmed 👋 This is Demo Realty's assistant, about your interest in Palm Heights. May I ask you a few quick questions so we can help you in the best way?",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "perm_yes",
+        "label": "Yes, go ahead"
+      },
+      {
+        "id": "perm_no",
+        "label": "Not now"
+      }
+    ],
+    "stageBefore": "language_selection",
+    "stageAfter": "awaiting_permission",
+    "questionKey": "q_permission",
+    "saveKey": "q_permission",
+    "outboxEvents": [
+      {
+        "eventType": "preferred_language_changed",
+        "payload": {
+          "language": "English"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "awaiting_permission",
+      "currentQuestionKey": "q_permission",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 2
+    }
+  }
+]

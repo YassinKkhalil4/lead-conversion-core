@@ -1,0 +1,40 @@
+[
+  {
+    "action": "handoff",
+    "replyKey": "already_handed_off",
+    "text": "Thank you! Your consultant has your details and will be in touch shortly 🙏",
+    "messageKind": "text",
+    "stageBefore": "qualified",
+    "stageAfter": "qualified",
+    "outboxEvents": [],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "qualified",
+      "currentQuestionKey": "",
+      "answers": {},
+      "retryCount": 0,
+      "status": "qualified",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 0
+    }
+  }
+]

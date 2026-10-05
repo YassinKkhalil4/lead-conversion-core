@@ -1,0 +1,710 @@
+[
+  {
+    "action": "reply",
+    "replyKey": "language_selection",
+    "text": "👋 Welcome!\nPlease choose your preferred language.\n👋 أهلاً بيك!\nاختار اللغة اللي تفضلها.",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "lang_en",
+        "label": "🇺🇸 English"
+      },
+      {
+        "id": "lang_ar",
+        "label": "🇪🇬 العربية"
+      }
+    ],
+    "stageBefore": "",
+    "stageAfter": "language_selection",
+    "outboxEvents": [],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "",
+      "currentStage": "language_selection",
+      "currentQuestionKey": "language_selection",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 1
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_permission",
+    "text": "أهلاً Ahmed 👋 معاك مساعد Demo Realty بخصوص اهتمامك بمشروع Palm Heights. ممكن أسألك كام سؤال سريع عشان نقدر نساعدك بأفضل شكل؟",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "perm_yes",
+        "label": "تمام، اتفضل"
+      },
+      {
+        "id": "perm_no",
+        "label": "مش دلوقتي"
+      }
+    ],
+    "stageBefore": "language_selection",
+    "stageAfter": "awaiting_permission",
+    "questionKey": "q_permission",
+    "saveKey": "q_permission",
+    "outboxEvents": [
+      {
+        "eventType": "preferred_language_changed",
+        "payload": {
+          "language": "Arabic"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "awaiting_permission",
+      "currentQuestionKey": "q_permission",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 2
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_location",
+    "text": "تحب المشروع يكون فين؟ (مثلاً: القاهرة الجديدة، الشيخ زايد، العاصمة الإدارية، الساحل)",
+    "messageKind": "text",
+    "stageBefore": "awaiting_permission",
+    "stageAfter": "asking_location",
+    "questionKey": "q_permission",
+    "saveKey": "q_permission",
+    "parsedValue": "yes",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_permission",
+          "saveKey": "q_permission",
+          "parsedValue": "yes",
+          "collected": {},
+          "raw": "perm_yes",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_location",
+      "currentQuestionKey": "q_location",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 3
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_unit_type",
+    "text": "نوع الوحدة اللي بتدور عليها إيه؟",
+    "messageKind": "list",
+    "interactiveOptions": [
+      {
+        "id": "unit_apartment",
+        "label": "شقة"
+      },
+      {
+        "id": "unit_villa",
+        "label": "فيلا"
+      },
+      {
+        "id": "unit_townhouse",
+        "label": "تاون هاوس"
+      },
+      {
+        "id": "unit_commercial",
+        "label": "تجاري / إداري"
+      }
+    ],
+    "stageBefore": "asking_location",
+    "stageAfter": "asking_unit_type",
+    "questionKey": "q_location",
+    "saveKey": "q_location",
+    "parsedValue": "التجمع",
+    "parseSource": "free_text",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_location",
+          "saveKey": "q_location",
+          "parsedValue": "التجمع",
+          "collected": {
+            "q_location": "التجمع"
+          },
+          "raw": "التجمع",
+          "parseSource": "free_text"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_unit_type",
+      "currentQuestionKey": "q_unit_type",
+      "answers": {
+        "q_location": "التجمع"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 4
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_budget",
+    "text": "ميزانيتك التقريبية كام؟",
+    "messageKind": "list",
+    "interactiveOptions": [
+      {
+        "id": "budget_lt3",
+        "label": "أقل من 3 مليون"
+      },
+      {
+        "id": "budget_3_5",
+        "label": "من 3 لـ 5 مليون"
+      },
+      {
+        "id": "budget_5_10",
+        "label": "من 5 لـ 10 مليون"
+      },
+      {
+        "id": "budget_gt10",
+        "label": "أكتر من 10 مليون"
+      }
+    ],
+    "stageBefore": "asking_unit_type",
+    "stageAfter": "asking_budget",
+    "questionKey": "q_unit_type",
+    "saveKey": "q_unit_type",
+    "parsedValue": "Apartment",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_unit_type",
+          "saveKey": "q_unit_type",
+          "parsedValue": "Apartment",
+          "collected": {
+            "q_unit_type": "Apartment"
+          },
+          "raw": "unit_apartment",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_budget",
+      "currentQuestionKey": "q_budget",
+      "answers": {
+        "q_location": "التجمع",
+        "q_unit_type": "Apartment"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 5
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_payment_plan",
+    "text": "تفضل الدفع كاش ولا تقسيط؟",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "pay_cash",
+        "label": "كاش"
+      },
+      {
+        "id": "pay_installments",
+        "label": "تقسيط"
+      },
+      {
+        "id": "pay_flexible",
+        "label": "الاتنين ينفع"
+      }
+    ],
+    "stageBefore": "asking_budget",
+    "stageAfter": "asking_payment_plan",
+    "questionKey": "q_budget",
+    "saveKey": "q_budget",
+    "parsedValue": "3000000-5000000",
+    "parseSource": "label",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_budget",
+          "saveKey": "q_budget",
+          "parsedValue": "3000000-5000000",
+          "collected": {
+            "q_budget_min": "3000000",
+            "q_budget_max": "5000000"
+          },
+          "raw": "من ٣ لـ ٥ مليون",
+          "parseSource": "label"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_payment_plan",
+      "currentQuestionKey": "q_payment_plan",
+      "answers": {
+        "q_location": "التجمع",
+        "q_unit_type": "Apartment",
+        "q_budget_min": "3000000",
+        "q_budget_max": "5000000"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 6
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_timeline",
+    "text": "ناوي تشتري إمتى؟",
+    "messageKind": "list",
+    "interactiveOptions": [
+      {
+        "id": "tl_now",
+        "label": "في أقرب وقت"
+      },
+      {
+        "id": "tl_3m",
+        "label": "خلال 3 شهور"
+      },
+      {
+        "id": "tl_6m",
+        "label": "خلال 6 شهور"
+      },
+      {
+        "id": "tl_explore",
+        "label": "لسه بشوف"
+      }
+    ],
+    "stageBefore": "asking_payment_plan",
+    "stageAfter": "asking_timeline",
+    "questionKey": "q_payment_plan",
+    "saveKey": "q_payment_plan",
+    "parsedValue": "Cash",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_payment_plan",
+          "saveKey": "q_payment_plan",
+          "parsedValue": "Cash",
+          "collected": {
+            "q_payment_plan": "Cash"
+          },
+          "raw": "pay_cash",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_timeline",
+      "currentQuestionKey": "q_timeline",
+      "answers": {
+        "q_location": "التجمع",
+        "q_unit_type": "Apartment",
+        "q_budget_min": "3000000",
+        "q_budget_max": "5000000",
+        "q_payment_plan": "Cash"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 7
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_purpose",
+    "text": "الوحدة دي للسكن ولا استثمار؟",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "pur_residence",
+        "label": "سكن"
+      },
+      {
+        "id": "pur_investment",
+        "label": "استثمار"
+      },
+      {
+        "id": "pur_both",
+        "label": "الاتنين"
+      }
+    ],
+    "stageBefore": "asking_timeline",
+    "stageAfter": "asking_purpose",
+    "questionKey": "q_timeline",
+    "saveKey": "q_timeline",
+    "parsedValue": "Immediate",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_timeline",
+          "saveKey": "q_timeline",
+          "parsedValue": "Immediate",
+          "collected": {
+            "q_timeline": "Immediate"
+          },
+          "raw": "tl_now",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_purpose",
+      "currentQuestionKey": "q_purpose",
+      "answers": {
+        "q_location": "التجمع",
+        "q_unit_type": "Apartment",
+        "q_budget_min": "3000000",
+        "q_budget_max": "5000000",
+        "q_payment_plan": "Cash",
+        "q_timeline": "Immediate"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 8
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_site_visit",
+    "text": "تحب نرتبلك زيارة للمشروع تشوف الوحدات بنفسك؟",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "sv_yes",
+        "label": "أيوه، يا ريت"
+      },
+      {
+        "id": "sv_no",
+        "label": "مش دلوقتي"
+      }
+    ],
+    "stageBefore": "asking_purpose",
+    "stageAfter": "asking_site_visit",
+    "questionKey": "q_purpose",
+    "saveKey": "q_purpose",
+    "parsedValue": "Both",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_purpose",
+          "saveKey": "q_purpose",
+          "parsedValue": "Both",
+          "collected": {
+            "q_purpose": "Both"
+          },
+          "raw": "pur_both",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_site_visit",
+      "currentQuestionKey": "q_site_visit",
+      "answers": {
+        "q_location": "التجمع",
+        "q_unit_type": "Apartment",
+        "q_budget_min": "3000000",
+        "q_budget_max": "5000000",
+        "q_payment_plan": "Cash",
+        "q_timeline": "Immediate",
+        "q_purpose": "Both"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 9
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "appointment_slot_offer",
+    "text": "",
+    "messageKind": "list",
+    "stageBefore": "asking_site_visit",
+    "stageAfter": "awaiting_appointment_slot",
+    "questionKey": "q_site_visit",
+    "saveKey": "q_site_visit",
+    "parsedValue": "Yes",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_site_visit",
+          "saveKey": "q_site_visit",
+          "parsedValue": "Yes",
+          "collected": {
+            "q_site_visit": "Yes"
+          },
+          "raw": "sv_yes",
+          "parseSource": "option_id"
+        }
+      },
+      {
+        "eventType": "qualification_completed",
+        "payload": {
+          "qualification": {
+            "location": "التجمع",
+            "unit_type": "Apartment",
+            "budget_min": "3000000",
+            "budget_max": "5000000",
+            "down_payment": "",
+            "payment_plan": "Cash",
+            "timeline": "Immediate",
+            "purpose": "Both",
+            "site_visit": "Yes",
+            "notes": ""
+          },
+          "transcriptNote": "completed via conversation edge integration-safe runtime"
+        }
+      },
+      {
+        "eventType": "appointment_slot_offer_requested",
+        "payload": {
+          "siteVisit": "Yes"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "awaiting_appointment_slot",
+      "currentQuestionKey": "",
+      "answers": {
+        "q_location": "التجمع",
+        "q_unit_type": "Apartment",
+        "q_budget_min": "3000000",
+        "q_budget_max": "5000000",
+        "q_payment_plan": "Cash",
+        "q_timeline": "Immediate",
+        "q_purpose": "Both",
+        "q_site_visit": "Yes"
+      },
+      "retryCount": 0,
+      "status": "qualified",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 10
+    }
+  }
+]

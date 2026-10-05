@@ -1,0 +1,770 @@
+[
+  {
+    "action": "reply",
+    "replyKey": "language_selection",
+    "text": "👋 Welcome!\nPlease choose your preferred language.\n👋 أهلاً بيك!\nاختار اللغة اللي تفضلها.",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "lang_en",
+        "label": "🇺🇸 English"
+      },
+      {
+        "id": "lang_ar",
+        "label": "🇪🇬 العربية"
+      }
+    ],
+    "stageBefore": "",
+    "stageAfter": "language_selection",
+    "outboxEvents": [],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "",
+      "currentStage": "language_selection",
+      "currentQuestionKey": "language_selection",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 1
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_permission",
+    "text": "Hello Ahmed 👋 This is Demo Realty's assistant, about your interest in Palm Heights. May I ask you a few quick questions so we can help you in the best way?",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "perm_yes",
+        "label": "Yes, go ahead"
+      },
+      {
+        "id": "perm_no",
+        "label": "Not now"
+      }
+    ],
+    "stageBefore": "language_selection",
+    "stageAfter": "awaiting_permission",
+    "questionKey": "q_permission",
+    "saveKey": "q_permission",
+    "outboxEvents": [
+      {
+        "eventType": "preferred_language_changed",
+        "payload": {
+          "language": "English"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "awaiting_permission",
+      "currentQuestionKey": "q_permission",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 2
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_location",
+    "text": "Where would you like the project to be? (e.g., New Cairo, Sheikh Zayed, New Capital, North Coast)",
+    "messageKind": "text",
+    "stageBefore": "awaiting_permission",
+    "stageAfter": "asking_location",
+    "questionKey": "q_permission",
+    "saveKey": "q_permission",
+    "parsedValue": "yes",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_permission",
+          "saveKey": "q_permission",
+          "parsedValue": "yes",
+          "collected": {},
+          "raw": "perm_yes",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_location",
+      "currentQuestionKey": "q_location",
+      "answers": {},
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 3
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_unit_type",
+    "text": "What type of unit are you looking for?",
+    "messageKind": "list",
+    "interactiveOptions": [
+      {
+        "id": "unit_apartment",
+        "label": "Apartment"
+      },
+      {
+        "id": "unit_villa",
+        "label": "Villa"
+      },
+      {
+        "id": "unit_townhouse",
+        "label": "Townhouse"
+      },
+      {
+        "id": "unit_commercial",
+        "label": "Commercial / Office"
+      }
+    ],
+    "stageBefore": "asking_location",
+    "stageAfter": "asking_unit_type",
+    "questionKey": "q_location",
+    "saveKey": "q_location",
+    "parsedValue": "New Cairo",
+    "parseSource": "free_text",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_location",
+          "saveKey": "q_location",
+          "parsedValue": "New Cairo",
+          "collected": {
+            "q_location": "New Cairo"
+          },
+          "raw": "New Cairo",
+          "parseSource": "free_text"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_unit_type",
+      "currentQuestionKey": "q_unit_type",
+      "answers": {
+        "q_location": "New Cairo"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 4
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_budget",
+    "text": "What is your approximate budget?",
+    "messageKind": "list",
+    "interactiveOptions": [
+      {
+        "id": "budget_lt3",
+        "label": "Under 3M EGP"
+      },
+      {
+        "id": "budget_3_5",
+        "label": "3M – 5M EGP"
+      },
+      {
+        "id": "budget_5_10",
+        "label": "5M – 10M EGP"
+      },
+      {
+        "id": "budget_gt10",
+        "label": "Over 10M EGP"
+      }
+    ],
+    "stageBefore": "asking_unit_type",
+    "stageAfter": "asking_budget",
+    "questionKey": "q_unit_type",
+    "saveKey": "q_unit_type",
+    "parsedValue": "Villa",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_unit_type",
+          "saveKey": "q_unit_type",
+          "parsedValue": "Villa",
+          "collected": {
+            "q_unit_type": "Villa"
+          },
+          "raw": "unit_villa",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_budget",
+      "currentQuestionKey": "q_budget",
+      "answers": {
+        "q_location": "New Cairo",
+        "q_unit_type": "Villa"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 5
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_payment_plan",
+    "text": "Do you prefer paying cash or in installments?",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "pay_cash",
+        "label": "Cash"
+      },
+      {
+        "id": "pay_installments",
+        "label": "Installments"
+      },
+      {
+        "id": "pay_flexible",
+        "label": "Either works"
+      }
+    ],
+    "stageBefore": "asking_budget",
+    "stageAfter": "asking_payment_plan",
+    "questionKey": "q_budget",
+    "saveKey": "q_budget",
+    "parsedValue": "5000000-10000000",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_budget",
+          "saveKey": "q_budget",
+          "parsedValue": "5000000-10000000",
+          "collected": {
+            "q_budget_min": "5000000",
+            "q_budget_max": "10000000"
+          },
+          "raw": "budget_5_10",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_payment_plan",
+      "currentQuestionKey": "q_payment_plan",
+      "answers": {
+        "q_location": "New Cairo",
+        "q_unit_type": "Villa",
+        "q_budget_min": "5000000",
+        "q_budget_max": "10000000"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 6
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_down_payment",
+    "text": "Roughly how much can you pay as a down payment?",
+    "messageKind": "text",
+    "stageBefore": "asking_payment_plan",
+    "stageAfter": "asking_down_payment",
+    "questionKey": "q_payment_plan",
+    "saveKey": "q_payment_plan",
+    "parsedValue": "Installments",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_payment_plan",
+          "saveKey": "q_payment_plan",
+          "parsedValue": "Installments",
+          "collected": {
+            "q_payment_plan": "Installments"
+          },
+          "raw": "pay_installments",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_down_payment",
+      "currentQuestionKey": "q_down_payment",
+      "answers": {
+        "q_location": "New Cairo",
+        "q_unit_type": "Villa",
+        "q_budget_min": "5000000",
+        "q_budget_max": "10000000",
+        "q_payment_plan": "Installments"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 7
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_timeline",
+    "text": "When are you planning to buy?",
+    "messageKind": "list",
+    "interactiveOptions": [
+      {
+        "id": "tl_now",
+        "label": "As soon as possible"
+      },
+      {
+        "id": "tl_3m",
+        "label": "Within 3 months"
+      },
+      {
+        "id": "tl_6m",
+        "label": "Within 6 months"
+      },
+      {
+        "id": "tl_explore",
+        "label": "Just exploring"
+      }
+    ],
+    "stageBefore": "asking_down_payment",
+    "stageAfter": "asking_timeline",
+    "questionKey": "q_down_payment",
+    "saveKey": "q_down_payment",
+    "parsedValue": "500000",
+    "parseSource": "parser",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_down_payment",
+          "saveKey": "q_down_payment",
+          "parsedValue": "500000",
+          "collected": {
+            "q_down_payment": "500000"
+          },
+          "raw": "500k",
+          "parseSource": "parser"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_timeline",
+      "currentQuestionKey": "q_timeline",
+      "answers": {
+        "q_location": "New Cairo",
+        "q_unit_type": "Villa",
+        "q_budget_min": "5000000",
+        "q_budget_max": "10000000",
+        "q_payment_plan": "Installments",
+        "q_down_payment": "500000"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 8
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_purpose",
+    "text": "Is this unit for living or for investment?",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "pur_residence",
+        "label": "To live in"
+      },
+      {
+        "id": "pur_investment",
+        "label": "Investment"
+      },
+      {
+        "id": "pur_both",
+        "label": "Both"
+      }
+    ],
+    "stageBefore": "asking_timeline",
+    "stageAfter": "asking_purpose",
+    "questionKey": "q_timeline",
+    "saveKey": "q_timeline",
+    "parsedValue": "3 months",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_timeline",
+          "saveKey": "q_timeline",
+          "parsedValue": "3 months",
+          "collected": {
+            "q_timeline": "3 months"
+          },
+          "raw": "tl_3m",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_purpose",
+      "currentQuestionKey": "q_purpose",
+      "answers": {
+        "q_location": "New Cairo",
+        "q_unit_type": "Villa",
+        "q_budget_min": "5000000",
+        "q_budget_max": "10000000",
+        "q_payment_plan": "Installments",
+        "q_down_payment": "500000",
+        "q_timeline": "3 months"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 9
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "q_site_visit",
+    "text": "Would you like us to arrange a site visit so you can see the units yourself?",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "sv_yes",
+        "label": "Yes, please"
+      },
+      {
+        "id": "sv_no",
+        "label": "Not now"
+      }
+    ],
+    "stageBefore": "asking_purpose",
+    "stageAfter": "asking_site_visit",
+    "questionKey": "q_purpose",
+    "saveKey": "q_purpose",
+    "parsedValue": "Investment",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_purpose",
+          "saveKey": "q_purpose",
+          "parsedValue": "Investment",
+          "collected": {
+            "q_purpose": "Investment"
+          },
+          "raw": "pur_investment",
+          "parseSource": "option_id"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "asking_site_visit",
+      "currentQuestionKey": "q_site_visit",
+      "answers": {
+        "q_location": "New Cairo",
+        "q_unit_type": "Villa",
+        "q_budget_min": "5000000",
+        "q_budget_max": "10000000",
+        "q_payment_plan": "Installments",
+        "q_down_payment": "500000",
+        "q_timeline": "3 months",
+        "q_purpose": "Investment"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 10
+    }
+  },
+  {
+    "action": "complete",
+    "replyKey": "qualified_closing",
+    "text": "Perfect, thank you Ahmed 🙏 Our property consultant will contact you shortly with all the details that suit you.",
+    "messageKind": "text",
+    "stageBefore": "asking_site_visit",
+    "stageAfter": "qualified",
+    "questionKey": "q_site_visit",
+    "saveKey": "q_site_visit",
+    "parsedValue": "No",
+    "parseSource": "option_id",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_site_visit",
+          "saveKey": "q_site_visit",
+          "parsedValue": "No",
+          "collected": {
+            "q_site_visit": "No"
+          },
+          "raw": "sv_no",
+          "parseSource": "option_id"
+        }
+      },
+      {
+        "eventType": "qualification_completed",
+        "payload": {
+          "qualification": {
+            "location": "New Cairo",
+            "unit_type": "Villa",
+            "budget_min": "5000000",
+            "budget_max": "10000000",
+            "down_payment": "500000",
+            "payment_plan": "Installments",
+            "timeline": "3 months",
+            "purpose": "Investment",
+            "site_visit": "No",
+            "notes": ""
+          },
+          "transcriptNote": "completed via conversation edge integration-safe runtime"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "English",
+      "currentStage": "qualified",
+      "currentQuestionKey": "",
+      "answers": {
+        "q_location": "New Cairo",
+        "q_unit_type": "Villa",
+        "q_budget_min": "5000000",
+        "q_budget_max": "10000000",
+        "q_payment_plan": "Installments",
+        "q_down_payment": "500000",
+        "q_timeline": "3 months",
+        "q_purpose": "Investment",
+        "q_site_visit": "No"
+      },
+      "retryCount": 0,
+      "status": "qualified",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 11
+    }
+  }
+]

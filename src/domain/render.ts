@@ -6,15 +6,19 @@ export interface TemplateVariables {
   project_name: string;
 }
 
+const DEFAULT_NAMES: Record<Language, { company_name: string; project_name: string }> = {
+  English: { company_name: 'our team', project_name: 'our projects' },
+  Arabic: { company_name: 'فريقنا', project_name: 'مشاريعنا' },
+  Spanish: { company_name: 'nuestro equipo', project_name: 'nuestros locales' },
+  Catalan: { company_name: 'el nostre equip', project_name: 'els nostres locals' },
+};
+
 export function renderTemplate(
   template: string,
   variables: TemplateVariables,
   language: Language,
 ): string {
-  const defaults =
-    language === 'English'
-      ? { company_name: 'our team', project_name: 'our projects' }
-      : { company_name: 'فريقنا', project_name: 'مشاريعنا' };
+  const defaults = DEFAULT_NAMES[language];
 
   const values: Record<string, string> = {
     lead_name: variables.lead_name,

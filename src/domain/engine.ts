@@ -1,3 +1,5 @@
+import { industryHooks } from './industries/index.js';
+import { configLanguages, defaultLanguage, localized } from './language.js';
 import { parseQuestionAnswer } from './normalization.js';
 import { renderTemplate } from './render.js';
 import type {
@@ -20,13 +22,6 @@ export const APPOINTMENT_SLOT_STAGE = 'awaiting_appointment_slot';
 
 /** `appt:<appointmentOfferId>:<appointmentSlotId>`, 78 characters. */
 const SLOT_OPTION_PATTERN = /^appt:([0-9a-f-]{36}):([0-9a-f-]{36})$/i;
-
-const SITE_VISIT_ACCEPTED = ['yes', 'نعم', 'أيوه', 'ايوه'];
-
-function isSiteVisitAccepted(question: CompiledQuestion, value: string): boolean {
-  if (question.saveKey !== 'q_site_visit') return false;
-  return SITE_VISIT_ACCEPTED.includes(value.trim().toLocaleLowerCase());
-}
 
 export function parseSlotOption(value: string): { appointmentOfferId: string; appointmentSlotId: string } | null {
   const match = SLOT_OPTION_PATTERN.exec(value.trim());
@@ -52,7 +47,7 @@ function templateVars(state: ConversationState) {
 function messageText(config: CompiledConfig, key: string, language: Language, state: ConversationState): string {
   const message = config.messages[key];
   if (!message) return '';
-  return renderTemplate(message.texts[language], templateVars(state), language);
+  return renderTemplate(localized(message.texts, language), templateVars(state), language);
 }
 
 function questionReply(
@@ -60,10 +55,10 @@ function questionReply(
   question: CompiledQuestion,
   language: Language,
 ): Pick<ReplyDecision, 'text' | 'messageKind' | 'interactiveOptions'> {
-  const text = renderTemplate(question.texts[language], templateVars(state), language);
+  const text = renderTemplate(localized(question.texts, language), templateVars(state), language);
   const options: InteractiveOption[] = question.options.map((option) => ({
     id: option.id,
-    label: option.labels[language] || option.labels[language === 'Arabic' ? 'English' : 'Arabic'],
+    label: localized(option.labels, language),
   }));
   const messageKind = options.length === 0 ? 'text' : question.type === 'List' || options.length > 3 ? 'list' : 'buttons';
   return {
@@ -72,6 +67,29 @@ function questionReply(
     ...(options.length > 0 ? { interactiveOptions: options } : {}),
   };
 }
+
+const LANGUAGE_BUTTONS: Record<Language, { id: string; label: string; aliases: string[] }> = {
+  English: {
+    id: 'lang_en',
+    label: '🇺🇸 English',
+    aliases: ['lang_en', 'english', 'en', 'انجليزي', 'انجليزى', 'الانجليزية', '🇺🇸 english'],
+  },
+  Arabic: {
+    id: 'lang_ar',
+    label: '🇪🇬 العربية',
+    aliases: ['lang_ar', 'arabic', 'ar', 'العربية', 'عربي', 'عربى', 'مصري', 'مصرى', '🇪🇬 العربية'],
+  },
+  Spanish: {
+    id: 'lang_es',
+    label: '🇪🇸 Español',
+    aliases: ['lang_es', 'spanish', 'es', 'español', 'espanol', 'castellano', 'castellà', '🇪🇸 español'],
+  },
+  Catalan: {
+    id: 'lang_ca',
+    label: 'Català',
+    aliases: ['lang_ca', 'catalan', 'ca', 'català', 'catala', 'catalán'],
+  },
+};
 
 function languageReply(config: CompiledConfig, state: ConversationState): ReplyDecision {
   const nextState: ConversationState = {
@@ -84,12 +102,12 @@ function languageReply(config: CompiledConfig, state: ConversationState): ReplyD
   return {
     action: 'reply',
     replyKey: 'language_selection',
-    text: messageText(config, 'language_selection', 'Arabic', state),
+    text: messageText(config, 'language_selection', defaultLanguage(config), state),
     messageKind: 'buttons',
-    interactiveOptions: [
-      { id: 'lang_en', label: '🇺🇸 English' },
-      { id: 'lang_ar', label: '🇪🇬 العربية' },
-    ],
+    interactiveOptions: configLanguages(config).map((language) => ({
+      id: LANGUAGE_BUTTONS[language].id,
+      label: LANGUAGE_BUTTONS[language].label,
+    })),
     stageBefore: state.currentStage,
     stageAfter: 'language_selection',
     outboxEvents: [],
@@ -97,17 +115,19 @@ function languageReply(config: CompiledConfig, state: ConversationState): ReplyD
   };
 }
 
-function parseLanguage(input: { text?: string; optionId?: string }): Language | null {
+/**
+ * The language a guest picked, among the ones this tenant offers. A number
+ * picks by position in the button order, so for real estate 1 is English and
+ * 2 is Arabic, as it always was.
+ */
+function parseLanguage(input: { text?: string; optionId?: string }, allowed: readonly Language[]): Language | null {
   const raw = String(input.optionId || input.text || '')
     .trim()
     .toLocaleLowerCase()
-    .replace(/[ًٌٍَُِّْـ]/g, '');
-  if (
-    ['lang_en', '1', 'english', 'en', 'انجليزي', 'انجليزى', 'الانجليزية', '🇺🇸 english'].includes(raw)
-  ) return 'English';
-  if (
-    ['lang_ar', '2', 'arabic', 'ar', 'العربية', 'عربي', 'عربى', 'مصري', 'مصرى', '🇪🇬 العربية'].includes(raw)
-  ) return 'Arabic';
+    .replace(/[ًٌٍَُِّْـ]/g, '');
+  for (const [index, language] of allowed.entries()) {
+    if (raw === String(index + 1) || LANGUAGE_BUTTONS[language].aliases.includes(raw)) return language;
+  }
   return null;
 }
 
@@ -147,69 +167,12 @@ function findCurrentQuestion(config: CompiledConfig, state: ConversationState): 
   return undefined;
 }
 
-function saveAnswer(
-  state: ConversationState,
-  question: CompiledQuestion,
-  value: string,
-): Record<string, string> {
-  const answers = { ...state.answers };
-  if (question.saveKey === 'q_budget') {
-    const [min = '0', max = min] = value.split('-');
-    answers.q_budget_min = min;
-    answers.q_budget_max = max;
-  } else if (question.saveKey && question.saveKey !== 'q_permission') {
-    answers[question.saveKey] = value;
-  }
-  return answers;
-}
-
-function qualificationPayload(answers: Record<string, string>): Record<string, string> {
-  const payload: Record<string, string> = {
-    location: answers.q_location || '',
-    unit_type: answers.q_unit_type || '',
-    budget_min: answers.q_budget_min || '',
-    budget_max: answers.q_budget_max || '',
-    down_payment: answers.q_down_payment || '',
-    payment_plan: answers.q_payment_plan || '',
-    timeline: answers.q_timeline || '',
-    purpose: answers.q_purpose || '',
-    site_visit: answers.q_site_visit || '',
-    notes: answers.qualification_notes || '',
-  };
-  const consumed = new Set([
-    'q_location',
-    'q_unit_type',
-    'q_budget_min',
-    'q_budget_max',
-    'q_down_payment',
-    'q_payment_plan',
-    'q_timeline',
-    'q_purpose',
-    'q_site_visit',
-    'qualification_notes',
-  ]);
-  for (const [key, value] of Object.entries(answers)) {
-    if (!consumed.has(key)) payload[key.replace(/^q_/, '')] = value;
-  }
-  return payload;
-}
-
-function nextQuestionAfter(
-  config: CompiledConfig,
-  question: CompiledQuestion,
-  parsedValue: string,
-): CompiledQuestion | undefined {
-  if (question.saveKey === 'q_payment_plan' && parsedValue !== 'Installments') {
-    return config.questions.find((candidate) => candidate.stageKey === 'asking_timeline');
-  }
-  const index = config.questions.findIndex((candidate) => candidate.questionKey === question.questionKey);
-  return index >= 0 ? config.questions[index + 1] : undefined;
-}
-
 export function evaluateConversation(input: EngineInput): ReplyDecision {
   const { config, messageText: incomingText, messageOptionId } = input;
   const state = { ...input.state, answers: { ...input.state.answers } };
   const stageBefore = state.currentStage;
+  const hooks = industryHooks(config.industry);
+  const fallbackLanguage = defaultLanguage(config);
 
   const suppressedBy = suppressionReason(state);
   if (suppressedBy) {
@@ -242,7 +205,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
   }
 
   if (state.currentStage === APPOINTMENT_SLOT_STAGE) {
-    const language: Language = state.preferredLanguage || 'Arabic';
+    const language: Language = state.preferredLanguage || fallbackLanguage;
     const selected = parseSlotOption(String(messageOptionId || incomingText || ''));
     if (selected) {
       return {
@@ -300,7 +263,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
   }
 
   if (['qualified', 'sales_handoff'].includes(state.currentStage)) {
-    const language: Language = state.preferredLanguage || 'Arabic';
+    const language: Language = state.preferredLanguage || fallbackLanguage;
     return {
       action: 'handoff',
       replyKey: 'already_handed_off',
@@ -321,12 +284,12 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
     const selected = parseLanguage({
       ...(incomingText !== undefined ? { text: incomingText } : {}),
       ...(messageOptionId !== undefined ? { optionId: messageOptionId } : {}),
-    });
+    }, configLanguages(config));
     if (!selected && state.retryCount === 0) {
       const nextState = { ...state, retryCount: 1, stateVersion: state.stateVersion + 1 };
       return { ...languageReply(config, nextState), stageBefore, nextState };
     }
-    const language: Language = selected || 'Arabic';
+    const language: Language = selected || fallbackLanguage;
     const first = config.questions[0];
     if (!first) throw new Error('Compiled config has no questions');
     const nextState: ConversationState = {
@@ -358,7 +321,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
   if (!state.currentStage) {
     const first = config.questions[0];
     if (!first) throw new Error('Compiled config has no questions');
-    const language: Language = state.preferredLanguage || 'Arabic';
+    const language: Language = state.preferredLanguage || fallbackLanguage;
     const nextState: ConversationState = {
       ...state,
       currentStage: first.stageKey,
@@ -381,7 +344,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
 
   const question = findCurrentQuestion(config, state);
   if (!question) {
-    const language: Language = state.preferredLanguage || 'Arabic';
+    const language: Language = state.preferredLanguage || fallbackLanguage;
     return {
       action: 'fallback',
       replyKey: 'fallback',
@@ -396,7 +359,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
     };
   }
 
-  const language: Language = state.preferredLanguage || 'Arabic';
+  const language: Language = state.preferredLanguage || fallbackLanguage;
   const parsed = parseQuestionAnswer(
     question,
     {
@@ -451,7 +414,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
   }
 
   const finalParsedValue = parsedValue ?? '';
-  const answers = saveAnswer(state, question, finalParsedValue);
+  const answers = hooks.saveAnswer(state, question, finalParsedValue);
   if (parseSource === 'raw_fallback') {
     const raw = String(incomingText || messageOptionId || '').trim().slice(0, 500);
     const note = `[${question.saveKey || question.questionKey}] unparsed answer: ${raw}`;
@@ -461,9 +424,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
       .slice(0, 5000);
   }
   const lowerValue = finalParsedValue.toLocaleLowerCase();
-  const isPause =
-    question.saveKey === 'q_permission' &&
-    ['no', 'مش دلوقتي'].includes(lowerValue);
+  const isPause = hooks.isPauseAnswer(question, lowerValue);
 
   if (isPause) {
     const nextState: ConversationState = {
@@ -497,8 +458,8 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
     };
   }
 
-  const nextQuestion = nextQuestionAfter(config, question, finalParsedValue);
-  const collected = saveAnswer({ ...state, answers: {} }, question, finalParsedValue);
+  const nextQuestion = hooks.nextQuestionAfter(config, question, finalParsedValue);
+  const collected = hooks.saveAnswer({ ...state, answers: {} }, question, finalParsedValue);
   const commonEvents: ReplyDecision['outboxEvents'] = [
     {
       eventType: 'qualification_answer_saved',
@@ -530,7 +491,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
       {
         eventType: 'qualification_completed',
         payload: {
-          qualification: qualificationPayload(answers),
+          qualification: hooks.qualificationPayload(answers),
           transcriptNote: 'completed via conversation edge integration-safe runtime',
         },
       },
@@ -540,7 +501,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
     // routing still run off `qualification_completed`. Instead of closing the
     // conversation, park them on the slot stage; the caller owns slot
     // generation and decides whether an offer can actually be sent.
-    if (isSiteVisitAccepted(question, finalParsedValue)) {
+    if (hooks.offersAppointment(question, finalParsedValue)) {
       const offerState: ConversationState = {
         ...state,
         answers,

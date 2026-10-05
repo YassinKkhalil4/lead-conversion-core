@@ -1,4 +1,7 @@
-export type Language = 'Arabic' | 'English';
+export type BaseLanguage = 'Arabic' | 'English';
+export type Language = BaseLanguage | 'Spanish' | 'Catalan';
+/** English and Arabic always exist; Spanish and Catalan only when the tenant's config has them. */
+export type LocalizedText = Record<BaseLanguage, string> & Partial<Record<'Spanish' | 'Catalan', string>>;
 export type QuestionType = 'Buttons' | 'List' | 'Free Text';
 export type ParserHint = 'none' | 'egp_amount' | 'egp_range' | string;
 export type ConversationEngine = 'legacy' | 'edge';
@@ -8,7 +11,7 @@ export interface CompiledOption {
   id: string;
   value: string;
   order: number;
-  labels: Record<Language, string>;
+  labels: LocalizedText;
 }
 
 export interface CompiledQuestion {
@@ -19,19 +22,21 @@ export interface CompiledQuestion {
   order: number;
   type: QuestionType;
   parserHint: ParserHint;
-  texts: Record<Language, string>;
+  texts: LocalizedText;
   options: CompiledOption[];
 }
 
 export interface CompiledMessage {
   key: string;
-  texts: Record<Language, string>;
+  texts: LocalizedText;
 }
 
 export interface CompiledConfig {
   version: string;
   clientRecordId: string | null;
   industry: string;
+  /** Languages offered, in button order. Absent means English and Arabic, as for real estate. */
+  languages?: Language[];
   questions: CompiledQuestion[];
   messages: Record<string, CompiledMessage>;
   createdAt: string;

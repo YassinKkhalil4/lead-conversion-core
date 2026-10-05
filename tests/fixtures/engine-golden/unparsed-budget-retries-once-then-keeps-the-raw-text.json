@@ -1,0 +1,143 @@
+[
+  {
+    "action": "reply",
+    "replyKey": "q_payment_plan",
+    "text": "تفضل الدفع كاش ولا تقسيط؟",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "pay_cash",
+        "label": "كاش"
+      },
+      {
+        "id": "pay_installments",
+        "label": "تقسيط"
+      },
+      {
+        "id": "pay_flexible",
+        "label": "الاتنين ينفع"
+      }
+    ],
+    "stageBefore": "asking_budget",
+    "stageAfter": "asking_payment_plan",
+    "questionKey": "q_budget",
+    "saveKey": "q_budget",
+    "parsedValue": "2400000-3600000",
+    "parseSource": "parser",
+    "outboxEvents": [
+      {
+        "eventType": "qualification_answer_saved",
+        "payload": {
+          "questionKey": "q_budget",
+          "saveKey": "q_budget",
+          "parsedValue": "2400000-3600000",
+          "collected": {
+            "q_budget_min": "2400000",
+            "q_budget_max": "3600000"
+          },
+          "raw": "mish 3arf",
+          "parseSource": "parser"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_payment_plan",
+      "currentQuestionKey": "q_payment_plan",
+      "answers": {
+        "q_budget_min": "2400000",
+        "q_budget_max": "3600000"
+      },
+      "retryCount": 0,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 1
+    }
+  },
+  {
+    "action": "reply",
+    "replyKey": "clarify_invalid",
+    "text": "معلش، مش فاهم قصدك 🙏 ممكن تختار من الاختيارات دي؟\n\nتفضل الدفع كاش ولا تقسيط؟",
+    "messageKind": "buttons",
+    "interactiveOptions": [
+      {
+        "id": "pay_cash",
+        "label": "كاش"
+      },
+      {
+        "id": "pay_installments",
+        "label": "تقسيط"
+      },
+      {
+        "id": "pay_flexible",
+        "label": "الاتنين ينفع"
+      }
+    ],
+    "stageBefore": "asking_payment_plan",
+    "stageAfter": "asking_payment_plan",
+    "questionKey": "q_payment_plan",
+    "saveKey": "q_payment_plan",
+    "needsAsyncAi": true,
+    "outboxEvents": [
+      {
+        "eventType": "shadow_ai_refinement_requested",
+        "payload": {
+          "stage": "asking_payment_plan",
+          "questionKey": "q_payment_plan",
+          "raw": "mish 3arf bardo"
+        }
+      }
+    ],
+    "nextState": {
+      "clientRecordId": "recCLIENT00000001",
+      "clientId": "client_demo",
+      "phoneNormalized": "+201000000000",
+      "leadRecordId": "recLEAD000000001",
+      "leadId": "lead_demo",
+      "leadName": "Ahmed",
+      "companyName": "Demo Realty",
+      "projectName": "Palm Heights",
+      "projectRecordId": "recPROJECT000001",
+      "preferredLanguage": "Arabic",
+      "currentStage": "asking_payment_plan",
+      "currentQuestionKey": "q_payment_plan",
+      "answers": {
+        "q_budget_min": "2400000",
+        "q_budget_max": "3600000"
+      },
+      "retryCount": 1,
+      "status": "in_qualification",
+      "humanTakeover": false,
+      "stopFollowUp": false,
+      "closedStatus": "",
+      "appointmentStatus": "",
+      "assignedSalespersonRecordId": "",
+      "assignedSalespersonPhone": "",
+      "lastInboundAt": "2026-07-28T00:00:00.000Z",
+      "conversationWindowExpiresAt": "2026-07-29T00:00:00.000Z",
+      "conversationEngine": "edge",
+      "stateAuthority": "edge",
+      "configVersion": "4329ccc9fd4aebcb2705b1cbd5bbf1dc9ba879dd7a343c04787479d5f38f4e0d",
+      "stateVersion": 2
+    }
+  }
+]

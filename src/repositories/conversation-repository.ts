@@ -5,6 +5,7 @@ import type {
   ShadowEvaluateInput,
   StateAuthority,
 } from '../domain/types.js';
+import { isLanguage } from '../domain/language.js';
 import type { ConfigSnapshot } from './config-repository.js';
 
 interface ConversationRow {
@@ -56,9 +57,7 @@ function rowToState(row: ConversationRow): ConversationState {
     companyName: row.company_name,
     projectName: row.project_name,
     projectRecordId: row.project_record_id,
-    preferredLanguage: row.preferred_language === 'Arabic' || row.preferred_language === 'English'
-      ? row.preferred_language
-      : '',
+    preferredLanguage: isLanguage(row.preferred_language) ? row.preferred_language : '',
     currentStage: row.current_stage,
     currentQuestionKey: row.current_question_key,
     answers: row.answers_json || {},

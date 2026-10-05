@@ -5,6 +5,7 @@ import type {
   CompiledOption,
   CompiledQuestion,
   Language,
+  LocalizedText,
   QuestionType,
 } from './types.js';
 
@@ -16,6 +17,7 @@ export interface AirtableRecord {
 export interface CompileInput {
   clientRecordId?: string | null;
   industry?: string;
+  languages?: Language[];
   questions: AirtableRecord[];
   options: AirtableRecord[];
   messages: AirtableRecord[];
@@ -31,9 +33,23 @@ function isDefault(fields: Record<string, unknown>): boolean {
   return !Array.isArray(fields.Client) || fields.Client.length === 0;
 }
 
-function text(fields: Record<string, unknown>, language: Language): string {
-  const other: Language = language === 'English' ? 'Arabic' : 'English';
+function text(fields: Record<string, unknown>, language: 'English' | 'Arabic'): string {
+  const other = language === 'English' ? 'Arabic' : 'English';
   return String(fields[language] || fields[other] || '');
+}
+
+/**
+ * English and Arabic as before, plus Spanish and Catalan only when the record
+ * has them. A real-estate config therefore compiles to exactly the same object
+ * and checksum as it did before those languages existed.
+ */
+function localizedText(fields: Record<string, unknown>): LocalizedText {
+  const out: LocalizedText = { Arabic: text(fields, 'Arabic'), English: text(fields, 'English') };
+  for (const language of ['Spanish', 'Catalan'] as const) {
+    const value = String(fields[language] || '').trim();
+    if (value) out[language] = value;
+  }
+  return out;
 }
 
 function stableStringify(value: unknown): string {
@@ -73,10 +89,7 @@ export function compileConfig(input: CompileInput): CompiledConfig {
         id: String(option.fields['Option Key'] || ''),
         value: String(option.fields.Value ?? ''),
         order: Number(option.fields.Order || 0),
-        labels: {
-          Arabic: text(option.fields, 'Arabic'),
-          English: text(option.fields, 'English'),
-        },
+        labels: localizedText(option.fields),
       }));
 
     return {
@@ -87,10 +100,7 @@ export function compileConfig(input: CompileInput): CompiledConfig {
       order: Number(record.fields.Order || 0),
       type: String(record.fields['Question Type'] || 'Free Text') as QuestionType,
       parserHint: String(record.fields['Parser Hint'] || 'none'),
-      texts: {
-        Arabic: text(record.fields, 'Arabic'),
-        English: text(record.fields, 'English'),
-      },
+      texts: localizedText(record.fields),
       options: questionOptions,
     };
   });
@@ -110,16 +120,15 @@ export function compileConfig(input: CompileInput): CompiledConfig {
     if (!selected) continue;
     messages[key] = {
       key,
-      texts: {
-        Arabic: text(selected.fields, 'Arabic'),
-        English: text(selected.fields, 'English'),
-      },
+      texts: localizedText(selected.fields),
     };
   }
 
+  const languages = input.languages && input.languages.length > 0 ? input.languages : undefined;
   const withoutVersion = {
     clientRecordId,
     industry: input.industry || 'real_estate',
+    ...(languages ? { languages } : {}),
     questions,
     messages,
   };
@@ -129,6 +138,7 @@ export function compileConfig(input: CompileInput): CompiledConfig {
     version,
     clientRecordId,
     industry: input.industry || 'real_estate',
+    ...(languages ? { languages } : {}),
     questions,
     messages,
     createdAt: input.now || new Date().toISOString(),

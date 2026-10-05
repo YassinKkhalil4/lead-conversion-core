@@ -19,6 +19,18 @@ const OPT_OUT_PHRASES = [
   'مش عايز',
   'مش عايزة',
   'مش عايزين',
+  // Spanish and Catalan. Never a bare "para": it is the ordinary word "for"
+  // ("una mesa para cuatro") and would opt a guest out mid-booking.
+  'baja',
+  'baixa',
+  'parar',
+  'aturar',
+  'darse de baja',
+  'dar de baja',
+  'donar de baixa',
+  'no me interesa',
+  'no m interessa',
+  'no molestar',
 ].map((phrase) => tokens(phrase));
 
 function normalise(text: string): string {
