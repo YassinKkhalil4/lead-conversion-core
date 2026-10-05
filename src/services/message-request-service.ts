@@ -80,6 +80,9 @@ export class MessageRequestService {
   async requestWhatsAppSend(input: MessageRequestInput): Promise<MessageRequestResult> {
     const parsed = requestSchema.parse(input);
     this.validatePolicy(parsed);
+    // Callers that do not name a sender (dashboard replies, reminders) send from
+    // the client's own registered number; none registered keeps the default one.
+    if (!parsed.phoneNumberId) parsed.phoneNumberId = await this.clientPhoneNumberId(parsed.clientId);
     const idempotencyKey = messageIdempotencyKey(parsed);
     return withTransaction(async (client) => {
       const message = await client.query<{ message_id: string; inserted: boolean }>(
@@ -145,6 +148,20 @@ export class MessageRequestService {
       }
       return { messageId, outboxCommandId, idempotencyKey };
     });
+  }
+
+  private async clientPhoneNumberId(clientId: string): Promise<string> {
+    const result = await pool.query<{ phone_number_id: string }>(
+      `SELECT ch.phone_number_id
+       FROM edge_client_channels ch
+       JOIN app.clients c ON c.client_id=$1
+       WHERE ch.active=true AND ch.direct_send_enabled=true
+         AND (ch.client_id=c.client_id::text OR (c.legacy_airtable_id IS NOT NULL AND ch.client_record_id=c.legacy_airtable_id))
+       ORDER BY ch.updated_at DESC
+       LIMIT 1`,
+      [clientId],
+    );
+    return result.rows[0]?.phone_number_id ?? '';
   }
 
   private validatePolicy(parsed: z.output<typeof requestSchema>): void {

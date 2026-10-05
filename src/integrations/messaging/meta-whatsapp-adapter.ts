@@ -105,10 +105,37 @@ function classifyStatus(statusCode: number): 'retryable' | 'permanently_failed' 
   return 'permanently_failed';
 }
 
+/**
+ * Whether Kadensio sends from this WhatsApp number: an active row in
+ * `edge_client_channels` with direct send on. The default number comes from env;
+ * every other tenant number (a hospitality venue's own) must be registered here
+ * to be sent from, and is sent with the same access token. An unknown id is
+ * refused, so a stale or forged command can never pick an arbitrary sender.
+ */
+export type ChannelLookup = (phoneNumberId: string) => Promise<boolean>;
+
+/** A database-backed lookup, cached for a minute so a busy send loop does not query per message. */
+function activeChannelLookup(): ChannelLookup {
+  const cache = new Map<string, { ok: boolean; at: number }>();
+  return async (phoneNumberId) => {
+    const hit = cache.get(phoneNumberId);
+    if (hit && Date.now() - hit.at < 60_000) return hit.ok;
+    const { pool } = await import('../../db/pool.js');
+    const result = await pool.query(
+      'SELECT 1 FROM edge_client_channels WHERE phone_number_id=$1 AND active=true AND direct_send_enabled=true',
+      [phoneNumberId],
+    );
+    const ok = (result.rowCount ?? 0) > 0;
+    cache.set(phoneNumberId, { ok, at: Date.now() });
+    return ok;
+  };
+}
+
 export class MetaWhatsAppAdapter implements MessageProvider {
   constructor(
     private readonly config: MetaWhatsAppConfig,
     private readonly fetcher: FetchLike = fetch,
+    private readonly sendableChannel: ChannelLookup = async () => false,
   ) {}
 
   static fromEnv(fetcher: FetchLike = fetch): MetaWhatsAppAdapter {
@@ -121,6 +148,7 @@ export class MetaWhatsAppAdapter implements MessageProvider {
         graphApiVersion: env.GRAPH_API_VERSION,
       },
       fetcher,
+      activeChannelLookup(),
     );
   }
 
@@ -131,11 +159,13 @@ export class MetaWhatsAppAdapter implements MessageProvider {
     if (!this.config.accessToken || !this.config.phoneNumberId) {
       return { outcome: 'permanently_failed', error: 'meta_whatsapp_credentials_missing', providerResponse: {} };
     }
-    if (command.destination.phoneNumberId && command.destination.phoneNumberId !== this.config.phoneNumberId) {
+    const requested = command.destination.phoneNumberId;
+    if (requested && requested !== this.config.phoneNumberId && !(await this.sendableChannel(requested))) {
       return { outcome: 'permanently_failed', error: 'meta_whatsapp_phone_number_id_mismatch', statusCode: 409, providerResponse: {} };
     }
+    const senderId = requested || this.config.phoneNumberId;
 
-    const endpoint = `https://graph.facebook.com/${this.config.graphApiVersion}/${this.config.phoneNumberId}/messages`;
+    const endpoint = `https://graph.facebook.com/${this.config.graphApiVersion}/${senderId}/messages`;
     try {
       const response = await this.fetcher(endpoint, {
         method: 'POST',

@@ -168,4 +168,41 @@ describe('MetaWhatsAppAdapter', () => {
       },
     });
   });
+
+  describe('sending from a tenant\'s own number', () => {
+    const venueCommand: SendMessageCommand = { ...baseCommand, destination: { ...baseCommand.destination, phoneNumberId: 'venue-number-id' } };
+
+    function withChannels(allowed: string[]) {
+      const fetcher = vi.fn(async () => jsonResponse(acceptedFixture, 200));
+      return {
+        fetcher,
+        send: new MetaWhatsAppAdapter(
+          { enabled: true, accessToken: 'test-access-token', phoneNumberId: 'phone-number-id-test', graphApiVersion: 'v25.0' },
+          fetcher,
+          async (id) => allowed.includes(id),
+        ),
+      };
+    }
+
+    it('sends from a registered channel with the shared access token', async () => {
+      const { send, fetcher } = withChannels(['venue-number-id']);
+      await expect(send.send(venueCommand)).resolves.toMatchObject({ outcome: 'accepted' });
+      const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+      expect(url).toContain('/venue-number-id/messages');
+      expect((init.headers as Record<string, string>).authorization).toBe('Bearer test-access-token');
+    });
+
+    it('refuses a number that is not a registered, send-enabled channel', async () => {
+      const { send, fetcher } = withChannels([]);
+      await expect(send.send(venueCommand)).resolves.toMatchObject({ outcome: 'permanently_failed', error: 'meta_whatsapp_phone_number_id_mismatch' });
+      expect(fetcher).not.toHaveBeenCalled();
+    });
+
+    it('uses the default number when the command names none', async () => {
+      const { send, fetcher } = withChannels([]);
+      await send.send({ ...baseCommand, destination: { ...baseCommand.destination, phoneNumberId: '' } });
+      expect((fetcher.mock.calls[0] as unknown as [string])[0]).toContain('/phone-number-id-test/messages');
+    });
+  });
 });
+

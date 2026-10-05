@@ -130,7 +130,7 @@ describePg('reservations dashboard API, with real PostgreSQL', () => {
 
   beforeEach(async () => {
     await db.pool.query(`
-      TRUNCATE app.sessions, app.users, app.login_attempts, app.notifications, app.lead_assignments, app.messages,
+      TRUNCATE edge_client_channels, app.sessions, app.users, app.login_attempts, app.notifications, app.lead_assignments, app.messages,
                app.leads, app.contacts, app.projects, app.salespeople, app.conversations, app.clients,
                runtime.outbox_commands, runtime.scheduled_jobs, audit.events
       RESTART IDENTITY CASCADE
@@ -216,6 +216,30 @@ describePg('reservations dashboard API, with real PostgreSQL', () => {
     expect(stage.rows[0]?.pipeline_stage).toBe('site_visit_scheduled');
     const again = await app.inject({ method: 'POST', url: `/api/reservations/${seed.reservations.requestedA}/confirm`, headers, payload: {} });
     expect(again.statusCode).toBe(409);
+  });
+
+  it('messages the guest from the venue\'s own WhatsApp number when the window is open', async () => {
+    const seed = await seedTenant('bcnvenue');
+    await db.pool.query(
+      `INSERT INTO edge_client_channels (phone_number_id, client_record_id, client_id, company_name, active, direct_send_enabled, graph_phone_number_id)
+       VALUES ('venue-number-777', 'rec_bcnvenue', $1, 'Venue', true, true, 'venue-number-777')`,
+      [seed.clientId],
+    );
+    await db.pool.query(
+      `INSERT INTO app.conversations (client_id, contact_id, lead_id, preferred_language, last_inbound_at, conversation_window_expires_at)
+       SELECT r.client_id, r.contact_id, r.lead_id, 'Spanish', now(), now() + interval '20 hours'
+       FROM app.reservations r WHERE r.reservation_id=$1`,
+      [seed.reservations.requestedA],
+    );
+    const res = await app.inject({
+      method: 'POST', url: `/api/reservations/${seed.reservations.requestedA}/confirm`, headers: await login(seed.emails.hostA), payload: {},
+    });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json().guestNotified).toBe(true);
+    const sent = await db.pool.query(`SELECT payload_json FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'`);
+    expect(sent.rows).toHaveLength(1);
+    expect(sent.rows[0]?.payload_json.phoneNumberId).toBe('venue-number-777');
+    expect(sent.rows[0]?.payload_json.message.text).toContain('ha confirmado tu mesa para 3');
   });
 
   it('cancels a reservation and frees it; a cancelled one cannot be cancelled again', async () => {
