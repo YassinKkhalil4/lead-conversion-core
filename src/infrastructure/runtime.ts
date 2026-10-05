@@ -661,6 +661,22 @@ export class JobRepository {
     );
   }
 
+  /**
+   * Cancels every job of a type that is still waiting for one aggregate, on the
+   * caller's transaction (unlike `cancel`, which uses the pool), so a reservation
+   * and its reminder are cancelled atomically. Returns the cancelled keys.
+   */
+  async cancelForAggregate(client: Db, jobType: string, aggregateKey: string, reason: string): Promise<string[]> {
+    const result = await client.query<{ job_key: string }>(
+      `UPDATE runtime.scheduled_jobs
+       SET status='cancelled', cancelled_reason=$3
+       WHERE job_type=$1 AND aggregate_key=$2 AND status IN ('pending','retryable')
+       RETURNING job_key`,
+      [jobType, aggregateKey, reason.slice(0, 4000)],
+    );
+    return result.rows.map((row) => row.job_key);
+  }
+
   async claim(workerId: string, limit = 1, leaseSeconds = 60): Promise<ClaimedJob[]> {
     return withTransaction(async (client) => {
       const result = await client.query<{

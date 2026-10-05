@@ -216,6 +216,12 @@ describePg('reservations dashboard API, with real PostgreSQL', () => {
     expect(stage.rows[0]?.pipeline_stage).toBe('site_visit_scheduled');
     const again = await app.inject({ method: 'POST', url: `/api/reservations/${seed.reservations.requestedA}/confirm`, headers, payload: {} });
     expect(again.statusCode).toBe(409);
+    // Confirming a held request schedules its reminder; cancelling it later removes it.
+    const jobs = await db.pool.query(`SELECT status FROM runtime.scheduled_jobs WHERE job_type='reservation.reminder' AND aggregate_key=$1`, [seed.reservations.requestedA]);
+    expect(jobs.rows).toEqual([{ status: 'pending' }]);
+    await app.inject({ method: 'POST', url: `/api/reservations/${seed.reservations.requestedA}/cancel`, headers });
+    const after = await db.pool.query(`SELECT status FROM runtime.scheduled_jobs WHERE job_type='reservation.reminder' AND aggregate_key=$1`, [seed.reservations.requestedA]);
+    expect(after.rows).toEqual([{ status: 'cancelled' }]);
   });
 
   it('messages the guest from the venue\'s own WhatsApp number when the window is open', async () => {

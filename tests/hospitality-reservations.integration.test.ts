@@ -21,7 +21,7 @@ describePg('hospitality reservations over WhatsApp, with real PostgreSQL', () =>
     EDGE_INTERNAL_SECRET: 'test_internal_secret_123456',
     META_APP_SECRET: 'test_meta_app_secret_123456',
     META_WEBHOOK_VERIFY_TOKEN: 'test_meta_verify_token_123456',
-    META_APPROVED_TEMPLATE_NAMES: 'lead_welcome',
+    META_APPROVED_TEMPLATE_NAMES: 'lead_welcome,reservation_reminder:es,reservation_reminder:ca,reservation_reminder:en',
     DIRECT_META_WEBHOOK_ENABLED: 'true',
     META_STATUS_PROCESSOR_ENABLED: 'true',
     DIRECT_LEAD_INGRESS_ENABLED: 'true',
@@ -386,6 +386,140 @@ describePg('hospitality reservations over WhatsApp, with real PostgreSQL', () =>
       badTime.shifts[0].lastSeating = '12:00';
       await expect(provisionHospitalityTenant(badTime)).rejects.toThrow(/lastSeating is before start/);
       expect((await db.pool.query('SELECT count(*) FROM app.clients')).rows[0]?.count).toBe('0');
+    });
+  });
+
+  describe('reminders', () => {
+    /** A day-month text for a date `days` ahead, as a guest would type it ("15/12"). */
+    const inDays = (days: number) => {
+      const d = new Date(Date.now() + days * 86_400_000);
+      return `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
+    };
+    const jobFor = async (reservationId: string) =>
+      (await db.pool.query(`SELECT job_key, status, due_at, payload_json FROM runtime.scheduled_jobs WHERE job_type='reservation.reminder' AND aggregate_key=$1`, [reservationId])).rows;
+    const claimed = (reservationId: string, startsAt: Date) => ({
+      scheduledJobId: randomUUID(), workerId: 'test', jobType: 'reservation.reminder', attemptCount: 1,
+      payload: { reservationId, startsAtEpoch: Math.floor(startsAt.getTime() / 1000) },
+    });
+
+    async function bookAhead(phone: string, days = 60) {
+      await book(phone, { party: '4', when: `${inDays(days)} cena`, zone: 'zone_interior' });
+      const row = await db.pool.query<{ reservation_id: string; starts_at: Date }>('SELECT reservation_id, starts_at FROM app.reservations ORDER BY created_at DESC LIMIT 1');
+      return { id: row.rows[0]!.reservation_id, startsAt: row.rows[0]!.starts_at };
+    }
+
+    it('schedules a reminder 24 hours before a confirmed booking', async () => {
+      await seedVenue();
+      const { id, startsAt } = await bookAhead('+34600000030');
+      const jobs = await jobFor(id);
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0]).toMatchObject({ status: 'pending' });
+      expect(new Date(jobs[0].due_at).getTime()).toBe(startsAt.getTime() - 24 * 3600 * 1000);
+    });
+
+    it('does not remind for a table that is under two hours away, nor for a held request', async () => {
+      const { ReservationReminderService } = await import('../src/services/reservation-reminder-service.js');
+      const venue = await seedVenue({ threshold: 8 });
+      const phone = '+34600000031';
+      await book(phone, { party: '9', when: `${inDays(30)} cena`, zone: 'zone_interior' });
+      const held = (await db.pool.query<{ reservation_id: string }>('SELECT reservation_id FROM app.reservations')).rows[0]!.reservation_id;
+      expect(await jobFor(held)).toHaveLength(0);
+      await db.pool.query(`UPDATE app.reservations SET status='confirmed', starts_at=now() + interval '90 minutes' WHERE reservation_id=$1`, [held]);
+      const service = new ReservationReminderService();
+      expect(await service.schedule(db.pool, held)).toEqual({ scheduled: false, reason: 'too_close' });
+      expect(venue.clientId).toBeTruthy();
+    });
+
+    it('cancels the reminder when the guest cancels, by text or by the reminder button', async () => {
+      await seedVenue();
+      const phone = '+34600000032';
+      const { id } = await bookAhead(phone);
+      await deliver(phone, { text: 'cancelar' });
+      expect((await jobFor(id))[0]?.status).toBe('cancelled');
+
+      const phone2 = '+34600000033';
+      const second = await bookAhead(phone2, 61);
+      await deliver(phone2, { text: 'Cancelar', option: `rcancel:${second.id}` });
+      expect((await db.pool.query('SELECT status FROM app.reservations WHERE reservation_id=$1', [second.id])).rows[0]?.status).toBe('cancelled');
+      expect((await jobFor(second.id))[0]?.status).toBe('cancelled');
+      expect(await lastReply(phone2)).toContain('cancelada');
+    });
+
+    it('the reminder button cancels the reservation it was sent for, not the earliest one', async () => {
+      await seedVenue();
+      const phone = '+34600000034';
+      const early = await bookAhead(phone, 40);
+      // A second booking from the same guest, later.
+      await deliver(phone, { text: 'hola, quiero reservar' });
+      await deliver(phone, { text: '2' });
+      await deliver(phone, { text: `${inDays(70)} comida` });
+      await deliver(phone, { option: 'zone_interior' });
+      const later = (await db.pool.query<{ reservation_id: string }>('SELECT reservation_id FROM app.reservations ORDER BY starts_at DESC LIMIT 1')).rows[0]!.reservation_id;
+      expect(later).not.toBe(early.id);
+      await deliver(phone, { text: 'Cancelar', option: `rcancel:${later}` });
+      const states = await db.pool.query('SELECT reservation_id, status FROM app.reservations');
+      expect(states.rows.find((r) => r.reservation_id === later)?.status).toBe('cancelled');
+      expect(states.rows.find((r) => r.reservation_id === early.id)?.status).toBe('confirmed');
+    });
+
+    it('sends the reminder as text inside the window and as an approved template outside it', async () => {
+      const { ReservationReminderService } = await import('../src/services/reservation-reminder-service.js');
+      await seedVenue();
+      const { id, startsAt } = await bookAhead('+34600000035');
+      const service = new ReservationReminderService();
+
+      expect(await service.process(claimed(id, startsAt))).toEqual({ outcome: 'completed' });
+      const sent = await db.pool.query(`SELECT payload_json FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message' ORDER BY created_at DESC LIMIT 1`);
+      expect(sent.rows[0]?.payload_json.message.kind).toBe('text');
+      expect(sent.rows[0]?.payload_json.message.text).toContain('Recordatorio');
+      expect(sent.rows[0]?.payload_json.message.text).toContain('Responde CANCELAR');
+
+      // Outside the 24 hours: a template, with the cancel button naming this reservation.
+      await db.pool.query(`UPDATE app.reservations SET reminder_sent_at=NULL WHERE reservation_id=$1`, [id]);
+      await db.pool.query(`UPDATE app.conversations SET conversation_window_expires_at = now() - interval '2 hours'`);
+      await db.pool.query(`DELETE FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'`);
+      await db.pool.query(`DELETE FROM app.messages WHERE message_text LIKE '%reservation_reminder%'`);
+      expect(await service.process(claimed(id, startsAt))).toEqual({ outcome: 'completed' });
+      const template = await db.pool.query(`SELECT payload_json FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message' ORDER BY created_at DESC LIMIT 1`);
+      const message = template.rows[0]?.payload_json.message;
+      expect(message).toMatchObject({ kind: 'template', templateName: 'reservation_reminder', languageCode: 'es' });
+      expect(message.components[0].parameters).toHaveLength(4);
+      expect(message.components[1].parameters[0].payload).toBe(`rcancel:${id}`);
+    });
+
+    it('sends nothing for a cancelled, started, rescheduled or already-reminded reservation', async () => {
+      const { ReservationReminderService } = await import('../src/services/reservation-reminder-service.js');
+      await seedVenue();
+      const { id, startsAt } = await bookAhead('+34600000036');
+      const service = new ReservationReminderService();
+      const outbox = async () => (await db.pool.query(`SELECT count(*)::int AS n FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'`)).rows[0]!.n as number;
+      const base = await outbox();
+
+      await db.pool.query(`UPDATE app.reservations SET starts_at = starts_at + interval '1 day' WHERE reservation_id=$1`, [id]);
+      expect(await service.process(claimed(id, startsAt))).toEqual({ outcome: 'completed' }); // the job was for the old start
+      await db.pool.query(`UPDATE app.reservations SET starts_at = $2 WHERE reservation_id=$1`, [id, startsAt]);
+
+      await db.pool.query(`UPDATE app.reservations SET status='cancelled' WHERE reservation_id=$1`, [id]);
+      await service.process(claimed(id, startsAt));
+      await db.pool.query(`UPDATE app.reservations SET status='confirmed', starts_at = now() - interval '1 hour' WHERE reservation_id=$1`, [id]);
+      await service.process(claimed(id, new Date(Date.now() - 3600_000)));
+      await db.pool.query(`UPDATE app.reservations SET starts_at=$2, reminder_sent_at=now() WHERE reservation_id=$1`, [id, startsAt]);
+      await service.process(claimed(id, startsAt));
+
+      expect(await outbox()).toBe(base);
+      const reasons = await db.pool.query(`SELECT payload_json->>'reason' AS reason FROM audit.events WHERE event_type='reservation.reminder_skipped' ORDER BY created_at, audit_event_id`);
+      expect(reasons.rows.map((r) => r.reason)).toEqual(['rescheduled', 'status_cancelled', 'already_started', 'already_sent']);
+    });
+
+    it('sends a repeated run only once', async () => {
+      const { ReservationReminderService } = await import('../src/services/reservation-reminder-service.js');
+      await seedVenue();
+      const { id, startsAt } = await bookAhead('+34600000037');
+      const service = new ReservationReminderService();
+      await service.process(claimed(id, startsAt));
+      await service.process(claimed(id, startsAt));
+      const n = await db.pool.query(`SELECT count(*)::int AS n FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message' AND payload_json->'message'->>'text' LIKE 'Recordatorio%'`);
+      expect(n.rows[0]?.n).toBe(1);
     });
   });
 });

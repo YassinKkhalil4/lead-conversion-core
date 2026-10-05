@@ -2,7 +2,8 @@ import type { PoolClient } from 'pg';
 import { pool } from '../../db/pool.js';
 import { withTransaction } from '../../db/transaction.js';
 import { AuditRepository } from '../../infrastructure/runtime.js';
-import { describeDate } from '../reservation-service.js';
+import { describeDate } from '../../domain/hospitality-format.js';
+import { ReservationReminderService } from '../reservation-reminder-service.js';
 import { parseCalendarDate } from '../../domain/hospitality-normalization.js';
 import type { Language } from '../../domain/types.js';
 import { isLanguage } from '../../domain/language.js';
@@ -133,7 +134,10 @@ const NOTICE: Record<'confirmed' | 'declined', Record<Language, string>> = {
 };
 
 export class DashboardReservationService {
-  constructor(private readonly audit = new AuditRepository()) {}
+  constructor(
+    private readonly audit = new AuditRepository(),
+    private readonly reminders = new ReservationReminderService(),
+  ) {}
 
   async list(scope: DashboardScope, filters: ReservationListFilters): Promise<{ reservations: ReservationItem[]; total: number; limit: number; offset: number }> {
     const params = new QueryParams();
@@ -195,6 +199,7 @@ export class DashboardReservationService {
       if (current.leadId) {
         await client.query(`UPDATE app.leads SET pipeline_stage='site_visit_scheduled', updated_at=now() WHERE lead_id=$1`, [current.leadId]);
       }
+      await this.reminders.schedule(client, reservationId);
       await this.audit.record(client, {
         eventType: 'reservation.confirmed',
         actorType: 'operator',
@@ -223,6 +228,7 @@ export class DashboardReservationService {
         `UPDATE app.reservations SET status='cancelled', cancelled_at=now(), updated_at=now() WHERE reservation_id=$1`,
         [reservationId],
       );
+      await this.reminders.cancel(client, reservationId, 'venue_cancelled');
       if (current.leadId) {
         await client.query(
           `UPDATE app.leads l SET pipeline_stage='closed_lost', updated_at=now()
@@ -262,6 +268,7 @@ export class DashboardReservationService {
       if (!current) throw notFound('reservation_not_found');
       if (!allowedFrom[status].includes(current.status)) throw conflict('reservation_status_transition_not_allowed', { from: current.status, to: status });
       await client.query(`UPDATE app.reservations SET status=$2, updated_at=now() WHERE reservation_id=$1`, [reservationId, status]);
+      await this.reminders.cancel(client, reservationId, `status_${status}`);
       if (current.leadId && status !== 'no_show') {
         await client.query(`UPDATE app.leads SET pipeline_stage='closed_won', updated_at=now() WHERE lead_id=$1`, [current.leadId]);
       }

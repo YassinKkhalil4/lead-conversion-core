@@ -6,6 +6,7 @@ import { MetaWhatsAppAdapter } from './integrations/messaging/meta-whatsapp-adap
 import { leadIngressInboxEventTypes } from './services/lead-ingress-inbox-processor.js';
 import { MetaInboxProcessor } from './services/meta-inbox-processor.js';
 import { FollowupJobProcessor } from './services/followup-job-processor.js';
+import { ReservationReminderService } from './services/reservation-reminder-service.js';
 import { ReportingService } from './services/reporting-service.js';
 import { SlaService } from './services/sla-service.js';
 import { CalendarOutboxDispatcher } from './worker/calendar-outbox-dispatcher.js';
@@ -34,10 +35,12 @@ const {
 const followupJobProcessor = new FollowupJobProcessor();
 const slaService = new SlaService();
 const reportingService = new ReportingService();
+const reservationReminders = new ReservationReminderService();
 const processRuntimeJob = createJobRouter({
   'sla.notify': (job) => slaService.process(job),
   'followup.send': (job) => followupJobProcessor.process(job),
   'report.daily': (job) => reportingService.process(job),
+  'reservation.reminder': (job) => reservationReminders.process(job),
 });
 const dispatchRuntimeOutbox = createOutboxRouter({
   messaging: messagingDispatcher,

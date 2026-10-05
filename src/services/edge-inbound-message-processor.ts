@@ -24,6 +24,7 @@ import { InboundLeadCaptureService } from './inbound-lead-capture-service.js';
 import { LeadScoringService } from './lead-scoring-service.js';
 import { LeadRoutingService } from './lead-routing-service.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
+import { REMINDER_CANCEL_PREFIX } from './reservation-reminder-service.js';
 import { ReservationService } from './reservation-service.js';
 import { SlaService } from './sla-service.js';
 
@@ -248,8 +249,14 @@ export class EdgeInboundMessageProcessor {
         ? await this.venueToday(client, state.clientId, new Date(receivedAt))
         : undefined;
       // A guest who writes "cancelar" cancels the booking they have, before anything else reads the message.
-      const cancelled = !isOptOutMessage(input.messageText) && config.industry === 'hospitality' && isCancelIntent(input.messageText)
-        ? await this.reservations.cancel(client, { state, config, leadId: state.leadId })
+      // The reminder's quick-reply button names the reservation it was sent for; a typed
+      // "cancelar" cancels the guest's earliest upcoming one.
+      const buttonCancel = input.messageOptionId.startsWith(REMINDER_CANCEL_PREFIX)
+        ? input.messageOptionId.slice(REMINDER_CANCEL_PREFIX.length)
+        : '';
+      const cancelled = !isOptOutMessage(input.messageText) && config.industry === 'hospitality'
+        && (isUuid(buttonCancel) || isCancelIntent(input.messageText))
+        ? await this.reservations.cancel(client, { state, config, leadId: state.leadId, ...(isUuid(buttonCancel) ? { reservationId: buttonCancel } : {}) })
         : null;
       let decision = cancelled ?? (isOptOutMessage(input.messageText)
         ? optOutDecision(state)

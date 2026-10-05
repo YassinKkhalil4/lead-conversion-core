@@ -1,7 +1,9 @@
 import type { Db } from '../db/pool.js';
 import { localized } from '../domain/language.js';
-import { calendarDateIn, formatDate, parseCalendarDate, readDateShift, type CalendarDate } from '../domain/hospitality-normalization.js';
+import { calendarDateIn, formatDate, parseCalendarDate, readDateShift } from '../domain/hospitality-normalization.js';
+import { describeDate } from '../domain/hospitality-format.js';
 import { renderTemplate } from '../domain/render.js';
+import { ReservationReminderService } from './reservation-reminder-service.js';
 import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
 import { KadensioFloorPlanProvider } from '../integrations/reservations/kadensio-floor-plan.js';
 import type { ReservationProvider } from '../integrations/reservations/types.js';
@@ -44,28 +46,19 @@ interface Tenant {
   maps_url: string;
 }
 
-const LOCALE: Record<Language, string> = { English: 'en-GB', Spanish: 'es-ES', Catalan: 'ca-ES', Arabic: 'ar-EG' };
-
 function labelOf(labels: unknown, language: Language, fallback: string): string {
   const map = (labels && typeof labels === 'object' ? labels : {}) as Record<string, string>;
   return map[language] || map.English || fallback;
 }
 
-/** "viernes, 9 de octubre": a calendar date written for a guest, in their language. */
-export function describeDate(date: CalendarDate, language: Language): string {
-  return new Intl.DateTimeFormat(LOCALE[language], {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(date.year, date.month - 1, date.day)));
-}
+export { describeDate };
 
 export class ReservationService {
   constructor(
     private readonly outbox = new RuntimeOutboxRepository(),
     private readonly audit = new AuditRepository(),
     private readonly providers: Record<string, ReservationProvider> = { kadensio: new KadensioFloorPlanProvider() },
+    private readonly reminders = new ReservationReminderService(),
   ) {}
 
   /** Books the finished conversation. Throws only for database errors, which retry the turn. */
@@ -167,7 +160,10 @@ export class ReservationService {
        WHERE lead_id=$1`,
       [target.leadId, tenant.project_id, result.status === 'confirmed'],
     );
-    if (!result.replayed) await this.assignHostAndNotify(db, turn, tenant.project_id, tenant.project_name, result.reservationId, vars());
+    if (!result.replayed) {
+      await this.assignHostAndNotify(db, turn, tenant.project_id, tenant.project_name, result.reservationId, vars());
+      if (result.status === 'confirmed') await this.reminders.schedule(db, result.reservationId);
+    }
 
     const key = result.status === 'requested' ? 'reservation_requested' : 'reservation_confirmed';
     const text = this.text(config, key, language, state, tenant.project_name, vars());
@@ -196,7 +192,7 @@ export class ReservationService {
    * A guest asks to cancel. Cancels their next active reservation and says so;
    * null when they have none, so the message goes on to the normal flow.
    */
-  async cancel(db: Db, input: { state: ConversationState; config: CompiledConfig; leadId: string }): Promise<ReplyDecision | null> {
+  async cancel(db: Db, input: { state: ConversationState; config: CompiledConfig; leadId: string; reservationId?: string }): Promise<ReplyDecision | null> {
     const { state, config } = input;
     const found = await db.query<{ reservation_id: string; party_size: number; service_date: string; shift_labels: unknown; zone_labels: unknown; project_name: string; timezone: string }>(
       `SELECT r.reservation_id, r.party_size, to_char(r.service_date, 'YYYY-MM-DD') AS service_date,
@@ -208,10 +204,11 @@ export class ReservationService {
        JOIN app.projects p ON p.project_id=r.project_id
        JOIN app.clients c ON c.client_id=r.client_id
        WHERE l.lead_id=$1 AND r.status IN ('requested', 'confirmed') AND r.starts_at > now()
+         AND ($2::uuid IS NULL OR r.reservation_id=$2::uuid)
        ORDER BY r.starts_at
        LIMIT 1
        FOR UPDATE OF r`,
-      [input.leadId],
+      [input.leadId, input.reservationId ?? null],
     );
     const row = found.rows[0];
     if (!row) return null;
@@ -219,6 +216,7 @@ export class ReservationService {
       `UPDATE app.reservations SET status='cancelled', cancelled_at=now(), updated_at=now() WHERE reservation_id=$1`,
       [row.reservation_id],
     );
+    await this.reminders.cancel(db, row.reservation_id, 'guest_cancelled');
     await db.query(
       `UPDATE app.leads l SET pipeline_stage='closed_lost', updated_at=now()
        WHERE l.lead_id=$1
