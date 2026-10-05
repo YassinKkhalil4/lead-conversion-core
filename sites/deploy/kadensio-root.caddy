@@ -17,7 +17,6 @@ kadensio.com, www.kadensio.com {
 	redir /lead-scoring.html https://real-estate.kadensio.com/lead-scoring.html 301
 	redir /official-vs-unofficial-whatsapp-automation.html https://real-estate.kadensio.com/official-vs-unofficial-whatsapp-automation.html 301
 	redir /speed-to-lead-real-estate.html https://real-estate.kadensio.com/speed-to-lead-real-estate.html 301
-	redir /llms.txt https://real-estate.kadensio.com/llms.txt 301
 
 	handle {
 		root * /var/www/kadensio-root/current

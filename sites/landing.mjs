@@ -7,6 +7,7 @@
 // read it and write into sites/dist.
 
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { ORIGINS, PLATFORM_LABEL, PLATFORM_URL } from "./copy/shared.mjs";
 
@@ -88,11 +89,13 @@ export function realEstateFromLanding({ repo, out }) {
   for (const f of PAGES) writeFileSync(join(out, f), transformPage(readFileSync(join(src, f), "utf8")));
   writeFileSync(join(out, "styles.css"), readFileSync(join(src, "styles.css"), "utf8") + PARENT_CSS);
   // Crawler files point at this host. The legal pages are not here, so they are not listed.
-  const sitemap = readFileSync(join(src, "sitemap.xml"), "utf8")
-    .split("\n")
-    .filter((l) => !LEGAL.some((f) => l.includes(`/${f}`)))
-    .join("\n");
-  writeFileSync(join(out, "sitemap.xml"), moveText(sitemap));
+  // lastmod stays what landing/sitemap.xml says (edited by hand with the copy); the
+  // screenshots are added so image search can find them.
+  const entries = [...readFileSync(join(src, "sitemap.xml"), "utf8").matchAll(/<loc>([^<]+)<\/loc><lastmod>([^<]+)<\/lastmod>/g)]
+    .map(([, loc, lastmod]) => ({ loc: moveUrl(loc), lastmod }))
+    .filter((e) => !LEGAL.some((f) => e.loc.endsWith(`/${f}`)));
+  for (const e of entries) if (e.loc === `${RE}/`) e.images = HOME_IMAGES.map((f) => `${RE}/assets/${f}`);
+  writeFileSync(join(out, "sitemap.xml"), sitemapXml(entries));
   writeFileSync(join(out, "robots.txt"), moveText(readFileSync(join(src, "robots.txt"), "utf8")));
   writeFileSync(join(out, "llms.txt"), moveText(readFileSync(join(src, "llms.txt"), "utf8")));
 }
@@ -112,10 +115,29 @@ export function rootLegalPages({ repo, out }) {
   }
 }
 
-export function sitemapXml(urls, lastmod) {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
-    .map((u) => `  <url><loc>${u}</loc><lastmod>${lastmod}</lastmod></url>`)
-    .join("\n")}\n</urlset>\n`;
+/** Screenshots shown on the real estate home page. */
+const HOME_IMAGES = ["product-queue-1280.jpg", "product-detail-1280.jpg"];
+
+/**
+ * Date (YYYY-MM-DD) of the last commit that touched any of `paths`, so a page's
+ * lastmod moves only when its own content does. Undefined when git cannot say:
+ * a missing lastmod is honest, a made-up one is not.
+ */
+export function lastCommitDate(repo, ...paths) {
+  try {
+    const d = execFileSync("git", ["-C", repo, "log", "-1", "--format=%cs", "--", ...paths], { encoding: "utf8" }).trim();
+    return d || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** entries: [{ loc, lastmod?, images?: [absolute url] }] */
+export function sitemapXml(entries) {
+  const image = (u) => `<image:image><image:loc>${u}</image:loc></image:image>`;
+  const url = ({ loc, lastmod, images = [] }) =>
+    `  <url><loc>${loc}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}${images.map(image).join("")}</url>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${entries.map(url).join("\n")}\n</urlset>\n`;
 }
 
 export { LEGAL, existsSync };
