@@ -34,7 +34,7 @@ export const realEstate: TenantProfile = {
   ],
   qualificationTitle: 'Qualification',
   qualificationEmptyDetail: 'Answers appear here as the WhatsApp conversation progresses through the nine questions.',
-  features: { openingLine: true, currency: true },
+  features: { openingLine: true, currency: true, reservations: false },
   list: {
     wantColumn: 'What they want',
     leadColumn: 'Lead',

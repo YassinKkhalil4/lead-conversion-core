@@ -70,8 +70,8 @@ export interface TenantProfile {
   summary: SummaryPart[];
   qualificationTitle: string;
   qualificationEmptyDetail: string;
-  /** The scripted call-prep line and the budget currency only make sense for real estate. */
-  features: { openingLine: boolean; currency: boolean };
+  /** The scripted call-prep line and the budget currency only make sense for real estate; the reservations screen only for hospitality. */
+  features: { openingLine: boolean; currency: boolean; reservations: boolean };
   list: ListCopy;
   manage: ManageCopy;
   questionLabels: Record<string, string>;

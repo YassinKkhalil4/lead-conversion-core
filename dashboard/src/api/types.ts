@@ -8,7 +8,7 @@ export interface User {
   name: string;
   role: Role;
   clientKey: string;
-  /** Reserved: not sent by the API today. The tenant profile resolves from `clientKey`. */
+  /** Sent by the API; the tenant profile resolves from it before falling back to `clientKey`. */
   vertical?: string;
   companyName: string;
   timezone: string;
@@ -288,4 +288,44 @@ export interface DashboardSummary {
   responseTime: ResponseTimeMetrics;
   leadsByTemperature: { temperature: string; count: number }[];
   leadsBySource: { source: string; count: number }[];
+}
+
+export type ReservationStatus = 'requested' | 'confirmed' | 'cancelled' | 'no_show' | 'seated' | 'completed';
+
+/** One reservation as `GET /api/reservations` returns it. Labels are the venue's English ones. */
+export interface Reservation {
+  reservationId: string;
+  leadId: string | null;
+  guestName: string;
+  guestPhone: string;
+  venueId: string;
+  venueName: string;
+  partySize: number;
+  /** YYYY-MM-DD in the venue's calendar. */
+  serviceDate: string;
+  shift: string;
+  zone: string;
+  startsAt: string;
+  status: ReservationStatus;
+  depositRequired: boolean;
+  depositStatus: 'none' | 'pending' | 'paid' | 'waived' | string;
+  provider: string;
+  language: string;
+  notes: string;
+  hostId: string | null;
+  hostName: string;
+  createdAt: string;
+}
+
+export interface ReservationPage {
+  reservations: Reservation[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ReservationFilters {
+  status?: ReservationStatus[];
+  from?: string;
+  to?: string;
 }

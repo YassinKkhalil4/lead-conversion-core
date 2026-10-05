@@ -17,7 +17,7 @@ export interface NavItem {
  */
 export function navItems(profile: TenantProfile = realEstate): NavItem[] {
   const { terms } = profile;
-  return [
+  const items: NavItem[] = [
     { href: '/leads', label: 'Queue', roles: ['salesperson'] },
     { href: '/manage', label: 'Overview', roles: ['manager', 'admin'] },
     { href: '/leads', label: terms.leads, roles: ['manager', 'admin'] },
@@ -26,6 +26,16 @@ export function navItems(profile: TenantProfile = realEstate): NavItem[] {
     { href: '/manage/users', label: 'Users', roles: ['admin'] },
     { href: '/notifications', label: 'Notifications', roles: ['salesperson', 'manager', 'admin'] },
   ];
+  // The reservations screen exists for hospitality tenants only. Hiding the link is
+  // presentation; the screen's own layout guard is the control.
+  if (profile.features.reservations) {
+    items.splice(items.findIndex((item) => item.href === '/notifications'), 0, {
+      href: '/reservations',
+      label: 'Reservations',
+      roles: ['salesperson', 'manager', 'admin'],
+    });
+  }
+  return items;
 }
 
 export function navFor(role: Role, profile: TenantProfile = realEstate): NavItem[] {

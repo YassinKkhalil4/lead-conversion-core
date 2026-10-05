@@ -85,15 +85,16 @@ describe('hospitality profile re-labels without changing behaviour', () => {
   });
 
   it('labels navigation, stages and events in its own words', () => {
-    expect(navFor('manager', hospitality).map((i) => i.label)).toEqual(['Overview', 'Guests', 'Hosts', 'Venues', 'Notifications']);
+    expect(navFor('manager', hospitality).map((i) => i.label)).toEqual(['Overview', 'Guests', 'Hosts', 'Venues', 'Reservations', 'Notifications']);
     expect(stageLabel('closed_won', hospitality)).toBe('Seated');
     expect(eventLabel('salesperson.appointment_booked_notification', hospitality)).toBe('Reservation booked');
     expect(questionLabel('q_party_size', hospitality)).toBe('Party size');
   });
 
-  it('keeps routes, roles and stage values identical across profiles', () => {
+  it('keeps routes, roles and stage values identical across profiles, plus the one screen only hospitality has', () => {
     const shape = (p: typeof realEstate) => navFor('admin', p).map((i) => `${i.href}:${i.roles.join('|')}`);
-    expect(shape(hospitality)).toEqual(shape(realEstate));
+    expect(shape(hospitality).filter((entry) => !entry.startsWith('/reservations:'))).toEqual(shape(realEstate));
+    expect(shape(hospitality).filter((entry) => entry.startsWith('/reservations:'))).toHaveLength(1);
     expect(Object.keys(hospitality.stageLabels)).toEqual([...PIPELINE_STAGES]);
   });
 

@@ -9,6 +9,9 @@ import type {
   Message,
   Notification,
   Project,
+  Reservation,
+  ReservationFilters,
+  ReservationPage,
   Role,
   Salesperson,
   User,
@@ -211,4 +214,39 @@ export async function markAllNotificationsRead() {
 
 export async function getSummary() {
   return request<{ ok: true; summary: DashboardSummary }>('/api/dashboard/summary');
+}
+
+export async function listReservations(filters: ReservationFilters, page: { limit: number; offset: number }) {
+  const query = buildQuery({
+    status: filters.status?.join(','),
+    from: filters.from,
+    to: filters.to,
+    limit: page.limit,
+    offset: page.offset,
+  });
+  return request<{ ok: true } & ReservationPage>(`/api/reservations${query}`);
+}
+
+export async function getReservation(reservationId: string) {
+  return request<{ ok: true; reservation: Reservation }>(`/api/reservations/${reservationId}`);
+}
+
+export async function confirmReservation(reservationId: string, depositStatus?: 'pending' | 'paid' | 'waived') {
+  return request<{ ok: true; reservation: Reservation; guestNotified: boolean }>(`/api/reservations/${reservationId}/confirm`, {
+    method: 'POST',
+    body: depositStatus ? { depositStatus } : {},
+  });
+}
+
+export async function cancelReservation(reservationId: string) {
+  return request<{ ok: true; reservation: Reservation; guestNotified: boolean }>(`/api/reservations/${reservationId}/cancel`, {
+    method: 'POST',
+  });
+}
+
+export async function setReservationStatus(reservationId: string, status: 'seated' | 'completed' | 'no_show') {
+  return request<{ ok: true; reservation: Reservation }>(`/api/reservations/${reservationId}/status`, {
+    method: 'POST',
+    body: { status },
+  });
 }
