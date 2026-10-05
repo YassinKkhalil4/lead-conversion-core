@@ -1,5 +1,6 @@
 import { industryHooks } from './industries/index.js';
 import { configLanguages, defaultLanguage, localized } from './language.js';
+import type { CalendarDate } from './hospitality-normalization.js';
 import { parseQuestionAnswer } from './normalization.js';
 import { renderTemplate } from './render.js';
 import type {
@@ -34,6 +35,8 @@ interface EngineInput {
   config: CompiledConfig;
   messageText?: string;
   messageOptionId?: string;
+  /** The venue's calendar date now, for "tomorrow" and weekday answers. Hospitality only. */
+  today?: CalendarDate;
 }
 
 function templateVars(state: ConversationState) {
@@ -367,6 +370,7 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
       ...(messageOptionId !== undefined ? { optionId: messageOptionId } : {}),
     },
     language,
+    input.today ? { today: input.today } : {},
   );
 
   let parsedValue = parsed.value;

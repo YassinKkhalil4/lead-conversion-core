@@ -4,6 +4,7 @@ import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConversationRepository } from '../repositories/conversation-repository.js';
 import { evaluateConversation } from '../domain/engine.js';
 import { isOptOutMessage } from '../domain/opt-out.js';
+import { calendarDateIn, type CalendarDate } from '../domain/hospitality-normalization.js';
 import { renderTemplate } from '../domain/render.js';
 import { configLanguages, defaultLanguage, localized } from '../domain/language.js';
 import type { BaseLanguage, CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
@@ -23,6 +24,7 @@ import { InboundLeadCaptureService } from './inbound-lead-capture-service.js';
 import { LeadScoringService } from './lead-scoring-service.js';
 import { LeadRoutingService } from './lead-routing-service.js';
 import { FollowupSchedulerService } from './followup-scheduler-service.js';
+import { ReservationService } from './reservation-service.js';
 import { SlaService } from './sla-service.js';
 
 const inboundMessageSchema = z.object({
@@ -152,6 +154,7 @@ export class EdgeInboundMessageProcessor {
     private readonly sla = new SlaService(),
     private readonly appointments = new AppointmentConversationService(),
     private readonly capture = new InboundLeadCaptureService(),
+    private readonly reservations = new ReservationService(),
   ) {}
 
   async process(event: ClaimedInboxEvent): Promise<InboxProcessingResult> {
@@ -240,11 +243,16 @@ export class EdgeInboundMessageProcessor {
       state.leadName = state.leadName || input.profileName || '';
 
       const config = await this.configs.getByVersion(state.configVersion, client);
+      // "Tomorrow" and weekday answers are the venue's, not the server's.
+      const today = config.industry === 'hospitality'
+        ? await this.venueToday(client, state.clientId, new Date(receivedAt))
+        : undefined;
       let decision = isOptOutMessage(input.messageText)
         ? optOutDecision(state)
         : evaluateConversation({
             state,
             config,
+            ...(today ? { today } : {}),
             ...(input.messageText ? { messageText: input.messageText } : {}),
             ...(input.messageOptionId ? { messageOptionId: input.messageOptionId } : {}),
           });
@@ -463,9 +471,25 @@ export class EdgeInboundMessageProcessor {
         decision.nextState.configurationVersionId = state.configurationVersionId;
       }
 
-      const appConversationId = target
+      let appConversationId = target
         ? await this.upsertAppConversation(client, decision.nextState, target)
         : '';
+
+      // Hospitality: a finished conversation is a reservation, not a scored lead.
+      // The booking happens here, on this turn's transaction, so the guest is
+      // told what really happened (booked, waiting for the venue, no table).
+      if (
+        target &&
+        config.industry === 'hospitality' &&
+        decision.outboxEvents.some((outboxEvent) => outboxEvent.eventType === 'qualification_completed')
+      ) {
+        const reservation = await this.reservations.complete(client, { state, config, decision, target, appConversationId });
+        decision = reservation.decision;
+        decision.nextState.conversationId = conversationId;
+        decision.nextState.configVersion = state.configVersion;
+        decision.nextState.configurationVersionId = state.configurationVersionId;
+        appConversationId = await this.upsertAppConversation(client, decision.nextState, target);
+      }
       if (target && appConversationId) {
         await this.persistInboundAppMessage(client, {
           appConversationId,
@@ -478,6 +502,7 @@ export class EdgeInboundMessageProcessor {
       await this.persistQualificationEvents(client, state.leadId, decision, appConversationId, {
         correlationId: event.dedupeKey,
         causationId: event.inboxEventId,
+        scoreAndRoute: config.industry !== 'hospitality',
       });
 
       await this.conversations.update(client, decision.nextState);
@@ -610,6 +635,13 @@ export class EdgeInboundMessageProcessor {
     } finally {
       client.release(brokenConnection);
     }
+  }
+
+  private async venueToday(client: Db, clientId: string, now: Date): Promise<CalendarDate> {
+    const result = isUuid(clientId)
+      ? await client.query<{ timezone: string }>('SELECT timezone FROM app.clients WHERE client_id=$1', [clientId])
+      : { rows: [] as Array<{ timezone: string }> };
+    return calendarDateIn(result.rows[0]?.timezone || 'Europe/Madrid', now);
   }
 
   private async resolveAppLead(client: Db, leadId: string): Promise<{
@@ -759,7 +791,7 @@ export class EdgeInboundMessageProcessor {
     leadId: string,
     decision: ReplyDecision,
     appConversationId: string,
-    scoringContext: { correlationId: string; causationId: string },
+    scoringContext: { correlationId: string; causationId: string; scoreAndRoute: boolean },
   ): Promise<void> {
     if (!isUuid(leadId)) return;
     const answerEvents = decision.outboxEvents.filter((event) => event.eventType === 'qualification_answer_saved');
@@ -836,6 +868,8 @@ export class EdgeInboundMessageProcessor {
         correlationId: scoringContext.correlationId,
         causationId: scoringContext.causationId,
       });
+      // Real-estate scoring and routing; a reservation has neither.
+      if (!scoringContext.scoreAndRoute) return;
       const score = await this.scorer.scoreLead(client, {
         leadId,
         answers: decision.nextState.answers,

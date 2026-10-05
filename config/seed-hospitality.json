@@ -1,0 +1,295 @@
+{
+  "industry": "hospitality",
+  "clientRecordId": null,
+  "languages": [
+    "Spanish",
+    "Catalan",
+    "English"
+  ],
+  "questions": [
+    {
+      "id": "recHQ000000000001",
+      "fields": {
+        "Question Key": "q_permission",
+        "Stage Key": "awaiting_permission",
+        "Saves To": "q_permission",
+        "Question Type": "Buttons",
+        "Order": 1,
+        "Active": true,
+        "Parser Hint": "none",
+        "Industry": "hospitality",
+        "Client": [],
+        "English": "Hello {{lead_name}} 👋 This is the assistant of {{company_name}}. May I ask a few quick questions to book your table?",
+        "Spanish": "Hola {{lead_name}} 👋 Soy el asistente de {{company_name}}. ¿Te hago unas preguntas rápidas para reservar tu mesa?",
+        "Catalan": "Hola {{lead_name}} 👋 Sóc l'assistent de {{company_name}}. Et faig unes preguntes ràpides per reservar la teva taula?",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHQ000000000002",
+      "fields": {
+        "Question Key": "q_party_size",
+        "Stage Key": "asking_party_size",
+        "Saves To": "q_party_size",
+        "Question Type": "Free Text",
+        "Order": 2,
+        "Active": true,
+        "Parser Hint": "party_size",
+        "Industry": "hospitality",
+        "Client": [],
+        "English": "How many people will you be?",
+        "Spanish": "¿Cuántas personas seréis?",
+        "Catalan": "Quantes persones sereu?",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHQ000000000003",
+      "fields": {
+        "Question Key": "q_date_shift",
+        "Stage Key": "asking_date_shift",
+        "Saves To": "q_date_shift",
+        "Question Type": "Free Text",
+        "Order": 3,
+        "Active": true,
+        "Parser Hint": "date_shift",
+        "Industry": "hospitality",
+        "Client": [],
+        "English": "Which day, and lunch or dinner? For example: \"Friday dinner\".",
+        "Spanish": "¿Qué día, y comida o cena? Por ejemplo: \"viernes cena\".",
+        "Catalan": "Quin dia, i dinar o sopar? Per exemple: \"divendres sopar\".",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHQ000000000004",
+      "fields": {
+        "Question Key": "q_zone",
+        "Stage Key": "asking_zone",
+        "Saves To": "q_zone",
+        "Question Type": "Buttons",
+        "Order": 4,
+        "Active": true,
+        "Parser Hint": "none",
+        "Industry": "hospitality",
+        "Client": [],
+        "English": "Where would you like to sit?",
+        "Spanish": "¿Dónde os gustaría sentaros?",
+        "Catalan": "On us agradaria seure?",
+        "Arabic": ""
+      }
+    }
+  ],
+  "options": [
+    {
+      "id": "recHO000000000001",
+      "fields": {
+        "Question": [
+          "recHQ000000000001"
+        ],
+        "Option Key": "perm_yes",
+        "Value": "yes",
+        "Order": 1,
+        "Active": true,
+        "English": "Yes",
+        "Spanish": "Sí",
+        "Catalan": "Sí",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHO000000000002",
+      "fields": {
+        "Question": [
+          "recHQ000000000001"
+        ],
+        "Option Key": "perm_no",
+        "Value": "no",
+        "Order": 2,
+        "Active": true,
+        "English": "Not now",
+        "Spanish": "Ahora no",
+        "Catalan": "Ara no",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHO000000000003",
+      "fields": {
+        "Question": [
+          "recHQ000000000004"
+        ],
+        "Option Key": "zone_interior",
+        "Value": "interior",
+        "Order": 1,
+        "Active": true,
+        "English": "Inside",
+        "Spanish": "Sala interior",
+        "Catalan": "Sala interior",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHO000000000004",
+      "fields": {
+        "Question": [
+          "recHQ000000000004"
+        ],
+        "Option Key": "zone_terrace",
+        "Value": "terrace",
+        "Order": 2,
+        "Active": true,
+        "English": "Terrace",
+        "Spanish": "Terraza",
+        "Catalan": "Terrassa",
+        "Arabic": ""
+      }
+    }
+  ],
+  "messages": [
+    {
+      "id": "recHM000000000001",
+      "fields": {
+        "Message Key": "language_selection",
+        "Active": true,
+        "Client": [],
+        "English": "Welcome! Choose your language.\nBienvenido/a, elige tu idioma.\nBenvingut/da, tria el teu idioma.",
+        "Spanish": "Bienvenido/a, elige tu idioma.\nWelcome! Choose your language.\nBenvingut/da, tria el teu idioma.",
+        "Catalan": "Benvingut/da, tria el teu idioma.\nBienvenido/a, elige tu idioma.\nWelcome! Choose your language.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000002",
+      "fields": {
+        "Message Key": "clarify_invalid",
+        "Active": true,
+        "Client": [],
+        "English": "Sorry, I didn't catch that.",
+        "Spanish": "Perdona, no te he entendido.",
+        "Catalan": "Perdona, no t'he entès.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000003",
+      "fields": {
+        "Message Key": "paused_ack",
+        "Active": true,
+        "Client": [],
+        "English": "No problem. Write to us whenever you want to book.",
+        "Spanish": "Sin problema. Escríbenos cuando quieras reservar.",
+        "Catalan": "Cap problema. Escriu-nos quan vulguis reservar.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000004",
+      "fields": {
+        "Message Key": "fallback",
+        "Active": true,
+        "Client": [],
+        "English": "One of our team will continue this conversation shortly.",
+        "Spanish": "Una persona de nuestro equipo continuará esta conversación enseguida.",
+        "Catalan": "Una persona del nostre equip continuarà aquesta conversa de seguida.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000005",
+      "fields": {
+        "Message Key": "already_handed_off",
+        "Active": true,
+        "Client": [],
+        "English": "Your request is with our team. We will confirm shortly.",
+        "Spanish": "Tu solicitud está con nuestro equipo. Te confirmaremos enseguida.",
+        "Catalan": "La teva sol·licitud és amb el nostre equip. Et confirmarem de seguida.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000006",
+      "fields": {
+        "Message Key": "qualified_closing",
+        "Active": true,
+        "Client": [],
+        "English": "Thank you, {{lead_name}}! We have your request.",
+        "Spanish": "¡Gracias, {{lead_name}}! Tenemos tu solicitud.",
+        "Catalan": "Gràcies, {{lead_name}}! Tenim la teva sol·licitud.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000007",
+      "fields": {
+        "Message Key": "reservation_confirmed",
+        "Active": true,
+        "Client": [],
+        "English": "Booked ✅ {{party_size}} people, {{date}}, {{shift}}, {{zone}} at {{project_name}}.\n📍 {{maps_url}}\nWrite to us here if anything changes.",
+        "Spanish": "Reservado ✅ {{party_size}} personas, {{date}}, {{shift}}, {{zone}} en {{project_name}}.\n📍 {{maps_url}}\nEscríbenos aquí si algo cambia.",
+        "Catalan": "Reservat ✅ {{party_size}} persones, {{date}}, {{shift}}, {{zone}} a {{project_name}}.\n📍 {{maps_url}}\nEscriu-nos aquí si alguna cosa canvia.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000008",
+      "fields": {
+        "Message Key": "reservation_requested",
+        "Active": true,
+        "Client": [],
+        "English": "Thanks! For a group of {{party_size}} the venue confirms personally, and may ask for a deposit. We have passed your request ({{date}}, {{shift}}, {{zone}}) to {{project_name}} and they will reply here soon.",
+        "Spanish": "¡Gracias! Para un grupo de {{party_size}} el local confirma personalmente y puede pedir una señal. Hemos pasado tu solicitud ({{date}}, {{shift}}, {{zone}}) a {{project_name}} y te responderán aquí enseguida.",
+        "Catalan": "Gràcies! Per a un grup de {{party_size}} el local confirma personalment i pot demanar un dipòsit. Hem passat la teva sol·licitud ({{date}}, {{shift}}, {{zone}}) a {{project_name}} i et respondran aquí de seguida.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000009",
+      "fields": {
+        "Message Key": "reservation_unavailable",
+        "Active": true,
+        "Client": [],
+        "English": "Sorry, we have no table for {{party_size}} on {{date}} ({{shift}}) in that area. Would you like to try another day or area? Just tell me.",
+        "Spanish": "Lo siento, no tenemos mesa para {{party_size}} el {{date}} ({{shift}}) en esa zona. ¿Probamos otro día o zona? Dímelo.",
+        "Catalan": "Ho sento, no tenim taula per a {{party_size}} el {{date}} ({{shift}}) en aquesta zona. Provem un altre dia o zona? Digue-m'ho.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000010",
+      "fields": {
+        "Message Key": "reservation_closed",
+        "Active": true,
+        "Client": [],
+        "English": "We are closed on {{date}} for {{shift}}. Would you like another day?",
+        "Spanish": "Estamos cerrados el {{date}} en este turno ({{shift}}). ¿Quieres otro día?",
+        "Catalan": "Estem tancats el {{date}} en aquest torn ({{shift}}). Vols un altre dia?",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000011",
+      "fields": {
+        "Message Key": "reservation_cancelled",
+        "Active": true,
+        "Client": [],
+        "English": "Your reservation is cancelled. Write to us whenever you want to book again.",
+        "Spanish": "Tu reserva está cancelada. Escríbenos cuando quieras reservar de nuevo.",
+        "Catalan": "La teva reserva està cancel·lada. Escriu-nos quan vulguis tornar a reservar.",
+        "Arabic": ""
+      }
+    },
+    {
+      "id": "recHM000000000012",
+      "fields": {
+        "Message Key": "reservation_reminder",
+        "Active": true,
+        "Client": [],
+        "English": "Reminder 👋 Your table for {{party_size}} at {{project_name}} is tomorrow ({{shift}}). Reply CANCEL if you cannot come.",
+        "Spanish": "Recordatorio 👋 Tu mesa para {{party_size}} en {{project_name}} es mañana ({{shift}}). Responde CANCELAR si no puedes venir.",
+        "Catalan": "Recordatori 👋 La teva taula per a {{party_size}} a {{project_name}} és demà ({{shift}}). Respon CANCEL·LAR si no pots venir.",
+        "Arabic": ""
+      }
+    }
+  ]
+}

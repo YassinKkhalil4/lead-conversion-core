@@ -17,6 +17,8 @@ export function renderTemplate(
   template: string,
   variables: TemplateVariables,
   language: Language,
+  /** Further {{placeholders}} a message may carry, e.g. a reservation's party size. */
+  extra: Record<string, string> = {},
 ): string {
   const defaults = DEFAULT_NAMES[language];
 
@@ -24,6 +26,7 @@ export function renderTemplate(
     lead_name: variables.lead_name,
     company_name: variables.company_name || defaults.company_name,
     project_name: variables.project_name || defaults.project_name,
+    ...extra,
   };
 
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => values[key] ?? '');

@@ -1,3 +1,5 @@
+import { normalizeDigits } from './digits.js';
+import { calendarDateIn, formatDateShift, parseDateShift, parsePartySize, type CalendarDate } from './hospitality-normalization.js';
 import { localized } from './language.js';
 import type {
   CompiledQuestion,
@@ -5,25 +7,7 @@ import type {
   ParserHint,
 } from './types.js';
 
-const arabicDigits: Record<string, string> = {
-  '٠': '0',
-  '١': '1',
-  '٢': '2',
-  '٣': '3',
-  '٤': '4',
-  '٥': '5',
-  '٦': '6',
-  '٧': '7',
-  '٨': '8',
-  '٩': '9',
-};
-
-export function normalizeDigits(value: unknown): string {
-  return String(value ?? '')
-    .replace(/[٠-٩]/g, (digit) => arabicDigits[digit] ?? digit)
-    .replace(/ـ/g, '')
-    .trim();
-}
+export { normalizeDigits };
 
 export function parseEgpAmount(value: unknown): number | null {
   const text = normalizeDigits(value).replace(/,/g, '').replace(/٫/g, '.');
@@ -91,7 +75,26 @@ function parseIndex(text: string, optionCount: number): number | null {
   return index >= 0 && index < optionCount ? index : null;
 }
 
-function parseWithHint(text: string, hint: ParserHint): string | null {
+/** Where a parser needs to know "today": the venue's calendar date. */
+export interface ParseContext {
+  today?: CalendarDate;
+}
+
+/**
+ * Hints whose answer is meaningless when it does not parse. A free-text party
+ * size of "hola" must be asked again, not saved.
+ */
+const STRICT_HINTS = new Set<string>(['party_size', 'date_shift']);
+
+function parseWithHint(text: string, hint: ParserHint, context: ParseContext): string | null {
+  if (hint === 'party_size') {
+    const size = parsePartySize(text);
+    return size === null ? null : String(size);
+  }
+  if (hint === 'date_shift') {
+    const parsed = parseDateShift(text, context.today ?? calendarDateIn('UTC', new Date()));
+    return parsed ? formatDateShift(parsed.date, parsed.shift) : null;
+  }
   if (hint === 'egp_amount') {
     const amount = parseEgpAmount(text);
     return amount === null ? null : String(amount);
@@ -107,6 +110,7 @@ export function parseQuestionAnswer(
   question: CompiledQuestion,
   input: { text?: string; optionId?: string },
   language: Language,
+  context: ParseContext = {},
 ): ParseResult {
   const raw = String(input.optionId || input.text || '');
   const normalized = normalizeDigits(raw);
@@ -141,8 +145,9 @@ export function parseQuestionAnswer(
   });
   if (byLabel) return { ok: true, value: byLabel.value, source: 'label' };
 
-  const parsed = parseWithHint(normalized, question.parserHint);
+  const parsed = parseWithHint(normalized, question.parserHint, context);
   if (parsed !== null) return { ok: true, value: parsed, source: 'parser' };
+  if (STRICT_HINTS.has(question.parserHint)) return { ok: false };
 
   if (question.type === 'Free Text' && normalized) {
     return { ok: true, value: normalized.slice(0, 200), source: 'free_text' };
