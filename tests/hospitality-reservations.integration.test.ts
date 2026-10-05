@@ -341,5 +341,52 @@ describePg('hospitality reservations over WhatsApp, with real PostgreSQL', () =>
     await deliver(phone, { text: 'cancelar' });
     expect((await db.pool.query('SELECT count(*) FROM app.reservations')).rows[0]?.count).toBe('0');
   });
+
+  describe('provisioning a tenant from a spec', () => {
+    async function spec() {
+      const { readFileSync } = await import('node:fs');
+      const raw = JSON.parse(readFileSync(join(process.cwd(), 'docs/examples/hospitality-tenant.example.json'), 'utf8'));
+      raw.whatsapp.phoneNumberId = PHONE_NUMBER_ID;
+      raw.whatsapp.directSendEnabled = true;
+      raw.clientRecordId = CLIENT_RECORD_ID;
+      return raw;
+    }
+
+    it('creates a venue that takes a booking end to end, in its own zone labels', async () => {
+      const { provisionHospitalityTenant } = await import('../scripts/provision-hospitality-tenant.js');
+      const result = await provisionHospitalityTenant(await spec());
+      expect(result.clientId).toBeTruthy();
+      const reply = await book('+34600000020', { party: 'somos 3', when: 'el viernes comida', zone: 'zone_terrace' });
+      expect(reply).toContain('Reservado ✅ 3 personas');
+      expect(reply).toContain('Terraza');
+      expect(reply).toContain('https://maps.app.goo.gl/REPLACE');
+    });
+
+    it('is safe to run twice, and switches off a zone dropped from the spec instead of deleting it', async () => {
+      const { provisionHospitalityTenant } = await import('../scripts/provision-hospitality-tenant.js');
+      const first = await spec();
+      await provisionHospitalityTenant(first);
+      const second = await spec();
+      second.zones = second.zones.filter((z: { key: string }) => z.key !== 'terrace');
+      second.capacity = second.capacity.filter((c: { zone: string }) => c.zone !== 'terrace');
+      await provisionHospitalityTenant(second);
+      expect((await db.pool.query('SELECT count(*) FROM app.clients')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.projects')).rows[0]?.count).toBe('1');
+      expect((await db.pool.query('SELECT count(*) FROM app.salespeople')).rows[0]?.count).toBe('1');
+      const zones = await db.pool.query('SELECT zone_key, active FROM app.venue_zones ORDER BY zone_key');
+      expect(zones.rows).toEqual([{ zone_key: 'interior', active: true }, { zone_key: 'terrace', active: false }]);
+    });
+
+    it('refuses a spec that does not add up', async () => {
+      const { provisionHospitalityTenant } = await import('../scripts/provision-hospitality-tenant.js');
+      const bad = await spec();
+      bad.capacity.push({ zone: 'garden', shift: 'lunch', covers: 10 });
+      await expect(provisionHospitalityTenant(bad)).rejects.toThrow(/unknown zone garden/);
+      const badTime = await spec();
+      badTime.shifts[0].lastSeating = '12:00';
+      await expect(provisionHospitalityTenant(badTime)).rejects.toThrow(/lastSeating is before start/);
+      expect((await db.pool.query('SELECT count(*) FROM app.clients')).rows[0]?.count).toBe('0');
+    });
+  });
 });
 

@@ -2,6 +2,8 @@
 
 `src/` has no hospitality code: no voice pipeline, no CoverManager or floor-plan integration, no Catalan, no reservation flow. Everything on hospitality.kadensio.com comes from the owner's brief, not from the repo. Real estate is different: its numbers come from `landing/lead-scoring.html` and the live landing.
 
+**Backend status (2026-10-05):** WhatsApp reservations are built and tested in `src/` (rows 5, 6, 9 in part, 10 in part, 11 in part, 12, 13, 16, 17 in part; see `docs/owner-actions/08-hospitality-onboarding.md`). **Not built: live phone calls, scripted voice, sub-second replies, speech language detection, call transcripts, the voice trunk, and the CoverManager integration** (rows 1, 2, 4, 7, 8, 14, 15 and the voice half of 3, 9, 10, 11). Catalan and Spanish exist on WhatsApp only. Until those ship, the page's voice and CoverManager claims describe the planned product, not the running one.
+
 **Status:** on 2026-10-04 the owner asked for hospitality to be published and indexable, which confirms these claims. Several are not yet backed by code in this repo (rows 1-4, 6-10, 14, 15 depend on a voice pipeline and a floor-plan integration that live outside it), so treat the table as the list of what must be true in production.
 
 An indexable build (`SITES_INDEXABLE=1`) is refused until `claimsConfirmed` in `copy/hospitality.mjs` is set to `true`. Set it only after each row is true today, or the copy is changed to match.

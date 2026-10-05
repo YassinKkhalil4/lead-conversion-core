@@ -1,0 +1,26 @@
+{
+  "clientKey": "cal-demo",
+  "clientRecordId": "recCALDEMO0000001",
+  "companyName": "Cal Demo",
+  "timezone": "Europe/Madrid",
+  "managerPhoneE164": "+34600000000",
+  "depositThresholdPartySize": 8,
+  "whatsapp": { "phoneNumberId": "REPLACE_WITH_META_PHONE_NUMBER_ID", "directSendEnabled": false },
+  "languages": ["Spanish", "Catalan", "English"],
+  "venue": { "name": "Cal Demo Gràcia", "location": "Barcelona", "mapsUrl": "https://maps.app.goo.gl/REPLACE" },
+  "zones": [
+    { "key": "interior", "labels": { "English": "Inside", "Spanish": "Sala interior", "Catalan": "Sala interior" } },
+    { "key": "terrace", "labels": { "English": "Terrace", "Spanish": "Terraza", "Catalan": "Terrassa" } }
+  ],
+  "shifts": [
+    { "key": "lunch", "labels": { "English": "lunch", "Spanish": "comida", "Catalan": "dinar" }, "start": "13:30", "lastSeating": "15:30", "daysOpen": [1, 2, 3, 4, 5, 6, 7] },
+    { "key": "dinner", "labels": { "English": "dinner", "Spanish": "cena", "Catalan": "sopar" }, "start": "20:30", "lastSeating": "22:30", "daysOpen": [2, 3, 4, 5, 6, 7] }
+  ],
+  "capacity": [
+    { "zone": "interior", "shift": "lunch", "covers": 24 },
+    { "zone": "interior", "shift": "dinner", "covers": 24 },
+    { "zone": "terrace", "shift": "lunch", "covers": 12 },
+    { "zone": "terrace", "shift": "dinner", "covers": 12 }
+  ],
+  "hosts": [{ "name": "Laia", "phoneE164": "+34611111111" }]
+}

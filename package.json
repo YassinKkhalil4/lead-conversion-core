@@ -32,7 +32,9 @@
     "simulate": "tsx scripts/simulate-conversation.ts",
     "test:integration": "tsx scripts/smoke-integration.ts",
     "backup:postgres": "scripts/backup/backup-postgres.sh",
-    "restore:postgres": "scripts/backup/restore-postgres.sh"
+    "restore:postgres": "scripts/backup/restore-postgres.sh",
+    "tenant:hospitality": "tsx scripts/provision-hospitality-tenant.ts",
+    "tenant:hospitality:prod": "node dist/scripts/provision-hospitality-tenant.js"
   },
   "dependencies": {
     "@fastify/rate-limit": "^10.3.0",
