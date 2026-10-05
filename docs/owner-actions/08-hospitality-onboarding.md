@@ -30,7 +30,7 @@ Status: backend built and tested locally (WhatsApp reservations). Nothing below 
 Free-form messages only work inside the 24 hours after the guest's last message. The reminder is normally sent outside it, so it needs an approved template. Not submitted yet:
 
 - **`reservation_reminder`**, one per language (`es`, `ca`, `en`). Body with exactly four variables, in this order: `{{1}}` party size, `{{2}}` venue name, `{{3}}` date (e.g. "viernes, 9 de octubre"), `{{4}}` shift ("cena"). Example body: "Recordatorio: tu mesa para {{1}} en {{2}} es {{3}} ({{4}}). ¿Vienes?". One **quick-reply button** labelled Cancelar / Cancel·lar / Cancel (the backend fills its payload with the reservation id).
-- `reservation_confirmed_by_venue` and `reservation_declined_by_venue`: used when a host approves or declines a held request after the guest's window has closed. The dashboard currently tells the host the guest could not be messaged in that case; these two templates are not wired to send yet.
+- **`reservation_confirmed_by_venue`** and **`reservation_declined_by_venue`**, per language: sent when a host approves or declines a reservation after the guest's 24-hour window has closed. Body with exactly four variables, in this order: `{{1}}` venue name, `{{2}}` party size, `{{3}}` date, `{{4}}` shift. No buttons. Inside the window the host's decision goes out as plain text instead; with no approved template the host is told the guest was not messaged.
 
 Add each approved name with its language code to `META_APPROVED_TEMPLATE_NAMES` (`reservation_reminder:es,reservation_reminder:ca,reservation_reminder:en`). Until the template is approved, a reminder due outside the window retries and ends in the dead-letter list.
 

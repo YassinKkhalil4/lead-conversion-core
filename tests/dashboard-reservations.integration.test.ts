@@ -119,6 +119,8 @@ describePg('reservations dashboard API, with real PostgreSQL', () => {
     process.env.DASHBOARD_API_ENABLED = 'true';
     process.env.DASHBOARD_SESSION_COOKIE_SECURE = 'false';
     process.env.DASHBOARD_LOGIN_RATE_LIMIT_MAX = '50';
+    // Only the confirmation template is approved; the decline template is not, on purpose.
+    process.env.META_APPROVED_TEMPLATE_NAMES = 'reservation_confirmed_by_venue:es';
 
     db = await import('../src/db/pool.js');
     const appModule = await import('../src/app.js');
@@ -202,7 +204,7 @@ describePg('reservations dashboard API, with real PostgreSQL', () => {
     expect(bad.statusCode).toBe(400);
   });
 
-  it('confirms a held reservation, records the deposit, and says the guest could not be messaged outside the window', async () => {
+  it('confirms a held reservation, records the deposit, and messages the guest with the approved template outside the window', async () => {
     const seed = await seedTenant('bcnvenue');
     const headers = await login(seed.emails.hostA);
     const res = await app.inject({
@@ -210,8 +212,12 @@ describePg('reservations dashboard API, with real PostgreSQL', () => {
     });
     expect(res.statusCode, res.body).toBe(200);
     expect(res.json().reservation).toMatchObject({ status: 'confirmed', depositStatus: 'paid' });
-    // No open WhatsApp session in this fixture: the host is told, the confirm still stands.
-    expect(res.json().guestNotified).toBe(false);
+    // No open WhatsApp session in this fixture, so the approved template goes out instead of free text.
+    expect(res.json().guestNotified).toBe(true);
+    const template = await db.pool.query(`SELECT payload_json FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'`);
+    expect(template.rows).toHaveLength(1);
+    expect(template.rows[0]?.payload_json.message).toMatchObject({ kind: 'template', templateName: 'reservation_confirmed_by_venue', languageCode: 'es' });
+    expect(template.rows[0]?.payload_json.message.components[0].parameters).toHaveLength(4);
     const stage = await db.pool.query(`SELECT pipeline_stage FROM app.leads l JOIN app.reservations r USING (lead_id) WHERE r.reservation_id=$1`, [seed.reservations.requestedA]);
     expect(stage.rows[0]?.pipeline_stage).toBe('site_visit_scheduled');
     const again = await app.inject({ method: 'POST', url: `/api/reservations/${seed.reservations.requestedA}/confirm`, headers, payload: {} });
@@ -254,6 +260,9 @@ describePg('reservations dashboard API, with real PostgreSQL', () => {
     const res = await app.inject({ method: 'POST', url: `/api/reservations/${seed.reservations.confirmedA}/cancel`, headers });
     expect(res.statusCode, res.body).toBe(200);
     expect(res.json().reservation.status).toBe('cancelled');
+    // No open window and no approved decline template: the cancel stands, the host is told the guest was not messaged.
+    expect(res.json().guestNotified).toBe(false);
+    expect((await db.pool.query(`SELECT count(*) FROM runtime.outbox_commands WHERE command_type='whatsapp.send_message'`)).rows[0]?.count).toBe('0');
     const again = await app.inject({ method: 'POST', url: `/api/reservations/${seed.reservations.confirmedA}/cancel`, headers });
     expect(again.statusCode).toBe(409);
   });

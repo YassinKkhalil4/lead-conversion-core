@@ -3,6 +3,7 @@ import { pool } from '../../db/pool.js';
 import { withTransaction } from '../../db/transaction.js';
 import { AuditRepository } from '../../infrastructure/runtime.js';
 import { describeDate } from '../../domain/hospitality-format.js';
+import { MessageRequestService } from '../message-request-service.js';
 import { ReservationReminderService } from '../reservation-reminder-service.js';
 import { parseCalendarDate } from '../../domain/hospitality-normalization.js';
 import type { Language } from '../../domain/types.js';
@@ -117,6 +118,14 @@ function toItem(row: Row): ReservationItem {
   };
 }
 
+/**
+ * Outside WhatsApp's 24-hour window only an approved template can reach the guest.
+ * One per decision and language; four body variables in this order: venue name,
+ * party size, date, shift (see docs/owner-actions/08-hospitality-onboarding.md).
+ */
+const NOTICE_TEMPLATE = { confirmed: 'reservation_confirmed_by_venue', declined: 'reservation_declined_by_venue' } as const;
+const TEMPLATE_LANGUAGE: Record<Language, string> = { Spanish: 'es', Catalan: 'ca', English: 'en', Arabic: 'en' };
+
 /** What the venue says to a guest when it acts on their reservation. Per language, no config needed. */
 const NOTICE: Record<'confirmed' | 'declined', Record<Language, string>> = {
   confirmed: {
@@ -137,6 +146,7 @@ export class DashboardReservationService {
   constructor(
     private readonly audit = new AuditRepository(),
     private readonly reminders = new ReservationReminderService(),
+    private readonly messages = new MessageRequestService(),
   ) {}
 
   async list(scope: DashboardScope, filters: ReservationListFilters): Promise<{ reservations: ReservationItem[]; total: number; limit: number; offset: number }> {
@@ -285,10 +295,10 @@ export class DashboardReservationService {
   }
 
   /**
-   * Tells the guest what the venue decided. Free text only works inside
-   * WhatsApp's 24-hour window; outside it the guest is simply not messaged
-   * here (the venue can send an approved template from the lead), and the
-   * caller is told.
+   * Tells the guest what the venue decided: free text inside WhatsApp's 24-hour
+   * window, otherwise the approved template for that decision and language.
+   * False when neither can go out (no approved template yet), so the host is
+   * told to message the guest themselves.
    */
   private async notifyGuest(
     user: DashboardUser,
@@ -300,10 +310,11 @@ export class DashboardReservationService {
     if (!reservation.leadId) return false;
     const language: Language = isLanguage(reservation.language) ? reservation.language : 'Spanish';
     const date = parseCalendarDate(reservation.serviceDate);
+    const dateText = date ? describeDate(date, language) : reservation.serviceDate;
     const text = NOTICE[kind][language]
       .replaceAll('{{venue}}', reservation.venueName)
       .replaceAll('{{party_size}}', String(reservation.partySize))
-      .replaceAll('{{date}}', date ? describeDate(date, language) : reservation.serviceDate)
+      .replaceAll('{{date}}', dateText)
       .replaceAll('{{shift}}', reservation.shift)
       .replaceAll('{{zone}}', reservation.zone);
     try {
@@ -314,7 +325,54 @@ export class DashboardReservationService {
       });
       return true;
     } catch (error) {
-      if (error instanceof DashboardHttpError && error.statusCode === 409) return false;
+      if (!(error instanceof DashboardHttpError && error.statusCode === 409)) throw error;
+    }
+    return this.sendTemplate(reservation, reservation.leadId, kind, language, dateText, user.userId);
+  }
+
+  private async sendTemplate(
+    reservation: ReservationItem,
+    leadId: string,
+    kind: 'confirmed' | 'declined',
+    language: Language,
+    dateText: string,
+    actorId: string,
+  ): Promise<boolean> {
+    const target = await pool.query<{ client_id: string; contact_id: string; phone_e164: string; conversation_id: string | null }>(
+      `SELECT l.client_id, l.contact_id, ct.phone_e164, conv.conversation_id
+       FROM app.leads l
+       JOIN app.contacts ct ON ct.contact_id=l.contact_id
+       LEFT JOIN app.conversations conv ON conv.lead_id=l.lead_id
+       WHERE l.lead_id=$1`,
+      [leadId],
+    );
+    const row = target.rows[0];
+    if (!row) return false;
+    try {
+      await this.messages.requestWhatsAppSend({
+        clientId: row.client_id,
+        contactId: row.contact_id,
+        leadId,
+        ...(row.conversation_id ? { conversationId: row.conversation_id } : {}),
+        requestKey: `reservation-${kind}-template-${reservation.reservationId}`,
+        toE164: row.phone_e164,
+        actorId,
+        payload: {
+          kind: 'template',
+          templateName: NOTICE_TEMPLATE[kind],
+          languageCode: TEMPLATE_LANGUAGE[language],
+          components: [
+            {
+              type: 'body',
+              parameters: [reservation.venueName, String(reservation.partySize), dateText, reservation.shift].map((value) => ({ type: 'text', text: value })),
+            },
+          ],
+        },
+      });
+      return true;
+    } catch (error) {
+      // No approved template for this decision yet: not an error for the host's action.
+      if (error instanceof Error && error.message.startsWith('whatsapp_template_not_approved:')) return false;
       throw error;
     }
   }

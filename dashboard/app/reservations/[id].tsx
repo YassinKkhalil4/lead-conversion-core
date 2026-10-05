@@ -50,7 +50,7 @@ function Detail({ reservation: r, timezone, onBack, onLead }: { reservation: Res
     guestNotified
       ? { text: `${verb}. The guest was told on WhatsApp.`, variant: 'neutral' as const }
       : {
-          text: `${verb}. The guest could not be messaged here: WhatsApp only allows free text within 24 hours of their last message. Message them from their conversation.`,
+          text: `${verb}. The guest could not be messaged from here: it is outside WhatsApp's 24-hour window and no approved template is set up for this message yet. Message them from their conversation.`,
           variant: 'warning' as const,
         };
 
