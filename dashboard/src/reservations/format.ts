@@ -1,4 +1,4 @@
-import type { Reservation, ReservationStatus } from '@/api/types';
+import type { Reservation, ReservationStatus } from '../api/types';
 
 /**
  * Pure helpers for the reservations screens. No React Native imports, so the
@@ -114,5 +114,6 @@ export function rangeFor(key: RangeKey, today: string): { from: string; to?: str
 
 export function depositLabel(r: Pick<Reservation, 'depositRequired' | 'depositStatus'>): string {
   if (!r.depositRequired) return '';
-  return { pending: 'Deposit pending', paid: 'Deposit paid', waived: 'Deposit waived' }[r.depositStatus] ?? 'Deposit';
+  const labels: Record<string, string> = { pending: 'Deposit pending', paid: 'Deposit paid', waived: 'Deposit waived' };
+  return labels[r.depositStatus] ?? 'Deposit';
 }
