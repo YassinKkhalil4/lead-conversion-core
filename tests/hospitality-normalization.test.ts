@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   calendarDateIn,
+  isCancelIntent,
+  isNewBookingIntent,
   formatDate,
   formatDateShift,
   parseDateShift,
@@ -74,4 +76,11 @@ describe('calendar date in a timezone', () => {
     expect(calendarDateIn('Europe/Madrid', instant)).toEqual({ year: 2026, month: 10, day: 6 });
     expect(calendarDateIn('UTC', instant)).toEqual({ year: 2026, month: 10, day: 5 });
   });
+});
+
+describe('intent', () => {
+  it.each(['cancelar', 'CANCEL', 'cancel·lar', 'quiero anular mi reserva', 'please cancel it'])('"%s" is a cancellation', (t) => expect(isCancelIntent(t)).toBe(true));
+  it.each(['gracias', 'hola', 'una mesa para cuatro'])('"%s" is not a cancellation', (t) => expect(isCancelIntent(t)).toBe(false));
+  it.each(['hola', 'quiero reservar', 'una taula per a dos', '4', 'hello'])('"%s" starts a new booking', (t) => expect(isNewBookingIntent(t)).toBe(true));
+  it.each(['gracias', 'ok', 'perfecto', 'merci'])('"%s" does not', (t) => expect(isNewBookingIntent(t)).toBe(false));
 });

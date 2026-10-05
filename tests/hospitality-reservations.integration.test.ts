@@ -304,4 +304,42 @@ describePg('hospitality reservations over WhatsApp, with real PostgreSQL', () =>
     const state = await db.pool.query<{ human_takeover: boolean }>('SELECT human_takeover FROM app.conversations');
     expect(state.rows[0]?.human_takeover).toBe(true);
   });
+
+  it('cancels the booking when the guest writes "cancelar", and frees the table', async () => {
+    await seedVenue({ terraceCovers: 8 });
+    const phone = '+34600000009';
+    expect(await book(phone, { party: '6', when: 'el viernes cena', zone: 'zone_terrace' })).toContain('Reservado ✅');
+    await deliver(phone, { text: 'Cancelar' });
+    expect(await lastReply(phone)).toContain('cancelada');
+    const row = await db.pool.query('SELECT status, cancelled_at FROM app.reservations');
+    expect(row.rows[0]?.status).toBe('cancelled');
+    expect(row.rows[0]?.cancelled_at).not.toBeNull();
+    expect((await db.pool.query('SELECT pipeline_stage FROM app.leads')).rows[0]?.pipeline_stage).toBe('closed_lost');
+    // The six covers are back on sale.
+    expect(await book('+34600000010', { party: '6', when: 'el viernes cena', zone: 'zone_terrace' })).toContain('Reservado ✅');
+  });
+
+  it('starts a second booking when a returning guest writes again, but not for a thank-you', async () => {
+    await seedVenue();
+    const phone = '+34600000011';
+    await book(phone, { party: '2', when: 'el viernes comida', zone: 'zone_interior' });
+    await deliver(phone, { text: 'gracias' });
+    expect(await lastReply(phone)).toContain('Tu solicitud está con nuestro equipo');
+    await deliver(phone, { text: 'hola, quiero reservar otra mesa' });
+    expect(await lastReply(phone)).toBe('¿Cuántas personas seréis?');
+    await deliver(phone, { text: '3' });
+    await deliver(phone, { text: 'el sábado cena' });
+    await deliver(phone, { option: 'zone_interior' });
+    expect((await db.pool.query(`SELECT count(*) FROM app.reservations WHERE status='confirmed'`)).rows[0]?.count).toBe('2');
+  });
+
+  it('cancelling with nothing booked falls through to the normal flow', async () => {
+    await seedVenue();
+    const phone = '+34600000012';
+    await deliver(phone, { text: 'hola' });
+    await deliver(phone, { option: 'lang_es' });
+    await deliver(phone, { text: 'cancelar' });
+    expect((await db.pool.query('SELECT count(*) FROM app.reservations')).rows[0]?.count).toBe('0');
+  });
 });
+

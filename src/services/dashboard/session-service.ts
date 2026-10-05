@@ -28,6 +28,7 @@ interface UserRow {
   name: string;
   role: DashboardRole;
   client_key: string;
+  vertical: 'real_estate' | 'hospitality';
   company_name: string;
   timezone: string;
   last_login_at: Date | null;
@@ -35,7 +36,7 @@ interface UserRow {
 
 const USER_SELECT = `
   u.user_id, u.client_id, u.salesperson_id, u.email, u.name, u.role,
-  u.last_login_at, c.client_key, c.company_name, c.timezone
+  u.last_login_at, c.client_key, c.vertical, c.company_name, c.timezone
 `;
 
 function toUser(row: UserRow): DashboardUser {
@@ -47,6 +48,7 @@ function toUser(row: UserRow): DashboardUser {
     name: row.name,
     role: row.role,
     clientKey: row.client_key,
+    vertical: row.vertical,
     companyName: row.company_name,
     timezone: row.timezone,
     lastLoginAt: row.last_login_at ? row.last_login_at.toISOString() : null,

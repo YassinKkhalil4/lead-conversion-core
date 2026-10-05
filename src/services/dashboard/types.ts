@@ -10,6 +10,8 @@ export interface DashboardUser {
   name: string;
   role: DashboardRole;
   clientKey: string;
+  /** Which product this tenant runs; the dashboard picks its vocabulary from it. */
+  vertical: 'real_estate' | 'hospitality';
   companyName: string;
   timezone: string;
   lastLoginAt: string | null;

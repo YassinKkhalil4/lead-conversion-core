@@ -283,7 +283,7 @@ describePg('lead control inheritance on conversation creation', () => {
     const user = {
       userId: randomUUID(), clientId: seeded.clientId, salespersonId: null,
       email: 'ops@example.com', name: 'Ops', role: 'admin' as const,
-      clientKey: 'client-control', companyName: 'Control Realty',
+      clientKey: 'client-control', vertical: 'real_estate' as const, companyName: 'Control Realty',
       timezone: 'Africa/Cairo', lastLoginAt: null,
     };
     await new leadActions.DashboardLeadActionService().takeover(

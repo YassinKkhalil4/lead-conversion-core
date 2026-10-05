@@ -265,6 +265,34 @@ export function evaluateConversation(input: EngineInput): ReplyDecision {
     };
   }
 
+  if (['qualified', 'sales_handoff'].includes(state.currentStage) && state.preferredLanguage && hooks.startsNewRequest(incomingText || '')) {
+    // A guest who already has a booking asks for another: begin again after the
+    // consent question, in their language. Only industries that opt in reach here.
+    const second = config.questions[1];
+    if (second) {
+      const nextState: ConversationState = {
+        ...state,
+        answers: {},
+        currentStage: second.stageKey,
+        currentQuestionKey: second.questionKey,
+        retryCount: 0,
+        status: 'in_qualification',
+        stateVersion: state.stateVersion + 1,
+      };
+      return {
+        action: 'reply',
+        replyKey: second.questionKey,
+        ...questionReply(nextState, second, state.preferredLanguage),
+        stageBefore,
+        stageAfter: second.stageKey,
+        questionKey: second.questionKey,
+        saveKey: second.saveKey,
+        outboxEvents: [{ eventType: 'conversation_restarted', payload: { reason: 'new_request_after_completion' } }],
+        nextState,
+      };
+    }
+  }
+
   if (['qualified', 'sales_handoff'].includes(state.currentStage)) {
     const language: Language = state.preferredLanguage || fallbackLanguage;
     return {

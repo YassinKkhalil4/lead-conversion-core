@@ -1,6 +1,6 @@
 import type { Db } from '../db/pool.js';
 import { localized } from '../domain/language.js';
-import { calendarDateIn, formatDate, readDateShift, type CalendarDate } from '../domain/hospitality-normalization.js';
+import { calendarDateIn, formatDate, parseCalendarDate, readDateShift, type CalendarDate } from '../domain/hospitality-normalization.js';
 import { renderTemplate } from '../domain/render.js';
 import type { CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
 import { KadensioFloorPlanProvider } from '../integrations/reservations/kadensio-floor-plan.js';
@@ -189,6 +189,76 @@ export class ReservationService {
           { eventType: 'reservation_created', payload: { reservationId: result.reservationId, status: result.status, replayed: result.replayed } },
         ],
       },
+    };
+  }
+
+  /**
+   * A guest asks to cancel. Cancels their next active reservation and says so;
+   * null when they have none, so the message goes on to the normal flow.
+   */
+  async cancel(db: Db, input: { state: ConversationState; config: CompiledConfig; leadId: string }): Promise<ReplyDecision | null> {
+    const { state, config } = input;
+    const found = await db.query<{ reservation_id: string; party_size: number; service_date: string; shift_labels: unknown; zone_labels: unknown; project_name: string; timezone: string }>(
+      `SELECT r.reservation_id, r.party_size, to_char(r.service_date, 'YYYY-MM-DD') AS service_date,
+              s.labels AS shift_labels, z.labels AS zone_labels, p.project_name, c.timezone
+       FROM app.leads l
+       JOIN app.reservations r ON r.contact_id=l.contact_id AND r.client_id=l.client_id
+       JOIN app.venue_shifts s ON s.shift_id=r.shift_id
+       JOIN app.venue_zones z ON z.zone_id=r.zone_id
+       JOIN app.projects p ON p.project_id=r.project_id
+       JOIN app.clients c ON c.client_id=r.client_id
+       WHERE l.lead_id=$1 AND r.status IN ('requested', 'confirmed') AND r.starts_at > now()
+       ORDER BY r.starts_at
+       LIMIT 1
+       FOR UPDATE OF r`,
+      [input.leadId],
+    );
+    const row = found.rows[0];
+    if (!row) return null;
+    await db.query(
+      `UPDATE app.reservations SET status='cancelled', cancelled_at=now(), updated_at=now() WHERE reservation_id=$1`,
+      [row.reservation_id],
+    );
+    await db.query(
+      `UPDATE app.leads l SET pipeline_stage='closed_lost', updated_at=now()
+       WHERE l.lead_id=$1
+         AND NOT EXISTS (SELECT 1 FROM app.reservations r WHERE r.contact_id=l.contact_id AND r.client_id=l.client_id
+                           AND r.status IN ('requested','confirmed') AND r.starts_at > now())`,
+      [input.leadId],
+    );
+    await this.audit.record(db, {
+      eventType: 'reservation.cancelled',
+      actorType: 'external_user',
+      actorId: state.phoneNormalized,
+      aggregateType: 'lead',
+      aggregateId: input.leadId,
+      payload: { reservationId: row.reservation_id, by: 'guest' },
+    });
+    const language: Language = state.preferredLanguage || 'Spanish';
+    const date = parseCalendarDate(row.service_date);
+    const text = this.text(config, 'reservation_cancelled', language, state, row.project_name, {
+      party_size: String(row.party_size),
+      date: date ? describeDate(date, language) : row.service_date,
+      shift: labelOf(row.shift_labels, language, ''),
+      zone: labelOf(row.zone_labels, language, ''),
+    });
+    const nextState: ConversationState = {
+      ...state,
+      currentStage: 'qualified',
+      currentQuestionKey: '',
+      status: 'qualified',
+      retryCount: 0,
+      stateVersion: state.stateVersion + 1,
+    };
+    return {
+      action: 'reply',
+      replyKey: 'reservation_cancelled',
+      text,
+      messageKind: 'text',
+      stageBefore: state.currentStage,
+      stageAfter: 'qualified',
+      outboxEvents: [{ eventType: 'reservation_cancelled', payload: { reservationId: row.reservation_id, by: 'guest' } }],
+      nextState,
     };
   }
 

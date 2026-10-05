@@ -1,4 +1,5 @@
 import type { CompiledConfig, CompiledQuestion, ConversationState } from '../types.js';
+import { isNewBookingIntent } from '../hospitality-normalization.js';
 import type { IndustryHooks } from './types.js';
 
 /**
@@ -37,6 +38,7 @@ function nextQuestionAfter(config: CompiledConfig, question: CompiledQuestion): 
 }
 
 export const hospitalityHooks: IndustryHooks = {
+  startsNewRequest: isNewBookingIntent,
   saveAnswer,
   qualificationPayload,
   nextQuestionAfter,

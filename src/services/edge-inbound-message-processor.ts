@@ -4,7 +4,7 @@ import { ConfigRepository } from '../repositories/config-repository.js';
 import { ConversationRepository } from '../repositories/conversation-repository.js';
 import { evaluateConversation } from '../domain/engine.js';
 import { isOptOutMessage } from '../domain/opt-out.js';
-import { calendarDateIn, type CalendarDate } from '../domain/hospitality-normalization.js';
+import { calendarDateIn, isCancelIntent, type CalendarDate } from '../domain/hospitality-normalization.js';
 import { renderTemplate } from '../domain/render.js';
 import { configLanguages, defaultLanguage, localized } from '../domain/language.js';
 import type { BaseLanguage, CompiledConfig, ConversationState, Language, ReplyDecision } from '../domain/types.js';
@@ -247,7 +247,11 @@ export class EdgeInboundMessageProcessor {
       const today = config.industry === 'hospitality'
         ? await this.venueToday(client, state.clientId, new Date(receivedAt))
         : undefined;
-      let decision = isOptOutMessage(input.messageText)
+      // A guest who writes "cancelar" cancels the booking they have, before anything else reads the message.
+      const cancelled = !isOptOutMessage(input.messageText) && config.industry === 'hospitality' && isCancelIntent(input.messageText)
+        ? await this.reservations.cancel(client, { state, config, leadId: state.leadId })
+        : null;
+      let decision = cancelled ?? (isOptOutMessage(input.messageText)
         ? optOutDecision(state)
         : evaluateConversation({
             state,
@@ -255,7 +259,7 @@ export class EdgeInboundMessageProcessor {
             ...(today ? { today } : {}),
             ...(input.messageText ? { messageText: input.messageText } : {}),
             ...(input.messageOptionId ? { messageOptionId: input.messageOptionId } : {}),
-          });
+          }));
 
       if (capturedLead && decision.text) {
         decision = { ...decision, text: `${greetingText(config, state)}\n\n${decision.text}` };

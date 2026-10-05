@@ -208,3 +208,28 @@ export function calendarDateIn(timezone: string, now: Date): CalendarDate {
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
   return { year: get('year'), month: get('month'), day: get('day') };
 }
+
+// ── intent ─────────────────────────────────────────────────────────────────
+
+const CANCEL_WORDS = new Set(['cancel', 'cancelar', 'cancela', 'cancelo', 'cancellar', 'anular', 'anullar', 'cancelled', 'canceled']);
+
+/** "cancelar", "CANCEL", "cancel·lar", "anular mi reserva". */
+export function isCancelIntent(text: string): boolean {
+  // Catalan writes cancel·lar with a middle dot; fold it into one word first.
+  const tokens = fold(text).replace(/·/g, '').split(/[^a-z0-9]+/).filter(Boolean);
+  return tokens.some((t) => CANCEL_WORDS.has(t));
+}
+
+const BOOKING_WORDS = new Set([
+  'reservar', 'reserva', 'reservas', 'reservation', 'reservations', 'book', 'booking', 'table', 'tables', 'mesa', 'mesas', 'taula', 'taules',
+  'hola', 'hello', 'hi', 'hey', 'buenas', 'bon', 'bones', 'buenos',
+]);
+
+/**
+ * Whether a message from a guest who already has a booking is a new request:
+ * a greeting, a booking word, or a number (a party size). "Gracias" is not.
+ */
+export function isNewBookingIntent(text: string): boolean {
+  const tokens = words(text);
+  return tokens.some((t) => BOOKING_WORDS.has(t)) || /\d/.test(normalizeDigits(text));
+}

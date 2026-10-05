@@ -27,6 +27,7 @@ const session: DashboardSession = {
     name: 'Ops',
     role: 'admin',
     clientKey: 'client-key',
+    vertical: 'real_estate',
     companyName: 'Example Realty',
     timezone: 'Africa/Cairo',
     lastLoginAt: null,

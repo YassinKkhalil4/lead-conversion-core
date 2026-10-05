@@ -61,6 +61,7 @@ function nextQuestionAfter(
 }
 
 export const realEstateHooks: IndustryHooks = {
+  startsNewRequest: () => false,
   saveAnswer,
   qualificationPayload,
   nextQuestionAfter,

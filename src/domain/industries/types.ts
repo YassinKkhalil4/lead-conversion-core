@@ -16,4 +16,9 @@ export interface IndustryHooks {
   isPauseAnswer(question: CompiledQuestion, lowerValue: string): boolean;
   /** True when finishing on this answer should offer appointment slots instead of closing. */
   offersAppointment(question: CompiledQuestion, value: string): boolean;
+  /**
+   * True when a message from someone whose conversation already completed
+   * should start a new request. Real estate hands them to a person instead.
+   */
+  startsNewRequest(text: string): boolean;
 }
