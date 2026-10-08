@@ -1,4 +1,5 @@
-import type { Role } from '@/api/types';
+// Relative, not the '@/' alias: the root type-check reads this file and does not know the alias.
+import type { Role } from '../api/types';
 import { realEstate } from '../profile/real-estate';
 import type { TenantProfile } from '../profile/types';
 

@@ -7,7 +7,7 @@ import { navFor } from '../dashboard/src/nav/routes.js';
 import { hospitality, PROFILES, realEstate, resolveProfile } from '../dashboard/src/profile/index.js';
 import { words } from '../dashboard/src/profile/words.js';
 
-const values = (o: Record<string, string>) => Object.values(o);
+const values = (o: object): string[] => Object.values(o) as string[];
 const allText = (p: typeof realEstate): string[] => [
   ...values(p.terms),
   ...p.facts.map((f) => f.label),
