@@ -76,6 +76,10 @@ function transformPage(html) {
   html = html.replace('<header class="site-header">\n  <div class="wrap header-inner">', `<header class="site-header">\n${PARENT_BAR}  <div class="wrap header-inner">`);
   if (!html.includes('<p class="footer-meta">')) throw new Error("landing footer markup changed");
   html = html.replace('<p class="footer-meta">', `${FOOTER_LINK}<p class="footer-meta">`);
+  // Credit line, same markup the shared footer uses on the other two sites.
+  const legal = html.match(/<p class="footer-legal">[\s\S]*?<\/p>/);
+  if (!legal) throw new Error("landing footer-legal markup changed");
+  html = html.replace(legal[0], `${legal[0]}\n      <p class="footer-meta">Built by <a href="https://ykhalil.com/">Yassin Khalil</a></p>`);
   return html;
 }
 

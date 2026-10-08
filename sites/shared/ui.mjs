@@ -215,6 +215,7 @@ export function footer(site) {
       <p class="footer-meta">${esc(f.meta)} <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>
       ${gateways}
       <p class="footer-legal">${legal}</p>
+      <p class="footer-meta">Built by <a href="https://ykhalil.com/">Yassin Khalil</a></p>
     </div>
   </div>
 </footer>`;
