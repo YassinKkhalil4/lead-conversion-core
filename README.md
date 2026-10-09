@@ -35,3 +35,7 @@ npm run simulate
 ```
 
 The VPS Docker build installs dependencies from the public registry available to the server.
+
+---
+
+Built by [Yassin Khalil](https://ykhalil.com)
